@@ -53,9 +53,11 @@ class VelaConfig:
     duration_s: float = 90.0
     baseline: str = "BBRv3approx"
     contract_name: str = "DualGate"
+    view: str = ""
+    compose_digest: str = ""
 
 
-def program_to_config(prog: Program) -> VelaConfig:
+def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
     c = prog.controllers[0]
     mechs = list(c.compose) or [
         "Detect",
@@ -78,8 +80,29 @@ def program_to_config(prog: Program) -> VelaConfig:
     cfg.quiet_reach = "QuietReach" in mechs
     cfg.quiet_shield = "QuietShield" in mechs
     cfg.soft_flicker = "SoftFlicker" in mechs
+    if view:
+        found = [v for v in prog.views if v.name == view]
+        if not found:
+            raise ValueError(f"unknown view {view!r}")
+        mechs = list(found[0].compose)
+        cfg.mechanisms = mechs
+        cfg.name = f"{c.name}/{view}"
+        cfg.view = view
+        cfg.predictive_freeze = "PredictiveFreeze" in mechs
+        cfg.interval_bw = "IntervalBw" in mechs
+        cfg.horizon_chase = "HorizonChase" in mechs
+        cfg.dual_gate_guard = "DualGateGuard" in mechs
+        cfg.trim_hold = "TrimHold" in mechs
+        cfg.trim_fill = "TrimFill" in mechs
+        cfg.trim_reclaim = "TrimReclaim" in mechs
+        cfg.quiet_reach = "QuietReach" in mechs
+        cfg.quiet_shield = "QuietShield" in mechs
+        cfg.soft_flicker = "SoftFlicker" in mechs
     if cfg.trim_hold or cfg.trim_fill or cfg.trim_reclaim or cfg.quiet_reach:
         cfg.interval_bw = True
+    from vela.digest import compose_digest
+
+    cfg.compose_digest = compose_digest(cfg.mechanisms)
     if prog.contracts:
         con = prog.contracts[0]
         cfg.seeds = list(con.seeds)

@@ -252,11 +252,34 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 | Piece | Role |
 |-------|------|
-| `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax |
-| `vela/types.py` `checker.py` | Freshness, loss, compose, contracts |
-| `vela/ir.py` `compile.py` | Mechanism IR + Python lowering |
+| `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority) |
+| `vela/types.py` `checker.py` | Freshness, loss, reconfig kinds, WriteCap, integrators |
+| `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts |
+| `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA |
 | `vela/eval_harness.py` | Dual-gate runner on leo-aware-transport |
-| `examples/*.vela` | Reach (flagship), Horizon, Luff, OCE-class |
+| `examples/*.vela` | Equinox (0.3), Reach, Horizon, Luff, OCE-class |
 
-Version: VELA 0.2.0 (Reach flagship, typed reconfig in stdlib, observe-only compose).
+## G. Equinox (VELA 0.3)
+
+The 0.2 packet search closed: every additive write failed a house seed.
+0.3 evolves the *language* so those accidents are type errors, hashed
+operators, and receipts.
+
+See [EQUINOX.md](EQUINOX.md). Summary:
+
+| Law | What it refuses |
+|-----|-----------------|
+| Level vs integrator | `when { pace *= k }` without `integrate when` |
+| WriteCap | cruise writes with `authority` budget 0 |
+| Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
+| Cut refinement | `cut(1.2)` |
+| Compose digest | silent operator swap |
+| Eval receipt | a verdict detached from its source |
+| Views | eval of compose A claimed as compose B |
+
+Existing `lang vela 0.1` programs still parse. WriteCap and reconfig
+match are opt-in. Flagship sources: `examples/equinox.vela` (language)
+and `examples/reach.vela` (house policy).
+
+Version: VELA 0.3.0 (Equinox: authority, receipts, views).

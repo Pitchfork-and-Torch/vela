@@ -66,6 +66,7 @@ class OnClause:
 class WhenClause:
     pred: Expr
     body: list[Stmt]
+    integrate: bool = False
     span: Optional[Span] = None
 
 
@@ -73,6 +74,14 @@ class WhenClause:
 class EveryClause:
     tick: str
     body: list[Stmt]
+    span: Optional[Span] = None
+
+
+@dataclass
+class View:
+    name: str
+    of_controller: str
+    compose: list[str]
     span: Optional[Span] = None
 
 
@@ -85,6 +94,7 @@ class Controller:
     ons: list[OnClause]
     whens: list[WhenClause]
     everys: list[EveryClause]
+    authority: dict = field(default_factory=dict)
     span: Optional[Span] = None
 
 
@@ -122,4 +132,6 @@ class Program:
     controllers: list[Controller]
     contracts: list[Contract]
     paths: list[PathModel] = field(default_factory=list)
+    views: list[View] = field(default_factory=list)
     source_name: str = "<input>"
+    source_text: str = ""

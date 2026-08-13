@@ -5,6 +5,9 @@ from dataclasses import dataclass, field
 
 
 LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
+RECONFIG_KINDS = ("RttHop", "Flicker")
+WRITE_TARGETS = ("cwnd", "pace")
+INTEGRATOR_OPS = ("*=", "+=", "-=", "/=")
 
 STDLIB_MECHANISMS = {
     "Detect": {"reads": {"rtt", "epoch"}, "writes": {"reconfig"}, "cuts": "none", "phase": "ack"},
@@ -110,6 +113,9 @@ class CheckResult:
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     mechanisms: list[str] = field(default_factory=list)
+    compose_digest: str = ""
+    authority: dict = field(default_factory=dict)
+    views: list[str] = field(default_factory=list)
 
     def raise_if_error(self) -> None:
         if not self.ok:

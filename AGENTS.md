@@ -13,10 +13,11 @@ Canonical language tree for **VELA** (Variance-aware Epoch Language for Adaptati
 ## Commands
 
 ```
-py -3 -m vela check examples/reach.vela
-py -3 -m vela compile examples/reach.vela
+py -3 -m vela check examples/equinox.vela
+py -3 -m vela digest examples/equinox.vela
+py -3 -m vela mech
+py -3 -m vela compile examples/equinox.vela
 py -3 -m vela eval examples/reach.vela --fast --tag reach-fast
-py -3 -m vela eval examples/reach.vela --seeds 13,7,42,99,123 --tag reach-house
 py -3 -m unittest discover -s tests -v
 ```
 

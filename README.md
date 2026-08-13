@@ -23,8 +23,10 @@ The compiler still emits ordinary sender code (Python now, Rust-shaped IR next) 
 ## Quick start
 
 ```bash
-py -3 -m vela check examples/horizon.vela
-py -3 -m vela compile examples/horizon.vela -o emit/horizon_cca.py
+py -3 -m vela check examples/equinox.vela
+py -3 -m vela digest examples/equinox.vela
+py -3 -m vela mech
+py -3 -m vela compile examples/equinox.vela -o emit/equinox_cca.py
 py -3 -m unittest discover -s tests -v
 ```
 
@@ -68,7 +70,7 @@ controller Horizon {
 
   when p_ho > 0.35 {
     freeze min_rtt, bw for 1.4 * rtt
-    pace *= 0.94
+    pace = bw.mid
   }
 
   every ack {
@@ -97,7 +99,7 @@ contract DualGate vs BBRv3approx {
 
 ```
 vela/           compiler, type checker, composition kernel, Horizon CCA
-examples/       reach.vela, horizon.vela, luff.vela, leoaware_oce.vela
+examples/       equinox.vela, reach.vela, horizon.vela, luff.vela, leoaware_oce.vela
 docs/           LANGUAGE.md (complete design)
 tests/          parser, types, kernel
 emit/           compiled Python (generated)
@@ -107,7 +109,7 @@ emit/           compiled Python (generated)
 
 VELA does not violate causality or invent capacity. A Starlink-class path still has handovers, RTT jumps, and a real bottleneck. The language's job is to stop wasting the information the endpoint already has, and to refuse claims the numbers do not support.
 
-**v0.2 lab:** Reach is the write-enabled compose. Horizon stays observe-only after house 90s (pace/reclaim dumped seed 123 to 57 Mbps / 192 ms). House LeoAware 73.57 / 138.37 vs BBR 70.88 / 138.83 (locked v3.4-p95). JSON under `results/` is the only win table. See `docs/EVAL-NOTES.md`.
+**v0.3 Equinox:** the language grew. Integrators in `when` are type errors. WriteCap is linear. Reconfig is a closed kind. Eval writes a SHA-256 receipt bound to source + compose + merkle of rows. Views are first-class compose morphisms. House LeoAware remains 73.57 / 138.37 vs BBR 70.88 / 138.83. JSON + receipt under `results/` are the only win table. See `docs/EQUINOX.md` and `docs/EVAL-NOTES.md`.
 
 ## License
 

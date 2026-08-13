@@ -15,6 +15,7 @@ from vela.ast import (
     Span,
     Stmt,
     TypeRef,
+    View,
     WhenClause,
 )
 from vela.lexer import LexError, Token, tokenize
@@ -29,6 +30,7 @@ class Parser:
         self.tokens = tokenize(src)
         self.i = 0
         self.name = name
+        self._src_text = src
 
     def cur(self) -> Token:
         return self.tokens[self.i]
@@ -65,6 +67,7 @@ class Parser:
         controllers: list[Controller] = []
         contracts: list[Contract] = []
         paths: list[PathModel] = []
+        views: list[View] = []
         while not self.at("EOF"):
             if self.at("use"):
                 self.eat("use")
@@ -75,6 +78,8 @@ class Parser:
                 contracts.append(self._contract())
             elif self.at("path"):
                 paths.append(self._path())
+            elif self.at("view"):
+                views.append(self._view())
             else:
                 t = self.cur()
                 raise ParseError(
@@ -86,7 +91,9 @@ class Parser:
             controllers=controllers,
             contracts=contracts,
             paths=paths,
+            views=views,
             source_name=self.name,
+            source_text=self._src_text,
         )
 
     def _name(self) -> str:
@@ -119,6 +126,7 @@ class Parser:
         ons: list[OnClause] = []
         whens: list[WhenClause] = []
         everys: list[EveryClause] = []
+        authority: dict = {}
         while not self.at("RBRACE"):
             if self.at("compose"):
                 self.eat("compose")
@@ -128,8 +136,21 @@ class Parser:
                 self.eat("COLON")
                 while self.at("IDENT"):
                     signals.append(self._signal())
+            elif self.at("authority"):
+                self.eat("authority")
+                authority.update(self._authority())
             elif self.at("on"):
                 ons.append(self._on())
+            elif self.at("integrate"):
+                self.eat("integrate")
+                if not self.at("when"):
+                    t = self.cur()
+                    raise ParseError(
+                        f"{self.name}:{t.line}:{t.col}: integrate must precede when"
+                    )
+                w = self._when()
+                w.integrate = True
+                whens.append(w)
             elif self.at("when"):
                 whens.append(self._when())
             elif self.at("every"):
@@ -148,8 +169,48 @@ class Parser:
             ons=ons,
             whens=whens,
             everys=everys,
+            authority=authority,
             span=sp,
         )
+
+    def _authority(self) -> dict:
+        out: dict = {}
+        if self.at("LBRACE"):
+            self.eat("LBRACE")
+            while not self.at("RBRACE"):
+                key = self._name()
+                if self.at("COLON"):
+                    self.eat("COLON")
+                raw = self.eat("NUMBER").value
+                out[key] = int(float(raw.rstrip("s")))
+                if self.at("COMMA"):
+                    self.eat("COMMA")
+            self.eat("RBRACE")
+            return out
+        key = self._name()
+        raw = self.eat("NUMBER").value
+        out[key] = int(float(raw.rstrip("s")))
+        return out
+
+    def _view(self) -> View:
+        sp = self.span()
+        self.eat("view")
+        name = self.eat("IDENT").value
+        self.eat("of")
+        ofc = self.eat("IDENT").value
+        self.eat("LBRACE")
+        compose: list[str] = []
+        while not self.at("RBRACE"):
+            if self.at("compose"):
+                self.eat("compose")
+                compose = self._compose_list()
+            else:
+                t = self.cur()
+                raise ParseError(
+                    f"{self.name}:{t.line}:{t.col}: unexpected in view: {t.value!r}"
+                )
+        self.eat("RBRACE")
+        return View(name=name, of_controller=ofc, compose=compose, span=sp)
 
     def _compose_list(self) -> list[str]:
         names = [self.eat("IDENT").value]
