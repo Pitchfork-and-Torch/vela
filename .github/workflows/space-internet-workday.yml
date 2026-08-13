@@ -1,0 +1,30 @@
+# PC-off language check. Does not ship the VELA kernel to a third party VPS.
+# Does not enable closed-write CCA operators.
+name: space-internet-workday
+on:
+  schedule:
+    - cron: "20 13 * * 1-5"
+    - cron: "20 17 * * 1-5"
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Unit tests
+        run: python -m unittest discover -s tests -q
+      - name: Engine smoke (public repo only)
+        uses: actions/checkout@v4
+        with:
+          repository: Pitchfork-and-Torch/leo-aware-transport
+          path: leo-aware-transport
+      - name: Import LeoAware
+        run: |
+          pip install -q numpy
+          python -c "import sys; sys.path.insert(0,'leo-aware-transport'); from leo_cc.ccas import LeoAwareCCA; print(LeoAwareCCA.name)"
+      - name: Summary
+        run: |
+          echo "VELA tests green. Engine import OK. No write operators enabled." >> "$GITHUB_STEP_SUMMARY"
