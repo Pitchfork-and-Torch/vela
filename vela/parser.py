@@ -20,6 +20,9 @@ from vela.ast import (
 )
 from vela.lexer import LexError, Token, tokenize
 
+ALLOWED_CUTS_COMPOSE = frozenset({"min"})
+ALLOWED_GROWTH_COMPOSE = frozenset({"min", "max", "sum"})
+
 
 class ParseError(Exception):
     pass
@@ -122,6 +125,8 @@ class Parser:
             extends = self.eat("IDENT").value
         self.eat("LBRACE")
         compose: list[str] = []
+        cuts_compose: str | None = None
+        growth_compose: str | None = None
         signals: list[Signal] = []
         ons: list[OnClause] = []
         whens: list[WhenClause] = []
@@ -130,7 +135,13 @@ class Parser:
         while not self.at("RBRACE"):
             if self.at("compose"):
                 self.eat("compose")
-                compose = self._compose_list()
+                names, cuts, growth = self._compose_directive()
+                if names is not None:
+                    compose = names
+                if cuts is not None:
+                    cuts_compose = cuts
+                if growth is not None:
+                    growth_compose = growth
             elif self.at("signals"):
                 self.eat("signals")
                 self.eat("COLON")
@@ -170,6 +181,8 @@ class Parser:
             whens=whens,
             everys=everys,
             authority=authority,
+            cuts_compose=cuts_compose,
+            growth_compose=growth_compose,
             span=sp,
         )
 
@@ -211,6 +224,74 @@ class Parser:
                 )
         self.eat("RBRACE")
         return View(name=name, of_controller=ofc, compose=compose, span=sp)
+
+    def _peek(self, n: int = 1) -> Token:
+        j = self.i + n
+        if 0 <= j < len(self.tokens):
+            return self.tokens[j]
+        return self.tokens[-1]
+
+    def _at_compose_combinator(self) -> bool:
+        t = self.cur()
+        if t.kind != "IDENT" or t.value not in ("cuts", "growth"):
+            return False
+        return self._peek(1).kind == "EQ_SIGN"
+
+    def _at_trailing_compose_combinator(self) -> bool:
+        if not self.at("compose"):
+            return False
+        nxt = self._peek(1)
+        nxt2 = self._peek(2)
+        return (
+            nxt.kind == "IDENT"
+            and nxt.value in ("cuts", "growth")
+            and nxt2.kind == "EQ_SIGN"
+        )
+
+    def _compose_combinator(self) -> tuple[str, str]:
+        kind = self.eat("IDENT").value
+        self.eat("EQ_SIGN")
+        val_tok = self.cur()
+        val = self._name()
+        if kind == "cuts":
+            if val not in ALLOWED_CUTS_COMPOSE:
+                raise ParseError(
+                    f"{self.name}:{val_tok.line}:{val_tok.col}: "
+                    f"compose cuts must be min, got {val!r}"
+                )
+        elif kind == "growth":
+            if val not in ALLOWED_GROWTH_COMPOSE:
+                raise ParseError(
+                    f"{self.name}:{val_tok.line}:{val_tok.col}: "
+                    f"compose growth must be min | max | sum, got {val!r}"
+                )
+        else:
+            raise ParseError(
+                f"{self.name}:{val_tok.line}:{val_tok.col}: "
+                f"unknown compose combinator {kind!r}"
+            )
+        return kind, val
+
+    def _compose_directive(self) -> tuple[list[str] | None, str | None, str | None]:
+        names: list[str] | None = None
+        cuts: str | None = None
+        growth: str | None = None
+        if self._at_compose_combinator():
+            kind, val = self._compose_combinator()
+            if kind == "cuts":
+                cuts = val
+            else:
+                growth = val
+        else:
+            names = self._compose_list()
+        while self._at_trailing_compose_combinator():
+            self.eat("compose")
+            kind, val = self._compose_combinator()
+            if kind == "cuts":
+                cuts = val
+            else:
+                growth = val
+        return names, cuts, growth
 
     def _compose_list(self) -> list[str]:
         names = [self.eat("IDENT").value]

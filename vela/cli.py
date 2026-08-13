@@ -110,6 +110,10 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         c = prog.controllers[0]
         print(f"ok  controller={c.name}  compose={' + '.join(c.compose)}")
+        if c.cuts_compose:
+            print(f"    cuts_compose={c.cuts_compose}")
+        if c.growth_compose:
+            print(f"    growth_compose={c.growth_compose}")
         if res.compose_digest:
             print(f"    digest={res.compose_digest[:16]}")
         if res.authority:

@@ -95,6 +95,8 @@ class Controller:
     whens: list[WhenClause]
     everys: list[EveryClause]
     authority: dict = field(default_factory=dict)
+    cuts_compose: Optional[str] = None
+    growth_compose: Optional[str] = None
     span: Optional[Span] = None
 
 
