@@ -5,7 +5,7 @@ import json
 import unittest
 from pathlib import Path
 
-from vela.checker import check
+from vela.checker import check, interval_point_error
 from vela.digest import compose_digest, merkle, source_digest, stdlib_catalog, tagged
 from vela.parser import parse
 from vela.receipt import build_receipt, verify_receipt
@@ -130,6 +130,49 @@ controller Bad {
         res = check(parse(src, "bad-cap.vela"))
         self.assertFalse(res.ok)
         self.assertTrue(any("WriteCap" in e for e in res.errors))
+
+    def test_interval_as_point_requires_n_ge_2(self):
+        src = """
+lang vela 0.3
+controller Bad {
+  compose Detect
+  signals:
+    epoch: Epoch
+    bw: Interval<bps> @ epoch
+  when p_ho > 0.5 {
+    pace = bw
+  }
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.7)
+    Unknown => hold
+  }
+}
+"""
+        res = check(parse(src, "bad-interval.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(interval_point_error("Bad", "bw"), res.errors)
+
+    def test_interval_mid_under_when_n_ge_2(self):
+        src = """
+lang vela 0.3
+controller Ok {
+  compose Detect + IntervalBw
+  signals:
+    epoch: Epoch
+    bw: Interval<bps> @ epoch
+  when bw.n >= 2 {
+    pace = bw.mid
+  }
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.7)
+    Unknown => hold
+  }
+}
+"""
+        res = check(parse(src, "ok-interval.vela"))
+        self.assertTrue(res.ok, res.errors)
 
     def test_existing_examples_still_check(self):
         for name in ("horizon.vela", "reach.vela", "luff.vela", "leoaware_oce.vela"):
