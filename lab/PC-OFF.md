@@ -25,6 +25,18 @@ No Task Scheduler (PC-AUTOMATION-HOLD).
 - https://github.com/Pitchfork-and-Torch/vela/issues/2
 - https://github.com/Pitchfork-and-Torch/vela/issues/3
 
+## Grok cloud tasks (already created)
+
+Weekday email/app briefs. PC not required.
+
+- Space internet morning cook - 09:20 ET
+- Space internet midday cook - 13:15 ET
+- Space internet EOD cook - 17:35 ET
+
+## GitHub Actions (private vela)
+
+`space-internet-workday` at 09:20 and 13:20 ET weekdays: unit tests + public LeoAware import smoke.
+
 ## Operator phone
 
 1. Open https://cursor.com/agents and https://cursor.com/automations
