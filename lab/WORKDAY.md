@@ -22,7 +22,8 @@ powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\vela\scripts\Start-Spa
 
 Optional: `-Publish` copies sanitized progress to orbitstack and deploys that site only.
 
-PC stays ON + LOCKED + AC. Do not create Task Scheduler jobs.
+If the PC is **off**, do not start this script. Use `lab/PC-OFF.md` (Cursor Cloud + KnockNGrok VPS kicks).
+If the PC is on: stays ON + LOCKED + AC. Do not create Task Scheduler jobs.
 
 ## Cursor swarm
 

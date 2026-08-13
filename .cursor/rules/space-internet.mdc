@@ -1,0 +1,14 @@
+---
+description: Space internet cook on VELA. Builds onto LeoAware. PC-off cloud agents.
+alwaysApply: true
+---
+
+VELA builds onto LeoAware. It is not a rival CCA.
+Read docs/MISSION.md and lab/CURSOR-SWARM.md before edits.
+Do not enable HorizonChase, TrimFill, TrimReclaim, QuietReach, QuietShield, SoftFlicker, or TrimHold.
+Do not fork Detect or SoftReprobe. Compose them.
+Observe-only wrap must match LeoAware on the same seed.
+No dish Mbps claims. No mixing OPE-fair and coupled-RNG tables.
+Public numbers only go to sanitized progress notes. Ablation dumps stay in this private repo.
+Open a PR. Do not force-push public leo-aware-transport.
+Tests: py -3 -m unittest discover -s tests -q
