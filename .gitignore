@@ -6,3 +6,5 @@ emit/*.rs
 results/*.json
 !results/.gitkeep
 !emit/.gitkeep
+lab/journal.jsonl
+lab/STOP

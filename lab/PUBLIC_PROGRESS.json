@@ -1,0 +1,23 @@
+{
+  "updated": "2026-08-13",
+  "title": "OrbitStack / VELA research progress",
+  "honesty": "Means only. Coupled-RNG house numbers on this lab machine are not mixed with OPE-fair v3.7 site-tab figures. No dish Mbps claim.",
+  "engine": {
+    "name": "LeoAware",
+    "lab_coupled_v34": {"goodput_mbps": 73.57, "p95_ms": 138.37, "vs": "BBRv3approx 70.88 / 138.83"},
+    "ope_fair_v37_site": {"goodput_mbps": 58.78, "p95_ms": 152.09, "vs": "BBRv3approx 58.21 / 152.89"},
+    "terrestrial_floor": ">= 77 Mbps @ ~40 ms"
+  },
+  "language": {
+    "name": "VELA",
+    "role": "Compose and check LeoAware. Not a rival CCA.",
+    "site": "https://vela.jonbailey.xyz/"
+  },
+  "log": [
+    {
+      "date": "2026-08-13",
+      "note": "Mission lock: VELA builds onto LeoAware for space internet.",
+      "verdict": "policy"
+    }
+  ]
+}

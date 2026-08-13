@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "id": "confirm-passthrough",
+      "kind": "eval",
+      "safe": true,
+      "public": true,
+      "note": "Observe-only Reach must match LeoAware on seed 7 45s",
+      "status": "pending"
+    },
+    {
+      "id": "interval-n2",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Type error when Interval is used as a point with n < 2",
+      "status": "pending"
+    },
+    {
+      "id": "compose-cuts",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Parse compose cuts = min and compose growth = min|max|sum",
+      "status": "pending"
+    },
+    {
+      "id": "incomplete-verdict",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Harness top-level INCOMPLETE when terrestrial is missing",
+      "status": "pending"
+    }
+  ]
+}

@@ -2,7 +2,7 @@
 
 Canonical language tree for **VELA** (Variance-aware Epoch Language for Adaptation).
 
-- Language that **builds onto** LeoAware for space internet. Not a rival CCA. Mission: `docs/MISSION.md`.
+- Language that **builds onto** LeoAware for space internet. Not a rival CCA. Mission: `docs/MISSION.md`. Blend: `docs/CONSTELLATION.md`. Workday loop: `lab/WORKDAY.md`.
 - Sibling science stack: `~/Projects/leo-aware-transport` (MIT, Pitchfork-and-Torch).
 - This tree is the language + compiler + kernel. Do not fork LeoAware detect/reprobe lightly; compose them as stdlib mechanisms.
 - ASCII punctuation in public docs (no em/en dashes).
