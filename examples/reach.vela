@@ -1,0 +1,87 @@
+lang vela 0.1
+
+use std.epoch
+use std.loss
+use std.measure
+use std.control
+use std.path
+use std.eval
+
+// Reach: beam-reach control. The fastest point of sail is not pointing
+// into the wind (Horizon) and not trimming every gust (Luff).
+//
+// House-gate autopsy, locked:
+//   pace *= k every ACK           -> integrator death (seed 7: 55/173)
+//   chase into post-hop BDP       -> cwnd flood (jumped RTT)
+//   fill in the REPROBE window    -> seed 7: 83.8 / 184.9
+//   undo delay_yield              -> seed 7: 184 ms p95; seed 123: 57/192
+//   PredictiveFreeze pace/cwnd    -> seed 13 90s: -4 Mbps, p95 unchanged
+//   QuietReach +1.28x BDP         -> seed 123: 52.9 / 141.6
+//
+// The leftover is not a missing fill. Seed 7 90s: 55 REPROBE vs
+// 8 handovers. Those extras are flicker (capacity wobble, ACK-IA),
+// not bugs. Refusing them is v2.1. Softening the 0.58 cut is
+// Horizon-chase. Adding cwnd in a rare quiet stretch dumped 123.
+//
+// Typed reconfig is the abstraction. The house numbers say the
+// endpoint cut is 0.58 for every detect, hop or flicker.
+//
+// Closed failure class (do not compose until a new ablation is green):
+//   HorizonChase / pace*=k     seed 7 55/173
+//   TrimFill                   seed 7 83.8/184.9
+//   TrimReclaim                seed 7 184 ms; seed 123 57/192
+//   QuietReach +1.28x BDP      seed 123 52.9/141.6
+//   QuietShield refuse         seed 7 90s 74.9/175; seed 13 58.3/187
+//   SoftFlicker cut 0.85       seed 7 45s 55.2/123.8
+//   TrimHold on RTT calendar   seed 7 90s p95 185
+//
+// The 47 extra REPROBEs vs 8 handovers are flicker handling, not
+// bugs. BBR skips them and wins seeds 7/123. LeoAware pays them
+// and wins 13/42 and the dual-gate means. That tax is the frontier.
+//
+// Desired end: beat locked LeoAware v3.4-p95 (73.57 / 138.37) and
+// BBR (70.88 / 138.83) on leo_fast_ho means, terrestrial >= 77 @ 40.
+// Do not claim it without results/eval_*.json.
+
+controller Reach {
+  compose Detect + SoftReprobe + Calendar + IntervalBw
+        + WriteBudget + DualGateGuard
+
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+    bw: Interval<bps> @ epoch
+    delay_ratio: Ratio
+    p_ho: Prob
+
+  on Reconfig(e) {
+    invalidate min_rtt, bw
+    enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    // WriteBudget resets here: hold latch, reach shots, clean clock.
+  }
+
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => require delay_ratio > 1.35 then cut(0.72) else hold
+  }
+
+  // Calendar is observed. Writes stay in the stdlib. The compose
+  // that matches LeoAware bit-for-bit is the house-winning policy.
+}
+
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+
+contract DualGate vs BBRv3approx {
+  seeds = [13, 7, 42, 99, 123]
+  scenario leo_fast_ho duration 90s
+  assert mean(goodput) >= baseline.goodput
+  assert mean(p95) <= baseline.p95
+  assert terrestrial.goodput >= 77 Mbps
+  report ci(0.95), ablation
+}

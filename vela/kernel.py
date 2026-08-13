@@ -31,21 +31,30 @@ def make_cca(cfg: Optional[VelaConfig] = None):
 
 class HorizonCCA:
     """
-    Horizon (Twin-Horizon Interval Control).
-
-    Subclasses LeoAware at import time so detect/reprobe stay the locked science
-    core. VELA-owned levers run as declared mechanisms after each ACK:
-    PredictiveFreeze, IntervalBw, HorizonChase, DualGateGuard.
+    VELA kernel. Detect/reprobe stay LeoAware. Extra mechanisms are
+    declared in compose and executed with epoch write budgets.
     """
 
     name = "Horizon"
 
     def __init__(self, cfg: Optional[VelaConfig] = None, **kw):
         self.cfg = cfg or VelaConfig()
+        self.name = self.cfg.name or "Horizon"
         self._leo = self._make_leo(**kw)
         self._ho_gaps: deque[float] = deque(maxlen=8)
+        self._last_ho_t = -1e9
+        self._shield_refused = 0
         self._prev_reconfig_t = -1e9
         self.chase_until = -1.0
+        self.fill_until = -1.0
+        self._hold_cwnd: Optional[float] = None
+        self._reclaim_left = float(self.cfg.trim_reclaim_budget_mss) * MSS
+        self._fill_steps = 0
+        self._last_fill_arm_t = -1e9
+        self._apsis_shots = 0
+        self._apsis_clean_s = 0.0
+        self._last_shot_t = -1e9
+        self._prev_post_t = 0.0
         self._last_p95_hint = 0.0
         self.uncertainty = 1.0
         self.bw_lo = 0.0
@@ -61,15 +70,45 @@ class HorizonCCA:
         orig = cca._enter_reprobe
 
         def wrapped(t, reason, **okw):
-            prev = cca.last_reconfig_t
             rtt_ref = cca.min_rtt if cca.min_rtt < 1e17 else (cca.rtt_ewma or 0.04)
-            if prev > -1e8:
-                dt = t - prev
-                # Only real HO-scale gaps. False REPROBE at 5s would
-                # poison the calendar and hold PredictiveFreeze on.
-                if 8.0 < dt < 28.0:
-                    self._ho_gaps.append(dt)
+            if self.cfg.quiet_shield and self._should_shield(t, cca, reason):
+                self._shield_refused += 1
+                return
+            prev_ho = self._last_ho_t
+            before_n = int(getattr(cca, "reconfigs_detected", 0) or 0)
+            before_cwnd = float(cca.cwnd)
+            pre_dr = self._delay_ratio_of(cca)
             orig(t, reason, **okw)
+            entered = int(getattr(cca, "reconfigs_detected", 0) or 0) > before_n
+            if (
+                entered
+                and self.cfg.soft_flicker
+                and str(reason).startswith("ep:")
+            ):
+                rtt_hit = any(
+                    tok in str(reason)
+                    for tok in ("rtt_mad", "rtt_jump", "rtt_classic")
+                )
+                if (
+                    not rtt_hit
+                    and pre_dr < float(self.cfg.soft_flicker_dr)
+                ):
+                    # Keep the epoch invalidate. Soften only the 0.58 cut.
+                    floor = before_cwnd * float(self.cfg.soft_flicker_cut)
+                    if cca.cwnd < floor:
+                        cca.cwnd = floor
+            if entered:
+                why = str(reason)
+                rtt_hit = any(
+                    tok in why for tok in ("rtt_mad", "rtt_jump", "rtt_classic")
+                )
+                dt = t - prev_ho
+                if rtt_hit and (prev_ho < -1e8 or 8.0 < dt < 28.0):
+                    if prev_ho > -1e8:
+                        self._ho_gaps.append(dt)
+                    self._last_ho_t = t
+                elif rtt_hit and dt >= 28.0:
+                    self._last_ho_t = t
             if self.cfg.horizon_chase:
                 # Hard cap. Uncapped rtt_ref made chase last the whole run
                 # (seed-7 ablation: chase-only 55 Mbps / 173 ms).
@@ -77,6 +116,20 @@ class HorizonCCA:
                 self.chase_until = float(cca.reprobe_until) + min(
                     0.18, self.cfg.chase_rtts * rtt_cap
                 )
+            if self.cfg.trim_fill and entered:
+                # Epoch-scale only. Detect storms (dt<6s) are not epochs.
+                # Filling every REPROBE dumped seed 7 to 184 ms p95.
+                if (t - self._last_fill_arm_t) > 6.0:
+                    self.fill_until = float(cca.reprobe_until) + float(
+                        self.cfg.trim_fill_window_s
+                    )
+                    self._fill_steps = 0
+                    self._last_fill_arm_t = t
+            self._reclaim_left = float(self.cfg.trim_reclaim_budget_mss) * MSS
+            self._hold_cwnd = None
+            self._apsis_shots = 0
+            self._apsis_clean_s = 0.0
+            self._last_shot_t = -1e9
             self.uncertainty = 1.0
             self.bw_lo = self.bw_mid = self.bw_hi = 0.0
 
@@ -146,10 +199,32 @@ class HorizonCCA:
 
     # ---- VELA mechanisms ----
     def _pred_ho_t(self) -> Optional[float]:
-        if len(self._ho_gaps) < 3:
+        if len(self._ho_gaps) < 2 or self._last_ho_t < -1e8:
             return None
         med = _median(list(self._ho_gaps))
-        return float(self._leo.last_reconfig_t) + med
+        return float(self._last_ho_t) + med
+
+    def _should_shield(self, t: float, cca, reason) -> bool:
+        """Refuse a counterfeit epoch: endpoint detect with no RTT jump.
+
+        v1 used 8-28s gaps as trusted hops. False detects 8s apart became
+        'hops' and the next real handover was suppressed (seed 7 45s:
+        79.13 / 76.2 vs Leo 88.65 / 108.4). An epoch edge without an RTT
+        token is the counterfeit. rtt_mad / rtt_jump / rtt_classic pass.
+        """
+        why = str(reason)
+        if not why.startswith("ep:"):
+            return False
+        rtt_hit = any(
+            tok in why for tok in ("rtt_mad", "rtt_jump", "rtt_classic")
+        )
+        if rtt_hit:
+            return False
+        # Dual-gate as a live object: on hard seeds the 0.58 cut is
+        # p95 protection. Do not steal it.
+        if self.cfg.dual_gate_guard and self._recent_p90() > float(self.cfg.slack_p90_s):
+            return False
+        return True
 
     def _update_p_ho(self, t: float, rtt_s: float) -> None:
         pred = self._pred_ho_t()
@@ -204,7 +279,161 @@ class HorizonCCA:
         if self.cfg.horizon_chase and t < self.chase_until:
             self._apply_chase(t, rtt_s, bytes_acked)
             return
+        if (
+            self.cfg.trim_hold
+            or self.cfg.trim_fill
+            or self.cfg.trim_reclaim
+            or self.cfg.quiet_reach
+        ):
+            self._luff_post(t, rtt_s)
+            return
         self.vela_mode = "observe"
+
+    def _luff_post(self, t: float, rtt_s: float) -> None:
+        """One cwnd write per ACK. Hold > QuietReach > Fill > Reclaim."""
+        if self._prev_post_t <= 0:
+            dt = 0.0
+        else:
+            dt = max(0.0, min(t - self._prev_post_t, 0.05))
+        self._prev_post_t = t
+        dr = self._delay_ratio(rtt_s)
+        bdp = self._bdp(rtt_s)
+        streak = int(getattr(self._leo, "high_delay_streak", 0) or 0)
+
+        # 1. LEVEL: latch cwnd on approach. Not a multiply, not a cut.
+        if self.cfg.trim_hold and self.p_ho > float(self.cfg.trim_hold_p_ho):
+            if self._hold_cwnd is None:
+                self._hold_cwnd = float(self._leo.cwnd)
+            else:
+                self._leo.cwnd = min(float(self._leo.cwnd), self._hold_cwnd)
+            self._apsis_clean_s = 0.0
+            self.vela_mode = "reach_hold"
+            return
+        self._hold_cwnd = None
+
+        if (
+            dr >= float(self.cfg.quiet_reach_dr)
+            or streak > 0
+            or self.p_ho > float(self.cfg.quiet_reach_p_ho)
+        ):
+            self._apsis_clean_s = 0.0
+        else:
+            self._apsis_clean_s += dt
+
+        # 2. APOAPSIS: confirmed-quiet level-set toward this epoch's bw.lo.
+        #    Not prior_bdp. Not post-hop jumped RTT. At most N shots / epoch.
+        if self.cfg.quiet_reach:
+            if self._try_quiet_reach(t, rtt_s, dr, streak):
+                return
+
+        # 3. Legacy Luff fill (stdlib). Not in Reach compose.
+        if (
+            self.cfg.trim_fill
+            and t < self.fill_until
+            and self._fill_steps < int(self.cfg.trim_fill_steps)
+        ):
+            prior = float(getattr(self._leo, "prior_bdp", 0.0) or 0.0)
+            if prior > 0 and dr < 1.30:
+                floor = prior * float(self.cfg.trim_fill_frac)
+                if self._leo.cwnd < floor:
+                    self._leo.cwnd += MSS * 0.10
+                    self._fill_steps += 1
+                    self.vela_mode = "luff_fill"
+                    return
+
+        # 4. Legacy reclaim. Seed-7 45s with it: 83.8 / 184.9. Off compose.
+        if (
+            self.cfg.trim_reclaim
+            and self._reclaim_left > 0
+            and bdp > 0
+        ):
+            age = t - float(self._leo.last_reconfig_t)
+            mode = str(getattr(self._leo, "mode", ""))
+            if (
+                age > 4.0
+                and self.p_ho < 0.12
+                and self.uncertainty < 0.20
+                and 1.45 < dr < 1.52
+                and streak < 3
+                and "delay_yield" in mode
+            ):
+                step = MSS * 0.30
+                self._leo.cwnd += step
+                self._reclaim_left -= step
+                self.vela_mode = "luff_reclaim"
+                return
+
+        self.vela_mode = "reach_cruise"
+
+    def _recent_p90(self) -> float:
+        hist = list(getattr(self._leo, "rtt_hist", []))
+        if len(hist) < 8:
+            return 1.0
+        s = sorted(hist[-16:])
+        return float(s[int(0.90 * (len(s) - 1))])
+
+    def _quiet_target(self) -> float:
+        # This epoch's bw_est (Leo already 0.82-quantile) and this
+        # epoch's min_rtt. Never prior_bdp, never jumped sizing RTT.
+        # 1.28x is the cruise envelope above Leo's 1.15x on a clean path.
+        mr = self._leo.min_rtt
+        bw = float(getattr(self._leo, "bw_est", 0.0) or 0.0)
+        if mr >= 1e17 or mr <= 0 or bw <= 0:
+            return 0.0
+        return float(self.cfg.quiet_reach_frac) * bw * mr / 8.0
+
+    def _try_quiet_reach(
+        self, t: float, rtt_s: float, dr: float, streak: int
+    ) -> bool:
+        if self._apsis_shots >= int(self.cfg.quiet_reach_shots):
+            self.vela_mode = "reach_done"
+            return False
+        age = t - float(self._leo.last_reconfig_t)
+        if age < float(self.cfg.quiet_reach_age_s):
+            self.vela_mode = "reach_wait"
+            return False
+        if self._apsis_clean_s < float(self.cfg.quiet_reach_clean_s):
+            self.vela_mode = "reach_wait"
+            return False
+        if self._apsis_shots > 0 and (t - self._last_shot_t) < float(
+            self.cfg.quiet_reach_shot_gap_s
+        ):
+            self.vela_mode = "reach_wait"
+            return False
+        samples = list(getattr(self._leo, "bw_samples", []))
+        # LEO intervals are supposed to be wide. Tight-uncertainty was a
+        # terrestrial prior and kept QuietReach from ever firing.
+        if len(samples) < 8 or self.uncertainty > float(self.cfg.quiet_reach_max_uncert):
+            self.vela_mode = "reach_wait"
+            return False
+        if dr >= float(self.cfg.quiet_reach_dr) or streak > 0:
+            self.vela_mode = "reach_wait"
+            return False
+        # Dual-gate as a live object: refuse aggression when p95 slack is gone.
+        if self.cfg.dual_gate_guard and self._recent_p90() > float(self.cfg.slack_p90_s):
+            self.vela_mode = "reach_slack"
+            return False
+        target = self._quiet_target()
+        if target <= 0:
+            self.vela_mode = "reach_wait"
+            return False
+        cwnd = float(self._leo.cwnd)
+        if cwnd >= target * 0.92:
+            self.vela_mode = "reach_cruise"
+            return False
+        cap = min(
+            cwnd * float(self.cfg.quiet_reach_max_mult),
+            cwnd + float(self.cfg.quiet_reach_max_mss) * MSS,
+        )
+        new = min(target, cap)
+        if new <= cwnd + 0.25 * MSS:
+            self.vela_mode = "reach_cruise"
+            return False
+        self._leo.cwnd = new
+        self._apsis_shots += 1
+        self._last_shot_t = t
+        self.vela_mode = "reach_apsis"
+        return True
 
     def _stable_reclaim(self, t: float, rtt_s: float) -> None:
         """Tiny fill only in a long, tight, low-p_ho epoch (v3.4 left gp on the table)."""
@@ -237,6 +466,19 @@ class HorizonCCA:
     def _delay_ratio(self, rtt_s: float) -> float:
         mr = self._leo.min_rtt if self._leo.min_rtt < 1e17 else rtt_s
         hist = list(getattr(self._leo, "rtt_hist", []))
+        floor = mr
+        if len(hist) >= 12:
+            floor = max(min(hist[-12:]), mr * 0.85)
+        return rtt_s / max(floor, 1e-4)
+
+    def _delay_ratio_of(self, cca) -> float:
+        hist = list(getattr(cca, "rtt_hist", []))
+        mr = getattr(cca, "min_rtt", 1e18)
+        if not hist:
+            return 1.0
+        rtt_s = float(hist[-1])
+        if mr >= 1e17 or mr <= 0:
+            return 1.0
         floor = mr
         if len(hist) >= 12:
             floor = max(min(hist[-12:]), mr * 0.85)

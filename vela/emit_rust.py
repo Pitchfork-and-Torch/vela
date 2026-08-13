@@ -25,6 +25,14 @@ pub enum Mech {{
     OCE,
     TypedLoss,
     FairMode,
+    Calendar,
+    WriteBudget,
+    TrimHold,
+    TrimFill,
+    TrimReclaim,
+    QuietReach,
+    QuietShield,
+    SoftFlicker,
 }}
 
 #[derive(Clone, Debug)]

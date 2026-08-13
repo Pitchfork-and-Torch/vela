@@ -51,6 +51,54 @@ STDLIB_MECHANISMS = {
         "cuts": "soft",
         "phase": "ack",
     },
+    "Calendar": {
+        "reads": {"reconfig"},
+        "writes": {"p_ho"},
+        "cuts": "none",
+        "phase": "epoch",
+    },
+    "WriteBudget": {
+        "reads": {"epoch"},
+        "writes": {"budget"},
+        "cuts": "none",
+        "phase": "epoch",
+    },
+    "TrimHold": {
+        "reads": {"p_ho", "cwnd"},
+        "writes": {"cwnd"},
+        "cuts": "none",
+        "phase": "ack",
+    },
+    "TrimFill": {
+        "reads": {"prior", "cwnd", "delay_ratio"},
+        "writes": {"cwnd"},
+        "cuts": "soft",
+        "phase": "ack",
+    },
+    "TrimReclaim": {
+        "reads": {"epoch", "delay_ratio", "uncertainty"},
+        "writes": {"cwnd"},
+        "cuts": "soft",
+        "phase": "ack",
+    },
+    "QuietReach": {
+        "reads": {"bw", "epoch", "delay_ratio", "p_ho"},
+        "writes": {"cwnd"},
+        "cuts": "soft",
+        "phase": "ack",
+    },
+    "QuietShield": {
+        "reads": {"epoch", "delay_ratio", "p_ho"},
+        "writes": {"reconfig"},
+        "cuts": "none",
+        "phase": "epoch",
+    },
+    "SoftFlicker": {
+        "reads": {"reconfig", "delay_ratio"},
+        "writes": {"cwnd"},
+        "cuts": "soft",
+        "phase": "epoch",
+    },
 }
 
 FRESH_TYPES = {"Sample", "Interval", "min_rtt", "bw"}

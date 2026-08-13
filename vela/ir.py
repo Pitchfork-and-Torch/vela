@@ -21,6 +21,33 @@ class VelaConfig:
     chase_bdp_div: float = 1.26
     rollback_delay: float = 1.40
     pre_ho_pace: float = 0.94
+    trim_hold: bool = False
+    trim_fill: bool = False
+    trim_reclaim: bool = False
+    trim_hold_p_ho: float = 0.72
+    trim_fill_frac: float = 0.65
+    trim_fill_steps: int = 6
+    trim_fill_window_s: float = 0.10
+    trim_reclaim_budget_mss: float = 12.0
+    quiet_shield: bool = False
+    quiet_shield_age_s: float = 7.5
+    quiet_shield_dr: float = 1.40
+    quiet_shield_min_gaps: int = 2
+    soft_flicker: bool = False
+    soft_flicker_cut: float = 0.85
+    soft_flicker_dr: float = 1.20
+    quiet_reach: bool = False
+    quiet_reach_age_s: float = 2.2
+    quiet_reach_clean_s: float = 0.28
+    quiet_reach_p_ho: float = 0.22
+    quiet_reach_dr: float = 1.16
+    quiet_reach_frac: float = 1.28
+    quiet_reach_shots: int = 3
+    quiet_reach_shot_gap_s: float = 1.0
+    quiet_reach_max_mult: float = 1.22
+    quiet_reach_max_mss: float = 18.0
+    quiet_reach_max_uncert: float = 0.90
+    slack_p90_s: float = 0.130
     seeds: list[int] = field(default_factory=lambda: [13, 7, 42, 99, 123])
     scenarios: list[str] = field(default_factory=lambda: ["leo_fast_ho", "terrestrial"])
     duration_s: float = 90.0
@@ -45,6 +72,14 @@ def program_to_config(prog: Program) -> VelaConfig:
     cfg.typed_loss = "TypedLoss" in mechs or any(o.event == "Loss" for o in c.ons)
     cfg.dual_gate_guard = "DualGateGuard" in mechs
     cfg.oce_legacy = "OCE" in mechs and "HorizonChase" not in mechs
+    cfg.trim_hold = "TrimHold" in mechs
+    cfg.trim_fill = "TrimFill" in mechs
+    cfg.trim_reclaim = "TrimReclaim" in mechs
+    cfg.quiet_reach = "QuietReach" in mechs
+    cfg.quiet_shield = "QuietShield" in mechs
+    cfg.soft_flicker = "SoftFlicker" in mechs
+    if cfg.trim_hold or cfg.trim_fill or cfg.trim_reclaim or cfg.quiet_reach:
+        cfg.interval_bw = True
     if prog.contracts:
         con = prog.contracts[0]
         cfg.seeds = list(con.seeds)

@@ -28,6 +28,17 @@ class TestKernel(unittest.TestCase):
         h = HorizonCCA(VelaConfig())
         self.assertEqual(h.p_ho, 0.0)
 
+    def test_quiet_reach_does_not_fire_at_startup(self):
+        leo = Path.home() / "Projects" / "leo-aware-transport"
+        if not leo.is_dir():
+            self.skipTest("leo-aware-transport missing")
+        h = HorizonCCA(
+            VelaConfig(name="Reach", quiet_reach=True, trim_hold=True, interval_bw=True)
+        )
+        h.on_ack(0.5, 0.04, 1200, 0)
+        self.assertEqual(h._apsis_shots, 0)
+        self.assertNotEqual(h.vela_mode, "reach_apsis")
+
 
 if __name__ == "__main__":
     unittest.main()

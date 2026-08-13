@@ -89,19 +89,15 @@ contract DualGate vs BBRv3approx {
 
 ## Flagship controller
 
-**Horizon** (Twin-Horizon Interval Control) is the first VELA program that tries to beat LeoAware-class OCE without another ad-hoc module.
+**Reach** is the current VELA program. It names typed reconfig (RTT hop vs flicker) and keeps the house-winning LeoAware cut. Every additive write we tried (chase, fill, reclaim, quiet reach, refuse-detect, soft flicker) failed a house seed. Those operators live in the stdlib so the next session cannot re-invent them as unnamed flags.
 
-- **Epoch horizon:** predictive handover calendar + sample freeze *before* the jump
-- **Packet horizon:** interval-valued delivery chase (OCE successor) scaled by uncertainty
-- **Contract horizon:** dual-gate and terrestrial assertions the eval harness actually runs
-
-See [docs/LANGUAGE.md](docs/LANGUAGE.md) for the full design (philosophy, types, stdlib, Horizon, impact, limitations).
+`examples/reach.vela`. Horizon stays as the first observe-only compose. See [docs/LANGUAGE.md](docs/LANGUAGE.md) and [docs/EVAL-NOTES.md](docs/EVAL-NOTES.md).
 
 ## Layout
 
 ```
 vela/           compiler, type checker, composition kernel, Horizon CCA
-examples/       horizon.vela, leoaware_oce.vela
+examples/       reach.vela, horizon.vela, luff.vela, leoaware_oce.vela
 docs/           LANGUAGE.md (complete design)
 tests/          parser, types, kernel
 emit/           compiled Python (generated)
@@ -111,7 +107,7 @@ emit/           compiled Python (generated)
 
 VELA does not violate causality or invent capacity. A Starlink-class path still has handovers, RTT jumps, and a real bottleneck. The language's job is to stop wasting the information the endpoint already has, and to refuse claims the numbers do not support.
 
-**v0.1 lab:** Horizon compose names Detect + SoftReprobe + IntervalBw + PredictiveFreeze + DualGateGuard. The kernel is **observe-only** (house 90s: pace/reclaim dumped seed 123 to 57 Mbps / 192 ms). `HorizonChase` stays compose-gated. House LeoAware 73.57 / 138.37 vs BBR 70.88 / 138.83 (locked v3.4-p95). JSON under `results/` is the only win table. See `docs/EVAL-NOTES.md`.
+**v0.2 lab:** Reach is the write-enabled compose. Horizon stays observe-only after house 90s (pace/reclaim dumped seed 123 to 57 Mbps / 192 ms). House LeoAware 73.57 / 138.37 vs BBR 70.88 / 138.83 (locked v3.4-p95). JSON under `results/` is the only win table. See `docs/EVAL-NOTES.md`.
 
 ## License
 

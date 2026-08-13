@@ -89,3 +89,25 @@ Means: Horizon 70.23 / 155.6 vs LeoAware 73.57 / 138.4 vs BBR 70.88 / 138.8. Ter
 **Decision:** v0.1.4 kernel is observe-only. PredictiveFreeze / IntervalBw still *measure*. No pace or cwnd writes until a new ablation is green. JSON: `results/eval_horizon-house.json`.
 
 Confirm after the patch: seed 123 90s LeoAware **62.71 / 111.0** = Horizon **62.71 / 111.0**.
+
+### reach (v0.2 design, eval pending)
+
+New flagship: `examples/reach.vela`. Compose Detect + SoftReprobe + Calendar + IntervalBw + WriteBudget + TrimHold + QuietReach + DualGateGuard.
+
+Thesis: the leftover is the quiet middle of an epoch on easy paths (seeds 7, 123), not the hop.
+
+**reach-ablate-1** (0.88 * bw.lo, uncertainty < 0.40): bit-identical to LeoAware on seed 7 45s (88.65/108.4), seed 123 90s (62.71/111.0), terrestrial (77.82/40). No-op. Lesson: `bw.lo` is below cruise; LEO intervals are wide so the tight-uncertainty gate never opens.
+
+**reach-ablate-2** (`1.28 * bw.est * min_rtt`): seed 7 still identical (88.65 / 83.54). Seed 123 **52.89 / 141.6** vs Leo 62.71 / 111.0. Additive cwnd is the same death class.
+
+**diag:** seed 7 90s 55 REPROBE / 8 HO. Seed 123 49/8. Seed 13 51/8. Seed 42 53/7. Counterfeit epochs.
+
+**reach-ablate-3** (QuietShield refuse, 8-28s calendar): seed 7 45s 79.13/76.2. Missed real hops.
+
+**reach-ablate-4** (QuietShield refuse, RTT-token only): seed 7 45s 87.81/114.6 (near). Seed 7 90s 74.92/175. Seed 123 66.92/193. Seed 13 58.29/187. Same class as v2.1. The 47 extra REPROBEs are flicker handling, not bugs.
+
+**reach-ablate-5** (SoftFlicker cut 0.85, keep invalidate): seed 7 45s **55.24 / 123.8**. Seed 7 90s 62.43/123.8. Seed 123 80.98/156.5 (gp up, p95 death). Seed 13 62.87/102.5 (gp death). Same collapse class as Horizon chase.
+
+**Decision:** Reach compose is observe-only. Typed reconfig stays in the stdlib. The 0.58 endpoint cut is load-bearing on hop *and* flicker. Do not claim a dual-gate win. House champion remains LeoAware v3.4-p95 (73.57 / 138.37 vs BBR 70.88 / 138.83).
+
+**reach-passthrough:** shipped `examples/reach.vela` seed 7 45s **88.65 / 108.4** = LeoAware. JSON log: `results/eval_reach-ablate.json`.

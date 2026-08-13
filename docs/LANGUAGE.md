@@ -127,7 +127,7 @@ The same model object is used by the discrete-event simulator **and** by `Predic
 | `std.path` | handover calendar, flicker, RTT-jump priors, `p_ho` |
 | `std.hint` | ASCENT-D / Orb ingest, `fail_closed`, role checks |
 | `std.eval` | `contract`, dual-gate, CI, ablation, seed lists |
-| `std.mech` | `Detect`, `SoftReprobe`, `IntervalBw`, `PredictiveFreeze`, `HorizonChase`, `DualGateGuard`, `OCE` (legacy) |
+| `std.mech` | `Detect`, `SoftReprobe`, `IntervalBw`, `PredictiveFreeze`, `HorizonChase`, `DualGateGuard`, `OCE` (legacy), `Calendar`, `WriteBudget`, `TrimHold`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker` |
 
 **Detect** is the LeoAware multi-signal fusion (RTT MAD, ACK inter-arrival, rate drop, mobility burst) with a dual-signal gate. VELA does not "invent a better detector" in v0.1. It *names* the detector so it can be composed without being rewritten.
 
@@ -178,7 +178,28 @@ In VELA:
 
 The algorithmic leap is the same physics. The language leap is that the physics is *composable and checkable*.
 
-Concrete Horizon source: [`examples/horizon.vela`](../examples/horizon.vela).
+Concrete Horizon source: [`examples/horizon.vela`](../examples/horizon.vela). Shipped Horizon is observe-only after the house gate (see `docs/EVAL-NOTES.md`).
+
+### D2. Flagship program: Reach (after Horizon and Luff)
+
+Horizon pointed into the wind. Luff trimmed every gust. QuietReach lifted `cwnd` in a quiet epoch. QuietShield refused Detect. SoftFlicker softened the 0.58 cut. Every write failed a house seed.
+
+The leftover vs BBR on seeds 7 and 123 is **not a missing fill**. Seed 7 90s runs 55 REPROBE against 8 real handovers. Those extra detects are flicker handling (capacity wobble, ACK-IA freeze), not bugs. BBR skips them and wins 7/123. LeoAware pays the 0.58 cut and wins 13/42 plus the dual-gate *means*. Mean p95 slack vs BBR is 0.46 ms.
+
+**Reach** is the beam reach: name the typed reconfig, keep the house-winning cut, and make every failed successor a stdlib operator you have to *choose*.
+
+Shipped compose: `Detect + SoftReprobe + Calendar + IntervalBw + WriteBudget + DualGateGuard`. Observe-only. Bit-identical to LeoAware when the write flags are off.
+
+Typed reconfig (in the stdlib, not in this compose):
+
+| Kind | Evidence | Cut | Ablation |
+|------|----------|-----|----------|
+| RttHop | `rtt_mad` / `rtt_jump` / `rtt_classic` | 0.58 | load-bearing |
+| Flicker | `ack_ia` / `rate_drop` alone | 0.58 (0.85 dumped seed 7 to 55 Mbps) | SoftFlicker FAIL |
+
+Closed write class (stdlib only): `HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`.
+
+Source: [`examples/reach.vela`](../examples/reach.vela). The language result is the failure class. The packet policy that still clears the house dual-gate is LeoAware v3.4-p95.
 
 A reconstructed OCE-class controller lives in [`examples/leoaware_oce.vela`](../examples/leoaware_oce.vela) so ablation is a compose-list change, not a fork.
 
@@ -236,6 +257,6 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering |
 | `vela/kernel.py` | Composition runtime + HorizonCCA |
 | `vela/eval_harness.py` | Dual-gate runner on leo-aware-transport |
-| `examples/*.vela` | Horizon and OCE-class sources |
+| `examples/*.vela` | Reach (flagship), Horizon, Luff, OCE-class |
 
-Version: VELA 0.1.0 (working language, Python backend, Rust IR sketch).
+Version: VELA 0.2.0 (Reach flagship, typed reconfig in stdlib, observe-only compose).

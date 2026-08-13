@@ -59,6 +59,32 @@ def _check_controller(c: Controller, res: CheckResult) -> None:
         res.warnings.append(
             f"{c.name}: OCE and HorizonChase both chase; HorizonChase should replace OCE"
         )
+    if "HorizonChase" in c.compose and "TrimFill" in c.compose:
+        res.warnings.append(
+            f"{c.name}: HorizonChase and TrimFill both fill; pick one"
+        )
+    if "QuietReach" in c.compose and "HorizonChase" in c.compose:
+        res.warnings.append(
+            f"{c.name}: QuietReach and HorizonChase both write cwnd; pick one"
+        )
+    if "QuietReach" in c.compose and "TrimFill" in c.compose:
+        res.warnings.append(
+            f"{c.name}: QuietReach and TrimFill both fill; QuietReach is the apoapsis write"
+        )
+    if "QuietReach" in c.compose and "TrimReclaim" in c.compose:
+        res.warnings.append(
+            f"{c.name}: QuietReach and TrimReclaim both add cwnd; reclaim dumped seed 7"
+        )
+    if "QuietReach" in c.compose and "IntervalBw" not in c.compose:
+        res.warnings.append(f"{c.name}: QuietReach without IntervalBw uses point bw")
+    if "QuietShield" in c.compose and "Calendar" not in c.compose:
+        res.warnings.append(
+            f"{c.name}: QuietShield without Calendar cannot see HO-scale gaps"
+        )
+    if "QuietShield" in c.compose and "SoftFlicker" in c.compose:
+        res.warnings.append(
+            f"{c.name}: QuietShield refuses the detect; SoftFlicker needs it to fire"
+        )
 
     if "IntervalBw" not in c.compose and "HorizonChase" in c.compose:
         res.warnings.append(f"{c.name}: HorizonChase without IntervalBw uses point bw")
