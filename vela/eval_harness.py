@@ -228,6 +228,25 @@ def _std(xs: list[float]) -> float:
     return var ** 0.5
 
 
+REQUIRED_ASSERTS = ("dual_gate_vs_BBR", "pareto_vs_LeoAware", "terrestrial_floor")
+
+
+def _decide_verdict(asserts: list[dict], n_seeds: int, contract_min: int) -> str:
+    """ACCEPT / FAIL / INCOMPLETE. Missing data is not a measured miss."""
+    names = {a.get("assert") for a in asserts}
+    incomplete = (
+        any(a.get("note") == "INCOMPLETE" for a in asserts)
+        or "terrestrial_floor" not in names
+        or n_seeds < contract_min
+        or any(name not in names for name in REQUIRED_ASSERTS)
+    )
+    if incomplete:
+        return "INCOMPLETE"
+    if any(not a.get("ok") for a in asserts):
+        return "FAIL"
+    return "ACCEPT"
+
+
 def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
     by: dict[tuple[str, str], list[dict]] = {}
     for r in rows:
@@ -273,6 +292,8 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
                 "bbr_p95": bbr["p95_mean"],
             }
         )
+    else:
+        verdicts.append({"assert": "dual_gate_vs_BBR", "ok": False, "note": "INCOMPLETE"})
     if cand and leo:
         gp_delta = cand["goodput_mean"] - leo["goodput_mean"]
         p95_delta = cand["p95_mean"] - leo["p95_mean"]
@@ -289,6 +310,8 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
                 else None,
             }
         )
+    else:
+        verdicts.append({"assert": "pareto_vs_LeoAware", "ok": False, "note": "INCOMPLETE"})
     terr_h = cell("terrestrial", cfg.name)
     if terr_h:
         terr_ok = terr_h["goodput_mean"] >= 77.0 and terr_h["p95_mean"] <= 40.5
@@ -303,12 +326,20 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
     else:
         verdicts.append({"assert": "terrestrial_floor", "ok": False, "note": "INCOMPLETE"})
 
-    accept = all(v.get("ok") for v in verdicts)
-    n_seeds = 0
-    if cand:
-        n_seeds = cand["n"]
+    n_seeds = cand["n"] if cand else 0
+    contract_min = len(cfg.seeds)
+    if n_seeds < contract_min:
+        verdicts.append(
+            {
+                "assert": "seed_count",
+                "ok": False,
+                "note": "INCOMPLETE",
+                "n": n_seeds,
+                "contract_min": contract_min,
+            }
+        )
     return {
-        "verdict": "ACCEPT" if accept else "FAIL",
+        "verdict": _decide_verdict(verdicts, n_seeds, contract_min),
         "power": "low" if n_seeds < 8 else "ok",
         "tables": tables,
         "asserts": verdicts,
