@@ -1,0 +1,31 @@
+{
+  "agents": [
+    {
+      "name": "VELA JON-11 Interval n>=2",
+      "id": "bc-9ef8152a-be9a-4c39-a1f1-b7bf133f33c7",
+      "url": "https://cursor.com/agents/bc-9ef8152a-be9a-4c39-a1f1-b7bf133f33c7",
+      "status": "ACTIVE",
+      "runId": "run-7387a23a-644e-4849-a96f-5d5a2f270597",
+      "runStatus": "RUNNING",
+      "branch": "cursor/vela-jon-11-interval-n-2-ac6b"
+    },
+    {
+      "name": "VELA JON-12 compose cuts/growth",
+      "id": "bc-5d32af3a-d35b-4f51-8cd9-c683d0ca385d",
+      "url": "https://cursor.com/agents/bc-5d32af3a-d35b-4f51-8cd9-c683d0ca385d",
+      "status": "ACTIVE",
+      "runId": "run-f5f24075-7984-4231-9809-0604856ec1ed",
+      "runStatus": "RUNNING",
+      "branch": "cursor/vela-jon-12-compose-cuts-growth-e650"
+    },
+    {
+      "name": "VELA JON-13 harness INCOMPLETE",
+      "id": "bc-bc264b33-d1a5-4e67-8de3-8fbd0623f64a",
+      "url": "https://cursor.com/agents/bc-bc264b33-d1a5-4e67-8de3-8fbd0623f64a",
+      "status": "ACTIVE",
+      "runId": "run-5dca239d-251a-4818-b2f5-ba045cb5f4c4",
+      "runStatus": "RUNNING",
+      "branch": "cursor/vela-jon-13-harness-incomplete-d2ce"
+    }
+  ]
+}
