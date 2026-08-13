@@ -36,7 +36,9 @@ controller Horizon {
 
   when p_ho > 0.55 {
     freeze min_rtt, bw for 1.4 * rtt
-    pace = bw.mid
+    when bw.n >= 2 {
+      pace = bw.mid
+    }
   }
 
   // HorizonChase is in the stdlib but not in this compose.

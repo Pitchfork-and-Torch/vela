@@ -155,18 +155,25 @@ def _check_controller(c: Controller, res: CheckResult) -> None:
                 res.ok = False
                 res.errors.append(f"{c.name}: unknown reconfig kind {p}")
 
+    intervals = {s.name for s in c.signals if s.typ.name == "Interval"}
     for o in c.ons:
         _check_stale_in_stmts(c.name, o.body, res)
         _check_cuts_in_stmts(c.name, o.body, res)
+        _check_interval_in_stmts(c.name, o.body, intervals, set(), res)
         for arm in o.match_arms:
             _check_cuts_in_stmts(c.name, arm.body, res)
+            _check_interval_in_stmts(c.name, arm.body, intervals, set(), res)
     for w in c.whens:
         _check_stale_in_stmts(c.name, w.body, res)
         _check_cuts_in_stmts(c.name, w.body, res)
         _check_integrator(c.name, w, res)
+        proved = _proved_n_ge_2(w.pred, intervals)
+        _walk_interval_point(c.name, w.pred, intervals, set(), res)
+        _check_interval_in_stmts(c.name, w.body, intervals, proved, res)
     for e in c.everys:
         _check_stale_in_stmts(c.name, e.body, res)
         _check_cuts_in_stmts(c.name, e.body, res)
+        _check_interval_in_stmts(c.name, e.body, intervals, set(), res)
 
     _check_write_cap(c, res)
 
@@ -293,3 +300,133 @@ def _check_write_cap(c: Controller, res: CheckResult) -> None:
             f"{c.name}: WriteCap exhausted ({writes} writes, budget {budget}). "
             f"No ambient authority. Raise `authority` or remove the write."
         )
+
+
+INTERVAL_COUNT_ATTRS = frozenset({"n", "e"})
+
+
+def interval_point_error(cname: str, name: str) -> str:
+    return (
+        f"{cname}: Interval {name} used as a point requires {name}.n >= 2 "
+        "(uncertainty law)"
+    )
+
+
+def _interval_n_subject(expr, intervals: set[str]) -> str | None:
+    """Return the Interval name if expr is `{name}.n`, or '*' for a bare `n`."""
+    if expr is None:
+        return None
+    if expr.kind == "attr" and expr.name == "n" and expr.left is not None:
+        if expr.left.kind == "name" and expr.left.name in intervals:
+            return expr.left.name
+        return None
+    if expr.kind == "name" and expr.name == "n":
+        return "*"
+    return None
+
+
+def _proved_n_ge_2(expr, intervals: set[str]) -> set[str]:
+    """Names whose sample count is proved >= 2 by a comparison predicate."""
+    out: set[str] = set()
+    if expr is None or expr.kind != "binop" or not intervals:
+        return out
+    op = expr.name
+    left, right = expr.left, expr.right
+    sub_l = _interval_n_subject(left, intervals)
+    sub_r = _interval_n_subject(right, intervals)
+    num_l = _lit_num(left)
+    num_r = _lit_num(right)
+
+    def add(subject: str | None) -> None:
+        if subject == "*":
+            out.update(intervals)
+        elif subject:
+            out.add(subject)
+
+    if sub_l is not None and num_r is not None:
+        if (op == ">=" and num_r >= 2) or (op == ">" and num_r >= 1):
+            add(sub_l)
+    if sub_r is not None and num_l is not None:
+        if (op == "<=" and num_l >= 2) or (op == "<" and num_l >= 1):
+            add(sub_r)
+    return out
+
+
+def _stmt_else_body(st: Stmt) -> list[Stmt]:
+    if st.args and isinstance(st.args[0], Stmt):
+        return list(st.args)  # type: ignore[arg-type]
+    return []
+
+
+def _walk_enter_args(cname: str, args: list, intervals: set[str], proved: set[str], res: CheckResult) -> None:
+    for a in args:
+        if isinstance(a, tuple) and len(a) == 2:
+            _walk_interval_point(cname, a[1], intervals, proved, res)
+        else:
+            _walk_interval_point(cname, a, intervals, proved, res)
+
+
+def _check_interval_in_stmts(
+    cname: str,
+    stmts: list[Stmt],
+    intervals: set[str],
+    proved: set[str],
+    res: CheckResult,
+) -> None:
+    if not intervals:
+        return
+    for st in stmts:
+        if st.kind in ("assign", "let", "chase", "cut") and st.expr is not None:
+            _walk_interval_point(cname, st.expr, intervals, proved, res)
+        if st.kind == "chase":
+            for a in st.args:
+                _walk_interval_point(cname, a, intervals, proved, res)
+        if st.kind == "freeze" and st.expr is not None:
+            _walk_interval_point(cname, st.expr, intervals, proved, res)
+        if st.kind == "enter":
+            _walk_enter_args(cname, st.args, intervals, proved, res)
+        if st.kind in ("when", "if", "require"):
+            extra = proved | _proved_n_ge_2(st.expr, intervals)
+            _walk_interval_point(cname, st.expr, intervals, proved, res)
+            _check_interval_in_stmts(cname, st.body, intervals, extra, res)
+            else_body = _stmt_else_body(st)
+            if else_body:
+                _check_interval_in_stmts(cname, else_body, intervals, proved, res)
+        elif st.body:
+            _check_interval_in_stmts(cname, st.body, intervals, proved, res)
+
+
+def _walk_interval_point(
+    cname: str,
+    expr,
+    intervals: set[str],
+    proved: set[str],
+    res: CheckResult,
+) -> None:
+    if expr is None or not hasattr(expr, "kind"):
+        return
+    if expr.kind == "name" and expr.name in intervals:
+        if expr.name not in proved:
+            res.ok = False
+            res.errors.append(interval_point_error(cname, expr.name))
+        return
+    if expr.kind == "attr" and expr.left is not None and expr.left.kind == "name":
+        base = expr.left.name
+        if base in intervals:
+            if expr.name in INTERVAL_COUNT_ATTRS:
+                return
+            # .lo / .mid / .hi (and any other field) is a point estimate.
+            if base not in proved:
+                res.ok = False
+                res.errors.append(interval_point_error(cname, base))
+            return
+    if expr.kind == "call" and expr.left is not None and expr.left.kind == "name":
+        # Interval.method(...) reads the interval, not a point estimate.
+        if expr.left.name in intervals:
+            for a in expr.args:
+                _walk_interval_point(cname, a, intervals, proved, res)
+            return
+    _walk_interval_point(cname, expr.left, intervals, proved, res)
+    _walk_interval_point(cname, expr.right, intervals, proved, res)
+    for a in expr.args:
+        _walk_interval_point(cname, a, intervals, proved, res)

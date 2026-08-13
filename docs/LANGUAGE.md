@@ -54,7 +54,7 @@ use std.eval
 
 **Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`.
 
-**Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth.
+**Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth. The checker now enforces this as a type error unless the same block proves `n >= 2`.
 
 **Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level.
 

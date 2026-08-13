@@ -372,6 +372,30 @@ class Parser:
                 args=else_body,
                 span=sp,
             )
+        if self.at("when"):
+            self.eat("when")
+            pred = self._expr()
+            body = self._block()
+            return Stmt(kind="when", expr=pred, body=body, span=sp)
+        if self.at("if"):
+            self.eat("if")
+            pred = self._expr()
+            if self.at("then"):
+                self.eat("then")
+                then_body = self._stmt_or_block()
+            else:
+                then_body = self._block()
+            else_body: list[Stmt] = []
+            if self.at("else"):
+                self.eat("else")
+                else_body = self._stmt_or_block()
+            return Stmt(
+                kind="if",
+                expr=pred,
+                body=then_body,
+                args=else_body,
+                span=sp,
+            )
         if self.at("let"):
             self.eat("let")
             name = self.eat("IDENT").value
