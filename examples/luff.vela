@@ -18,8 +18,9 @@ use std.eval
 // A when-body is a LEVEL (hold the sheet), never an integrator.
 // That is the thing Python/C++ could not make illegal.
 //
-// Desired end: beat LeoAware v3.4-p95 on leo_fast_ho means
-// (73.57 Mbps / 138.37 ms) and BBR (70.88 / 138.83), terrestrial >= 77 @ 40.
+// Desired end: improve space internet on top of LeoAware. Dual-gate
+// vs BBR (70.88 / 138.83), no engine regress vs 73.57 / 138.37,
+// terrestrial >= 77 @ 40.
 // Do not claim it without results/eval_*.json.
 
 controller Luff {

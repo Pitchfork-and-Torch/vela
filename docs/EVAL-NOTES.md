@@ -108,6 +108,6 @@ Thesis: the leftover is the quiet middle of an epoch on easy paths (seeds 7, 123
 
 **reach-ablate-5** (SoftFlicker cut 0.85, keep invalidate): seed 7 45s **55.24 / 123.8**. Seed 7 90s 62.43/123.8. Seed 123 80.98/156.5 (gp up, p95 death). Seed 13 62.87/102.5 (gp death). Same collapse class as Horizon chase.
 
-**Decision:** Reach compose is observe-only. Typed reconfig stays in the stdlib. The 0.58 endpoint cut is load-bearing on hop *and* flicker. Do not claim a dual-gate win. House champion remains LeoAware v3.4-p95 (73.57 / 138.37 vs BBR 70.88 / 138.83).
+**Decision:** Reach compose is observe-only. Typed reconfig stays in the stdlib. The 0.58 endpoint cut is load-bearing on hop *and* flicker. Do not claim a dual-gate win. VELA is not a rival to LeoAware; the engine remains v3.4-p95 (73.57 / 138.37 vs BBR 70.88 / 138.83). See `docs/MISSION.md`.
 
 **reach-passthrough:** shipped `examples/reach.vela` seed 7 45s **88.65 / 108.4** = LeoAware. JSON log: `results/eval_reach-ablate.json`.

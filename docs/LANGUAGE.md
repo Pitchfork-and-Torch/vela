@@ -10,6 +10,8 @@ This document is the complete design: philosophy, syntax, stdlib, flagship contr
 
 **Philosophy:** A LEO path is not a continuous RTT process with occasional noise. It is a sequence of **epochs** punctuated by reconfigurations. Every measurement is born in an epoch, carries an interval and a sample count, and becomes uninhabited when that epoch ends. Loss is a closed taxonomy, not a boolean. A claim that "this beats BBR" is a **contract** the runtime evaluates across seeds, not a sentence in a README. The compiler exists to make scientific dishonesty a type error.
 
+**Relation to LeoAware:** VELA is not a competing CCA. LeoAware is the engine. VELA is how that engine is named, checked, and safely extended for space internet. Observe-only compose matching LeoAware is success (no-regress). Beating BBR or raising house-gate goodput/p95 is a gift *to* LeoAware, not a replacement brand. See `docs/MISSION.md`.
+
 **Paradigm:** hybrid of five things that already exist, locked to this domain.
 
 1. **Epoch-typed reactive programming** - signals (`rtt`, `bw`, `delay_ratio`, `p_ho`) fire on ACK, loss, hint, and epoch edges.
@@ -143,7 +145,7 @@ The same model object is used by the discrete-event simulator **and** by `Predic
 
 **OCE** is provided as a legacy mechanism so v3.7-class controllers can be *expressed* in VELA and compared by ablation (`compose ... + OCE` vs `+ HorizonChase`).
 
-## D. Flagship program: Horizon (next generation after OCE)
+## D. Flagship program: Horizon (named compose on LeoAware, after OCE)
 
 LeoAware v3.7 OCE (prompt SoT, OPE-fair `leo_fast_ho`) sits at **58.78 Mbps / 152.09 ms p95** vs BBRv3approx **58.21 / 152.89** - a dual-gate clearance of +0.57 Mbps and -0.80 ms. That is a real win and also a warning: the next hand-stacked module will not buy 10%.
 

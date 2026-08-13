@@ -2,7 +2,7 @@
 
 Canonical language tree for **VELA** (Variance-aware Epoch Language for Adaptation).
 
-- Invented to design, check, and deploy the next generation of LEO-aware congestion control after LeoAware v3.7 OCE.
+- Language that **builds onto** LeoAware for space internet. Not a rival CCA. Mission: `docs/MISSION.md`.
 - Sibling science stack: `~/Projects/leo-aware-transport` (MIT, Pitchfork-and-Torch).
 - This tree is the language + compiler + kernel. Do not fork LeoAware detect/reprobe lightly; compose them as stdlib mechanisms.
 - ASCII punctuation in public docs (no em/en dashes).

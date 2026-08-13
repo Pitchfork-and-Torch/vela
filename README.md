@@ -6,7 +6,9 @@ A domain language for designing, checking, and deploying LEO-aware congestion co
 
 Tagline: *Samples die with their epoch. Claims without variance do not compile.*
 
-VELA exists because stacking more mechanisms onto LeoAware (Soft-QIR, Keel, 2PC TBPR, SER, OCE) is hitting diminishing returns. The next leap is not another hand-written state machine. It is a language where:
+VELA does not compete with LeoAware. LeoAware is the packet-path engine (OrbitStack). VELA is the language that names its mechanisms, refuses stale samples, and lets the next space-internet improvement be composed instead of stacked as another unnamed flag (Soft-QIR, Keel, 2PC TBPR, SER, OCE). A VELA wrap that matches LeoAware is the no-regress rail. A wrap that improves the house gate is a gift to that engine.
+
+It is a language where:
 
 - path epochs and reconfiguration are types, not comments
 - mobility loss and congestion have different recovery types
@@ -91,7 +93,7 @@ contract DualGate vs BBRv3approx {
 
 ## Flagship controller
 
-**Reach** is the current VELA program. It names typed reconfig (RTT hop vs flicker) and keeps the house-winning LeoAware cut. Every additive write we tried (chase, fill, reclaim, quiet reach, refuse-detect, soft flicker) failed a house seed. Those operators live in the stdlib so the next session cannot re-invent them as unnamed flags.
+**Reach** is the current VELA program on top of LeoAware. It names typed reconfig (RTT hop vs flicker) and keeps the load-bearing 0.58 cut. Every additive write we tried failed a house seed. Those operators live in the stdlib so the next gift to LeoAware cannot be an unnamed flag.
 
 `examples/reach.vela`. Horizon stays as the first observe-only compose. See [docs/LANGUAGE.md](docs/LANGUAGE.md) and [docs/EVAL-NOTES.md](docs/EVAL-NOTES.md).
 

@@ -39,9 +39,10 @@ use std.eval
 // bugs. BBR skips them and wins seeds 7/123. LeoAware pays them
 // and wins 13/42 and the dual-gate means. That tax is the frontier.
 //
-// Desired end: beat locked LeoAware v3.4-p95 (73.57 / 138.37) and
-// BBR (70.88 / 138.83) on leo_fast_ho means, terrestrial >= 77 @ 40.
-// Do not claim it without results/eval_*.json.
+// Desired end: give LeoAware what space internet needs. Dual-gate vs
+// BBR (70.88 / 138.83) and terrestrial >= 77 @ 40, without regressing
+// the engine (73.57 / 138.37). Not a rival CCA. Do not claim a win
+// without results/eval_*.json.
 
 controller Reach {
   compose Detect + SoftReprobe + Calendar + IntervalBw

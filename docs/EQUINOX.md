@@ -44,6 +44,7 @@ py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela
 
 ## What 0.3 does not do
 
-It does not beat LeoAware v3.4-p95 on the house gate. That remains
-73.57 / 138.37 vs BBR 70.88 / 138.83. It makes the next illegal write
-a compile error instead of a 90s seed dump.
+It does not replace LeoAware. The engine remains v3.4-p95 at
+73.57 / 138.37 vs BBR 70.88 / 138.83. Equinox makes the next illegal
+write a compile error instead of a 90s seed dump, so gifts to that
+engine can be composed without stacking unnamed flags.
