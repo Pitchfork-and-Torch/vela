@@ -197,26 +197,14 @@ class HorizonCCA:
         # cost 10+ Mbps). Horizon v0.1.2 writes pace/cwnd only from
         # PredictiveFreeze and a gated stable-epoch reclaim.
 
-        pre = self.cfg.predictive_freeze and self.p_ho > 0.80
-        if pre:
-            self.vela_mode = "pred_freeze"
-            # Pace only. cwnd cap cost 4 Mbps on 90s seed 13 with no p95 win.
-            if self._leo.bw_est > 0:
-                self._leo.pacing_rate_bps = min(
-                    self._leo.pacing_rate_bps, self._leo.bw_est * 1.02
-                )
-            return
-
+        # House 90s (eval_horizon-house.json): pace-clamp + reclaim
+        # regressed seed 123 to 57.5 Mbps / 192 ms vs LeoAware 62.7 / 111.
+        # v0.1.4 shipped Horizon is observe-only. Writes stay behind
+        # horizon_chase (stdlib, compose-gated) until ablation is green.
         if self.cfg.horizon_chase and t < self.chase_until:
             self._apply_chase(t, rtt_s, bytes_acked)
             return
-
-        if self.cfg.interval_bw:
-            self._stable_reclaim(t, rtt_s)
-        if self.cfg.dual_gate_guard:
-            self._gate_ease(rtt_s)
-        if self.vela_mode != "reclaim":
-            self.vela_mode = "cruise"
+        self.vela_mode = "observe"
 
     def _stable_reclaim(self, t: float, rtt_s: float) -> None:
         """Tiny fill only in a long, tight, low-p_ho epoch (v3.4 left gp on the table)."""

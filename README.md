@@ -111,7 +111,7 @@ emit/           compiled Python (generated)
 
 VELA does not violate causality or invent capacity. A Starlink-class path still has handovers, RTT jumps, and a real bottleneck. The language's job is to stop wasting the information the endpoint already has, and to refuse claims the numbers do not support.
 
-**v0.1 lab (this tree):** Horizon compose is LeoAware + PredictiveFreeze + IntervalBw (observe) + DualGateGuard. `HorizonChase` is in the stdlib and **off** until `scripts/ablate_seed7.py` is green. `--fast` seeds 13+7: Horizon matches LeoAware. House 90s is partial (CPython 3.13 crash on seed 42). JSON under `results/` is the only win table. See `docs/EVAL-NOTES.md`.
+**v0.1 lab:** Horizon compose names Detect + SoftReprobe + IntervalBw + PredictiveFreeze + DualGateGuard. The kernel is **observe-only** (house 90s: pace/reclaim dumped seed 123 to 57 Mbps / 192 ms). `HorizonChase` stays compose-gated. House LeoAware 73.57 / 138.37 vs BBR 70.88 / 138.83 (locked v3.4-p95). JSON under `results/` is the only win table. See `docs/EVAL-NOTES.md`.
 
 ## License
 

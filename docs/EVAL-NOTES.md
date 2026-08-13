@@ -71,3 +71,21 @@ Interpreter died in LeoAware `_mad` on seed 42 (`Executing a cache`). Not a VELA
 | 7 | 90.78 / 111.3 | 83.54 / 111.1 | 83.54 / 111.1 |
 
 Seed 13 90s: freeze cwnd-cap cost ~4 Mbps, p95 unchanged. Kernel now pace-only at `p_ho > 0.80`. Re-run house gate next session.
+
+### horizon-house (90s, isolated workers, 5 seeds) - COMPLETE
+
+Isolated workers survived CPython 3.13. LeoAware matched the locked v3.4-p95 table (**73.57 / 138.37** vs BBR **70.88 / 138.83**).
+
+| seed | BBR | LeoAware | Horizon (pace+reclaim) |
+|-----:|----:|---------:|-----------------------:|
+| 13 | 65.38 / 188.6 | 77.05 / 165.4 | 73.10 / 165.4 |
+| 7 | 90.78 / 111.3 | 83.54 / 111.1 | 83.54 / 111.1 |
+| 42 | 62.55 / 116.2 | 79.02 / 154.9 | 71.48 / 159.6 |
+| 99 | 65.39 / 156.5 | 65.54 / 149.5 | 65.54 / 149.5 |
+| 123 | 70.31 / 121.6 | 62.71 / 111.0 | **57.49 / 192.5** |
+
+Means: Horizon 70.23 / 155.6 vs LeoAware 73.57 / 138.4 vs BBR 70.88 / 138.8. Terrestrial Horizon 78.18 @ 40 **PASS**. Dual-gate **FAIL**.
+
+**Decision:** v0.1.4 kernel is observe-only. PredictiveFreeze / IntervalBw still *measure*. No pace or cwnd writes until a new ablation is green. JSON: `results/eval_horizon-house.json`.
+
+Confirm after the patch: seed 123 90s LeoAware **62.71 / 111.0** = Horizon **62.71 / 111.0**.
