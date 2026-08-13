@@ -139,6 +139,145 @@ controller Bad {
         with self.assertRaises(ParseError):
             parse("controller X { compose Detect }", "x.vela")
 
+    def test_examples_need_no_compose_combinators(self):
+        for name in (
+            "horizon.vela",
+            "reach.vela",
+            "luff.vela",
+            "leoaware_oce.vela",
+            "equinox.vela",
+        ):
+            src = (EX / name).read_text(encoding="utf-8")
+            prog = parse(src, name)
+            for c in prog.controllers:
+                self.assertIsNone(c.cuts_compose, name)
+                self.assertIsNone(c.growth_compose, name)
+            res = check(prog)
+            self.assertTrue(res.ok, (name, res.errors))
+
+
+class TestComposeCutsAndGrowth(unittest.TestCase):
+    def test_two_hard_epoch_cuts_ok_with_min(self):
+        src = """
+lang vela 0.1
+controller DualCut {
+  compose SoftReprobe + SoftReprobe
+  compose cuts = min
+}
+"""
+        prog = parse(src, "dual-cut-min.vela")
+        c = prog.controllers[0]
+        self.assertEqual(c.cuts_compose, "min")
+        self.assertIsNone(c.growth_compose)
+        self.assertEqual(c.compose, ["SoftReprobe", "SoftReprobe"])
+        res = check(prog)
+        self.assertTrue(res.ok, res.errors)
+
+    def test_two_hard_epoch_cuts_error_without_clause(self):
+        src = """
+lang vela 0.1
+controller DualCut {
+  compose SoftReprobe + SoftReprobe
+}
+"""
+        prog = parse(src, "dual-cut.vela")
+        self.assertIsNone(prog.controllers[0].cuts_compose)
+        res = check(prog)
+        self.assertFalse(res.ok)
+        self.assertTrue(any("compose cuts = min" in e for e in res.errors))
+
+    def test_trailing_compose_cuts_after_list(self):
+        src = """
+lang vela 0.1
+controller DualCut {
+  compose SoftReprobe + SoftReprobe compose cuts = min
+}
+"""
+        prog = parse(src, "dual-cut-trail.vela")
+        self.assertEqual(prog.controllers[0].cuts_compose, "min")
+        res = check(prog)
+        self.assertTrue(res.ok, res.errors)
+
+    def test_parse_compose_growth_max(self):
+        src = """
+lang vela 0.1
+controller Grow {
+  compose OCE + HorizonChase
+  compose growth = max
+}
+"""
+        prog = parse(src, "growth-max.vela")
+        c = prog.controllers[0]
+        self.assertEqual(c.growth_compose, "max")
+        self.assertIsNone(c.cuts_compose)
+        self.assertEqual(c.compose, ["OCE", "HorizonChase"])
+        res = check(prog)
+        self.assertTrue(res.ok, res.errors)
+
+    def test_two_cwnd_raisers_error_without_growth(self):
+        src = """
+lang vela 0.1
+controller Grow {
+  compose OCE + HorizonChase
+}
+"""
+        res = check(parse(src, "growth-bare.vela"))
+        self.assertFalse(res.ok)
+        self.assertTrue(any("compose growth" in e for e in res.errors))
+
+    def test_compose_growth_min_and_sum(self):
+        for val in ("min", "sum"):
+            src = f"""
+lang vela 0.1
+controller Grow {{
+  compose TrimFill + QuietReach
+  compose growth = {val}
+}}
+"""
+            prog = parse(src, f"growth-{val}.vela")
+            self.assertEqual(prog.controllers[0].growth_compose, val)
+            res = check(prog)
+            self.assertTrue(res.ok, (val, res.errors))
+
+    def test_own_line_and_trailing_combinators_together(self):
+        src = """
+lang vela 0.1
+controller Mix {
+  compose SoftReprobe + SoftReprobe + OCE + TrimReclaim compose cuts = min
+  compose growth = min
+}
+"""
+        prog = parse(src, "mix.vela")
+        c = prog.controllers[0]
+        self.assertEqual(c.cuts_compose, "min")
+        self.assertEqual(c.growth_compose, "min")
+        res = check(prog)
+        self.assertTrue(res.ok, res.errors)
+
+    def test_cuts_rejects_non_min(self):
+        src = """
+lang vela 0.1
+controller Bad {
+  compose SoftReprobe
+  compose cuts = max
+}
+"""
+        with self.assertRaises(ParseError) as ctx:
+            parse(src, "bad-cuts.vela")
+        self.assertIn("compose cuts must be min", str(ctx.exception))
+
+    def test_growth_rejects_unknown_value(self):
+        src = """
+lang vela 0.1
+controller Bad {
+  compose OCE
+  compose growth = avg
+}
+"""
+        with self.assertRaises(ParseError) as ctx:
+            parse(src, "bad-growth.vela")
+        self.assertIn("compose growth must be min | max | sum", str(ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -12,6 +12,10 @@ from vela.types import (
     CheckResult,
 )
 
+# Check-time cwnd raisers. Closed-write operators stay off the packet path
+# unless an author names them; two still need an explicit growth combinator.
+CWND_RAISERS = ("OCE", "HorizonChase", "TrimFill", "QuietReach", "TrimReclaim")
+
 
 def check(prog: Program) -> CheckResult:
     res = CheckResult(ok=True)
@@ -71,12 +75,20 @@ def _check_controller(c: Controller, res: CheckResult) -> None:
 
     hard = [m for m in c.compose if STDLIB_MECHANISMS.get(m, {}).get("cuts") == "hard"]
     # SoftReprobe + TypedLoss both hard-cut but on different events (epoch vs loss).
-    # Same-event double hard-cut is the error.
+    # Same-event double hard-cut is the error unless the author picks min.
     epoch_hard = [m for m in hard if STDLIB_MECHANISMS[m]["phase"] == "epoch"]
-    if len(epoch_hard) > 1:
+    if len(epoch_hard) > 1 and c.cuts_compose != "min":
         res.ok = False
         res.errors.append(
             f"{c.name}: two hard epoch cuts {epoch_hard} (compose cuts = min to allow)"
+        )
+
+    raisers = [m for m in c.compose if m in CWND_RAISERS]
+    if len(raisers) > 1 and c.growth_compose is None:
+        res.ok = False
+        res.errors.append(
+            f"{c.name}: two cwnd raisers {raisers} "
+            f"(compose growth = min | max | sum to allow)"
         )
 
     # OCE + HorizonChase both write cwnd on ack (soft). Warn: pick one chase.

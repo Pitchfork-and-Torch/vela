@@ -74,8 +74,17 @@ when <pred> { ... }         # guarded continuous action
 ### Mechanism composition
 
 ```vela
-compose Detect + SoftReprobe + IntervalBw + PredictiveFreeze + HorizonChase + DualGateGuard
+compose Detect + SoftReprobe + IntervalBw + PredictiveFreeze + DualGateGuard
+compose cuts = min
+compose growth = max
 ```
+
+Mechanism names are an operator sum. After the list, optional combinators may sit on their own lines inside the controller, or as trailing clauses after the compose list (`compose Detect + SoftReprobe compose cuts = min`).
+
+- `compose cuts = min` -- required when two `hard` epoch cuts share an event. Soft cuts still compose as `min` without a clause. Check-time only; the kernel does not merge two soft cuts at runtime.
+- `compose growth = min | max | sum` -- required when two cwnd raisers share a compose (any pair among `OCE`, `HorizonChase`, `TrimFill`, `QuietReach`, `TrimReclaim`). Wrong picks still check if they are explicit.
+
+Existing programs need neither clause. Shipped examples stay observe-only.
 
 Each mechanism declares:
 
@@ -86,7 +95,7 @@ cuts:   none | soft | hard
 phase:  ack | epoch | both
 ```
 
-The checker rejects two `hard` cuts on the same event. Soft cuts compose as `min(cut_a, cut_b)` (the more conservative cut wins). This is the language-level answer to "OCE stacked on SER double-moved the window."
+The checker rejects two `hard` cuts on the same event unless the author writes `compose cuts = min`. Soft cuts compose as `min(cut_a, cut_b)` (the more conservative cut wins). This is the language-level answer to "OCE stacked on SER double-moved the window."
 
 ### Statistical contracts
 
