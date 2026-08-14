@@ -113,3 +113,5 @@ Thesis: the leftover is the quiet middle of an epoch on easy paths (seeds 7, 123
 **reach-passthrough:** shipped `examples/reach.vela` seed 7 45s **88.65 / 108.4** = LeoAware. JSON log: `results/eval_reach-ablate.json`.
 
 **passthrough-law:** `vela check examples/reach.vela` now stamps `passthrough` (no cruise write on `when`/`every`). That is the language rail for confirm-passthrough. Seed-7 eval still belongs to the measurer.
+
+**typed-loss:** `vela check examples/reach.vela` now stamps `loss=Mobility|Congestive|Unknown`. A bare Loss, a Mobility cut, or an Unknown cut without `delay_ratio > 1.35` is a type error on observe. Compile no longer stamps `typed_loss` for a bare handler. No packet-path change. Seed-7 eval still belongs to the measurer.

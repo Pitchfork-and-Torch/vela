@@ -9,6 +9,8 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+# LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
+UNKNOWN_DELAY_RATIO = 1.35
 HINT_ARMS = ("Some", "None")
 HINT_TYPE_NAMES = frozenset({"Hint", "Option"})
 HINT_CHANNELS = frozenset({"ascent", "orb", "orbital"})
@@ -165,6 +167,7 @@ class CheckResult:
     closed_writes: list[str] = field(default_factory=list)
     hint_fail_closed: bool = False
     typed_reconfig: bool = False
+    typed_loss: bool = False
     passthrough: bool = False
 
     def raise_if_error(self) -> None:

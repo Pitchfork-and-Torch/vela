@@ -53,6 +53,7 @@ class TestExamplesParse(unittest.TestCase):
         self.assertTrue(res.ok, res.errors)
         self.assertTrue(res.observe_only)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.typed_loss)
         self.assertTrue(res.passthrough)
         self.assertEqual(res.posture, "observe")
         self.assertEqual(res.closed_writes, [])

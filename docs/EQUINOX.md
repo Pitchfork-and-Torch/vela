@@ -24,16 +24,20 @@ binaries.
    (`RttHop | Flicker`), same shape as `Loss`. On the observe rail
    a bare Reconfig is a type error, and `enter Reprobe(cut: x)` must
    stay 0.58. SoftFlicker 0.85 dumped seed 7 and stays review.
-4. **Content-addressed stdlib.** Each mechanism has a domain-separated
+4. **Typed loss.** `on Loss match` is a closed taxonomy
+   (`Mobility | Congestive | Unknown`). On the observe rail a bare
+   Loss is a type error, Mobility must hold, and Unknown may cut
+   only after `delay_ratio > 1.35`. Review may name a Mobility cut.
+5. **Content-addressed stdlib.** Each mechanism has a domain-separated
    SHA-256 of its effect row (`VELA1|mech|...`). Compose order is part
    of the digest. `vela mech` prints the catalog.
-5. **Eval receipt.** `vela eval` writes `receipt_<tag>.json`: source
+6. **Eval receipt.** `vela eval` writes `receipt_<tag>.json`: source
    digest, compose digest, merkle of seed rows, verdict. `vela receipt
    --source` verifies. A swapped number fails the hash.
-6. **Views.** `view Observe of Equinox { compose ... }` is a morphism
+7. **Views.** `view Observe of Equinox { compose ... }` is a morphism
    of the same controller. `vela eval --view Observe` cannot pretend
    it ran the other compose.
-7. **Passthrough.** Observe `when` / `every` cannot write `pace`,
+8. **Passthrough.** Observe `when` / `every` cannot write `pace`,
    `cwnd`, `chase`, or `cut`. Reach is a LeoAware wrap at check time.
    Sample `freeze` stays legal. Review may name a cruise write.
 

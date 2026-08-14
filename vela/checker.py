@@ -9,6 +9,7 @@ from vela.types import (
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
     INTEGRATOR_OPS,
+    UNKNOWN_DELAY_RATIO,
     LOSS_KINDS,
     RECONFIG_KINDS,
     STDLIB_MECHANISMS,
@@ -50,6 +51,7 @@ def check(prog: Program) -> CheckResult:
         res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
         res.hint_fail_closed = _has_hint_surface(first)
         res.typed_reconfig = _has_typed_reconfig(first)
+        res.typed_loss = _has_typed_loss(first)
         res.passthrough = controller_is_passthrough(first)
     for con in prog.contracts:
         if not con.seeds:
@@ -179,14 +181,25 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
 
     loss_ons = [o for o in c.ons if o.event == "Loss"]
     for o in loss_ons:
-        if o.match_arms:
-            pats = {a.pattern for a in o.match_arms}
-            missing = [k for k in LOSS_KINDS if k not in pats]
-            if missing:
+        if not o.match_arms:
+            if c.posture == "observe":
                 res.ok = False
-                res.errors.append(
-                    f"{c.name}: Loss match missing {missing} (taxonomy must be closed)"
-                )
+                res.errors.append(typed_loss_error(c.name))
+            continue
+        pats = {a.pattern for a in o.match_arms}
+        missing = [k for k in LOSS_KINDS if k not in pats]
+        extra = [p for p in pats if p not in LOSS_KINDS]
+        if missing:
+            res.ok = False
+            res.errors.append(
+                f"{c.name}: Loss match missing {missing} (taxonomy must be closed)"
+            )
+        for p in extra:
+            res.ok = False
+            res.errors.append(f"{c.name}: unknown loss kind {p}")
+        if c.posture == "observe":
+            for arm in o.match_arms:
+                _check_observe_loss_arm(c.name, arm, res)
         for arm in o.match_arms:
             _check_stale_in_stmts(c.name, arm.body, res)
         _check_stale_in_stmts(c.name, o.body, res)
@@ -396,6 +409,27 @@ def typed_reconfig_error(cname: str) -> str:
     )
 
 
+def typed_loss_error(cname: str) -> str:
+    return (
+        f"{cname}: observe-only Loss must match Mobility | Congestive | Unknown "
+        "(typed loss; recovery is type-directed)"
+    )
+
+
+def mobility_cut_error(cname: str) -> str:
+    return (
+        f"{cname}: observe-only Mobility must hold "
+        "(typed loss; mobility is not congestive)"
+    )
+
+
+def unknown_cut_error(cname: str) -> str:
+    return (
+        f"{cname}: observe-only Unknown cut requires delay_ratio > {UNKNOWN_DELAY_RATIO} "
+        "(typed loss; fall-through)"
+    )
+
+
 def house_cut_error(cname: str, n: float) -> str:
     return (
         f"{cname}: observe-only Reprobe cut({n}) must be {HOUSE_ENDPOINT_CUT} "
@@ -439,6 +473,7 @@ def controller_is_passthrough(c: Controller) -> bool:
         c.posture == "observe"
         and is_observe_only(c.compose)
         and _has_typed_reconfig(c)
+        and _has_typed_loss(c)
         and not controller_cruise_writes(c)
     )
 
@@ -466,6 +501,89 @@ def _has_typed_reconfig(c: Controller) -> bool:
         if any(k not in pats for k in RECONFIG_KINDS):
             return False
     return True
+
+
+def controller_has_typed_loss(c: Controller) -> bool:
+    return _has_typed_loss(c)
+
+
+def _has_typed_loss(c: Controller) -> bool:
+    loss = [o for o in c.ons if o.event == "Loss"]
+    if not loss:
+        return False
+    for o in loss:
+        if not o.match_arms:
+            return False
+        pats = {a.pattern for a in o.match_arms}
+        if any(k not in pats for k in LOSS_KINDS):
+            return False
+    return True
+
+
+def _is_recovery_cut(st: Stmt) -> bool:
+    if st.kind == "cut":
+        return True
+    if st.kind == "enter" and st.name == "Reprobe":
+        return True
+    return False
+
+
+def _stmts_have_cut(stmts: list[Stmt]) -> bool:
+    return any(_is_recovery_cut(st) for st in _flatten_stmts(stmts))
+
+
+def _is_delay_ratio_name(expr) -> bool:
+    return expr is not None and getattr(expr, "kind", None) == "name" and expr.name == "delay_ratio"
+
+
+def _proved_delay_ratio(expr) -> bool:
+    """True when expr proves delay_ratio > UNKNOWN_DELAY_RATIO."""
+    if expr is None or getattr(expr, "kind", None) != "binop":
+        return False
+    op = expr.name
+    left, right = expr.left, expr.right
+    num_l = _lit_num(left)
+    num_r = _lit_num(right)
+    if _is_delay_ratio_name(left) and num_r is not None:
+        if op == ">" and num_r + 1e-12 >= UNKNOWN_DELAY_RATIO:
+            return True
+        if op == ">=" and num_r > UNKNOWN_DELAY_RATIO + 1e-12:
+            return True
+    if _is_delay_ratio_name(right) and num_l is not None:
+        if op == "<" and num_l + 1e-12 >= UNKNOWN_DELAY_RATIO:
+            return True
+        if op == "<=" and num_l > UNKNOWN_DELAY_RATIO + 1e-12:
+            return True
+    return False
+
+
+def _check_unknown_cuts(
+    cname: str,
+    stmts: list[Stmt],
+    proved: bool,
+    res: CheckResult,
+) -> None:
+    for st in stmts:
+        if _is_recovery_cut(st) and not proved:
+            res.ok = False
+            res.errors.append(unknown_cut_error(cname))
+        if st.kind in ("when", "if", "require"):
+            extra = proved or _proved_delay_ratio(st.expr)
+            _check_unknown_cuts(cname, st.body, extra, res)
+            else_body = _stmt_else_body(st)
+            if else_body:
+                _check_unknown_cuts(cname, else_body, proved, res)
+        elif st.body:
+            _check_unknown_cuts(cname, st.body, proved, res)
+
+
+def _check_observe_loss_arm(cname: str, arm, res: CheckResult) -> None:
+    if arm.pattern == "Mobility":
+        if _stmts_have_cut(arm.body):
+            res.ok = False
+            res.errors.append(mobility_cut_error(cname))
+    elif arm.pattern == "Unknown":
+        _check_unknown_cuts(cname, arm.body, False, res)
 
 
 def _reprobe_cut(st: Stmt) -> float | None:

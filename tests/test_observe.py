@@ -46,6 +46,7 @@ class TestObservePosture(unittest.TestCase):
         self.assertEqual(res.posture, "observe")
         self.assertTrue(res.observe_only)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.typed_loss)
         self.assertTrue(res.passthrough)
         self.assertEqual(res.closed_writes, [])
         _, cfg = compile_source(src, "reach.vela")
@@ -64,6 +65,7 @@ class TestObservePosture(unittest.TestCase):
             self.assertTrue(res.observe_only, name)
             self.assertEqual(res.posture, "observe", name)
             self.assertTrue(res.typed_reconfig, name)
+            self.assertTrue(res.typed_loss, name)
             self.assertTrue(res.passthrough, name)
 
     def test_default_posture_is_observe(self):
@@ -283,6 +285,7 @@ view Sneak of Base {
         res = check(parse(src, "kinded.vela"))
         self.assertTrue(res.ok, res.errors)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.typed_loss)
         self.assertTrue(res.observe_only)
         self.assertTrue(res.passthrough)
         self.assertEqual(res.closed_writes, [])
