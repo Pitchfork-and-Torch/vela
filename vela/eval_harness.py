@@ -10,8 +10,62 @@ from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Callable
 
-from vela.ir import VelaConfig
+from vela.ir import VelaConfig, parse_report_ci
 from vela.kernel import make_cca, oce_cca_factory
+
+# Seed 7 45s locked LeoAware rails (WORKDAY / EVAL-NOTES). Not house-gate.
+LEO_S7_45_GP = 88.65
+LEO_S7_45_P95 = 108.4
+PASSTHROUGH_GP_ABS = 0.05
+PASSTHROUGH_P95_ABS = 0.2
+PASSTHROUGH_LEO_GP_ABS = 0.15
+
+
+def passthrough_ok(leo: dict, reach: dict) -> bool:
+    """Observe-only Reach vs LeoAware on one seed. Not a dual-gate."""
+    return (
+        abs(float(reach["goodput_mbps"]) - float(leo["goodput_mbps"])) <= PASSTHROUGH_GP_ABS
+        and abs(float(reach["p95_rtt_ms"]) - float(leo["p95_rtt_ms"])) <= PASSTHROUGH_P95_ABS
+        and abs(float(leo["goodput_mbps"]) - LEO_S7_45_GP) <= PASSTHROUGH_LEO_GP_ABS
+    )
+
+
+def write_passthrough_result(
+    leo: dict,
+    reach: dict,
+    *,
+    ok: bool,
+    ran: str,
+) -> Path:
+    """Local claim file. results/*.json is gitignored on purpose."""
+    summary = {
+        "tag": "reach-passthrough",
+        "ran": ran,
+        "verdict": "MATCH" if ok else "MISS",
+        "power": "low",
+        "dual_gate": False,
+        "ok": bool(ok),
+        "note": (
+            "Observe-only Reach vs LeoAware on seed 7 45s. "
+            "Not a house-gate dual-gate claim."
+        ),
+        "honesty": (
+            "Means only. Do not mix with OPE-fair v3.7 prompt figures. "
+            "House champion remains LeoAware v3.4-p95 73.57/138.37 vs BBR 70.88/138.83."
+        ),
+        "scenario": "leo_fast_ho",
+        "seed": 7,
+        "duration_s": 45.0,
+        "rails": {
+            "gp_abs_mbps": PASSTHROUGH_GP_ABS,
+            "p95_abs_ms": PASSTHROUGH_P95_ABS,
+            "leo_locked_gp": LEO_S7_45_GP,
+            "leo_locked_p95": LEO_S7_45_P95,
+        },
+        "leo": leo,
+        "reach": reach,
+    }
+    return write_result(summary, tag="reach-passthrough")
 
 
 def _leo_root() -> Path:
@@ -231,6 +285,56 @@ def _std(xs: list[float]) -> float:
     return var ** 0.5
 
 
+def _mean_pm_std(mean: float, std: float) -> str:
+    """Honest CI stand-in: mean+/-std. Not a bootstrap interval."""
+    return f"{mean:.3f}+/-{std:.3f}"
+
+
+def _ci_level(reports: list[str]) -> float | None:
+    """Parse report ci / ci(0.95). Missing clause means no top-level ci object."""
+    for item in reports:
+        raw = str(item).strip()
+        if raw == "ci":
+            return 0.95
+        if raw.startswith("ci(") and raw.endswith(")"):
+            inner = raw[3:-1].strip()
+            try:
+                return float(inner)
+            except ValueError:
+                return 0.95
+    return None
+
+
+def _fmt_mean_std(mean: float, std: float) -> str:
+    return f"{mean:.3f} +/- {std:.3f}"
+
+
+def _ci_block(tables: list[dict], level: float) -> dict:
+    """Honest CI object: mean +/- sample std. Not a bootstrap interval."""
+    return {
+        "level": level,
+        "method": "mean+/-std",
+        "note": (
+            "Sample mean +/- sample std (ddof=1). "
+            "Not a bootstrap or t-interval. Coverage is not claimed."
+        ),
+        "rows": [
+            {
+                "scenario": t["scenario"],
+                "cca": t["cca"],
+                "n": t["n"],
+                "goodput": _fmt_mean_std(t["goodput_mean"], t["goodput_std"]),
+                "p95": _fmt_mean_std(t["p95_mean"], t["p95_std"]),
+                "goodput_mean": t["goodput_mean"],
+                "goodput_std": t["goodput_std"],
+                "p95_mean": t["p95_mean"],
+                "p95_std": t["p95_std"],
+            }
+            for t in tables
+        ],
+    }
+
+
 REQUIRED_ASSERTS = ("dual_gate_vs_BBR", "pareto_vs_LeoAware", "terrestrial_floor")
 
 
@@ -259,15 +363,21 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
     for (scen, cca), rs in sorted(by.items()):
         gps = [r["goodput_mbps"] for r in rs]
         p95s = [r["p95_rtt_ms"] for r in rs]
+        gp_mean = round(_mean(gps), 3)
+        gp_std = round(_std(gps), 3)
+        p95_mean = round(_mean(p95s), 3)
+        p95_std = round(_std(p95s), 3)
         tables.append(
             {
                 "scenario": scen,
                 "cca": cca,
                 "n": len(rs),
-                "goodput_mean": round(_mean(gps), 3),
-                "goodput_std": round(_std(gps), 3),
-                "p95_mean": round(_mean(p95s), 3),
-                "p95_std": round(_std(p95s), 3),
+                "goodput_mean": gp_mean,
+                "goodput_std": gp_std,
+                "goodput_ci": _mean_pm_std(gp_mean, gp_std),
+                "p95_mean": p95_mean,
+                "p95_std": p95_std,
+                "p95_ci": _mean_pm_std(p95_mean, p95_std),
             }
         )
 
@@ -341,7 +451,7 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
                 "contract_min": contract_min,
             }
         )
-    return {
+    out = {
         "verdict": _decide_verdict(verdicts, n_seeds, contract_min),
         "power": "low" if n_seeds < 8 else "ok",
         "tables": tables,
@@ -351,6 +461,10 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
             "Do not mix these numbers with OPE-fair v3.7 prompt figures."
         ),
     }
+    ci_level, _ci_errs = parse_report_ci(list(getattr(cfg, "reports", []) or []))
+    if ci_level is not None:
+        out["ci"] = _ci_block(tables, ci_level)
+    return out
 
 
 def write_result(summary: dict, tag: str = "horizon") -> Path:

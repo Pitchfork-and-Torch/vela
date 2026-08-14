@@ -1,10 +1,11 @@
 """Fixture tests for eval harness top-level ACCEPT / FAIL / INCOMPLETE."""
 from __future__ import annotations
 
+import json
 import unittest
 
-from vela.eval_harness import _summarize
-from vela.ir import VelaConfig
+from vela.eval_harness import _fmt_mean_std, _summarize
+from vela.ir import VelaConfig, parse_report_ci
 
 SEEDS = [13, 7, 42, 99, 123]
 CCA = "Reach"
@@ -105,6 +106,81 @@ class TestEvalVerdict(unittest.TestCase):
         self.assertEqual(seed_count.get("note"), "INCOMPLETE")
         self.assertEqual(seed_count["n"], 2)
         self.assertEqual(seed_count["contract_min"], 5)
+
+    def test_default_config_omits_ci_object(self):
+        rows = _passing_leo_fast_ho() + _rows("terrestrial", CCA, 78.0, 40.0)
+        summary = _summarize(rows, _cfg())
+        self.assertNotIn("ci", summary)
+
+    def test_report_ci_is_mean_plus_minus_std(self):
+        cfg = _cfg()
+        cfg.reports = ["ci(0.95)", "ablation"]
+        rows = (
+            _rows("leo_fast_ho", CCA, 80.0, 120.0)
+            + _rows("leo_fast_ho", "BBRv3approx", 70.0, 130.0)
+            + _rows("leo_fast_ho", "LeoAware", 80.0, 120.0)
+            + _rows("terrestrial", CCA, 78.0, 40.0)
+        )
+        summary = _summarize(rows, cfg)
+        ci = summary["ci"]
+        self.assertEqual(ci["level"], 0.95)
+        self.assertEqual(ci["method"], "mean+/-std")
+        self.assertIn("Not a bootstrap", ci["note"])
+        reach = next(
+            r
+            for r in ci["rows"]
+            if r["scenario"] == "leo_fast_ho" and r["cca"] == CCA
+        )
+        self.assertEqual(reach["n"], 5)
+        self.assertEqual(reach["goodput"], _fmt_mean_std(80.0, 0.0))
+        self.assertEqual(reach["p95"], _fmt_mean_std(120.0, 0.0))
+        self.assertEqual(reach["goodput"], "80.000 +/- 0.000")
+        self.assertNotIn("p<", json.dumps(ci))
+        self.assertNotIn("bootstrap interval", ci["note"].lower())
+
+    def test_report_ci_uses_sample_std(self):
+        cfg = _cfg()
+        cfg.reports = ["ci"]
+        cfg.seeds = [13, 7]
+        rows = (
+            [
+                {
+                    "scenario": "leo_fast_ho",
+                    "seed": 13,
+                    "cca": CCA,
+                    "goodput_mbps": 80.0,
+                    "p95_rtt_ms": 100.0,
+                },
+                {
+                    "scenario": "leo_fast_ho",
+                    "seed": 7,
+                    "cca": CCA,
+                    "goodput_mbps": 84.0,
+                    "p95_rtt_ms": 110.0,
+                },
+            ]
+            + _rows("leo_fast_ho", "BBRv3approx", 70.0, 130.0, [13, 7])
+            + _rows("leo_fast_ho", "LeoAware", 80.0, 120.0, [13, 7])
+            + _rows("terrestrial", CCA, 78.0, 40.0, [13, 7])
+        )
+        summary = _summarize(rows, cfg)
+        reach = next(
+            r
+            for r in summary["ci"]["rows"]
+            if r["scenario"] == "leo_fast_ho" and r["cca"] == CCA
+        )
+        self.assertAlmostEqual(reach["goodput_mean"], 82.0)
+        self.assertAlmostEqual(reach["goodput_std"], (8.0 ** 0.5), places=3)
+        self.assertEqual(reach["goodput"], _fmt_mean_std(82.0, 8.0 ** 0.5))
+        self.assertEqual(summary["ci"]["level"], 0.95)
+
+    def test_parse_report_ci_rejects_out_of_range(self):
+        level, errs = parse_report_ci(["ci(1.5)"])
+        self.assertIsNone(level)
+        self.assertTrue(any("must be in (0, 1)" in e for e in errs))
+        level, errs = parse_report_ci(["ci(high)"])
+        self.assertIsNone(level)
+        self.assertTrue(any("must be a number" in e for e in errs))
 
 
 if __name__ == "__main__":

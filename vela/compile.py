@@ -47,6 +47,7 @@ VELA_CONFIG = VelaConfig(
     duration_s={dur},
     baseline={base!r},
     contract_name={cname!r},
+    reports={reports!r},
 )
 
 CCA_NAME = {name!r}
@@ -96,6 +97,7 @@ def compile_program(prog: Program, *, strict: bool = True) -> tuple[str, VelaCon
         dur=cfg.duration_s,
         base=cfg.baseline,
         cname=cfg.contract_name,
+        reports=cfg.reports,
     )
     return text, cfg
 

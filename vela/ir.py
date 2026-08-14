@@ -54,11 +54,40 @@ class VelaConfig:
     duration_s: float = 90.0
     baseline: str = "BBRv3approx"
     contract_name: str = "DualGate"
+    reports: list[str] = field(default_factory=list)
     view: str = ""
     compose_digest: str = ""
     posture: str = "observe"
     observe_only: bool = True
     passthrough: bool = False
+
+
+def parse_report_ci(reports: list[str]) -> tuple[float | None, list[str]]:
+    """Read `report ci` / `report ci(0.95)` from a contract.
+
+    Returns (level, errors). Level is None when the contract does not
+    ask for a CI. Errors are check-time; a bad level is not a silent skip.
+    """
+    level: float | None = None
+    errors: list[str] = []
+    for item in reports:
+        text = str(item).strip()
+        if text == "ci":
+            level = 0.95
+            continue
+        if not text.startswith("ci("):
+            continue
+        raw = text[3:-1].strip() if text.endswith(")") else ""
+        try:
+            val = float(raw)
+        except ValueError:
+            errors.append(f"report {text}: CI level must be a number in (0, 1)")
+            continue
+        if not (0.0 < val < 1.0):
+            errors.append(f"report {text}: CI level must be in (0, 1)")
+            continue
+        level = val
+    return level, errors
 
 
 def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
@@ -135,4 +164,5 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
         cfg.duration_s = float(con.duration_s)
         cfg.baseline = con.baseline
         cfg.contract_name = con.name
+        cfg.reports = list(con.reports)
     return cfg

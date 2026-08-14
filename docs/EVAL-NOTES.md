@@ -112,6 +112,17 @@ Thesis: the leftover is the quiet middle of an epoch on easy paths (seeds 7, 123
 
 **reach-passthrough:** shipped `examples/reach.vela` seed 7 45s **88.65 / 108.4** = LeoAware. JSON log: `results/eval_reach-ablate.json`.
 
-**passthrough-law:** `vela check examples/reach.vela` now stamps `passthrough` (no cruise write on `when`/`every`). That is the language rail for confirm-passthrough. Seed-7 eval still belongs to the measurer.
+**passthrough-law:** `vela check examples/reach.vela` now stamps `passthrough` (no cruise write on `when`/`every`). That is the language rail for confirm-passthrough.
 
-**typed-loss:** `vela check examples/reach.vela` now stamps `loss=Mobility|Congestive|Unknown`. A bare Loss, a Mobility cut, or an Unknown cut without `delay_ratio > 1.35` is a type error on observe. Compile no longer stamps `typed_loss` for a bare handler. No packet-path change. Seed-7 eval still belongs to the measurer.
+**typed-loss:** `vela check examples/reach.vela` now stamps `loss=Mobility|Congestive|Unknown`. A bare Loss, a Mobility cut, or an Unknown cut without `delay_ratio > 1.35` is a type error on observe. Compile no longer stamps `typed_loss` for a bare handler. No packet-path change.
+
+### reach-passthrough confirm (2026-08-14)
+
+Isolated workers. `leo_fast_ho` seed 7, 45s. Observe-only Reach.
+
+| CCA | gp | p95 |
+|-----|---:|----:|
+| LeoAware | 88.65 | 108.4 |
+| Reach | 88.65 | 108.4 |
+
+MATCH within 0.05 Mbps / 0.2 ms. Locked Leo rail held. Not a dual-gate house-gate claim. JSON: `results/eval_reach-passthrough.json`.

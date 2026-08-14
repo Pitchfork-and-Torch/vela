@@ -14,9 +14,6 @@ JOURNAL = LAB / "journal.jsonl"
 PUBLIC = LAB / "PUBLIC_PROGRESS.json"
 STOP = LAB / "STOP"
 
-LEO_S7_GP = 88.65
-LEO_S7_P95 = 108.4
-
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -77,7 +74,7 @@ def _run_eval_passthrough() -> dict:
     import sys
 
     sys.path.insert(0, str(ROOT))
-    from vela.eval_harness import run_one_isolated
+    from vela.eval_harness import passthrough_ok, run_one_isolated, write_passthrough_result
     from vela.ir import VelaConfig, program_to_config
     from vela.parser import parse
 
@@ -85,11 +82,8 @@ def _run_eval_passthrough() -> dict:
     cfg = program_to_config(parse(src, "reach.vela"))
     leo = run_one_isolated("LeoAware", "leo_fast_ho", 7, 45.0, VelaConfig(name="LeoAware"))
     reach = run_one_isolated("Reach", "leo_fast_ho", 7, 45.0, cfg)
-    ok = (
-        abs(reach["goodput_mbps"] - leo["goodput_mbps"]) <= 0.05
-        and abs(reach["p95_rtt_ms"] - leo["p95_rtt_ms"]) <= 0.2
-        and abs(leo["goodput_mbps"] - LEO_S7_GP) <= 0.15
-    )
+    ok = passthrough_ok(leo, reach)
+    write_passthrough_result(leo, reach, ok=ok, ran=_now())
     return {
         "ok": ok,
         "leo": leo,
@@ -136,7 +130,7 @@ def tick() -> int:
             "id": item["id"],
             "status": item["status"],
             "note": result.get("note"),
-            "detail": {k: result[k] for k in result if k not in ("ok", "note") and k != "leo"},
+            "detail": {k: result[k] for k in result if k not in ("ok", "note")},
         }
     )
     if item.get("public") and item["status"] in ("done", "needs_agent"):

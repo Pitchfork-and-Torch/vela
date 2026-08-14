@@ -8,3 +8,4 @@ results/*.json
 !emit/.gitkeep
 lab/journal.jsonl
 lab/STOP
+.orbit/

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from vela.checker import check
 from vela.compile import compile_source
+from vela.ir import program_to_config
 from vela.parser import ParseError, parse
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -172,6 +173,31 @@ controller Bad {
                 self.assertIsNone(c.growth_compose, name)
             res = check(prog)
             self.assertTrue(res.ok, (name, res.errors))
+
+    def test_reach_contract_reports_ci(self):
+        src = (EX / "reach.vela").read_text(encoding="utf-8")
+        prog = parse(src, "reach.vela")
+        self.assertIn("ci(0.95)", prog.contracts[0].reports)
+        cfg = program_to_config(prog)
+        self.assertEqual(cfg.reports, prog.contracts[0].reports)
+        self.assertIn("ci(0.95)", cfg.reports)
+
+    def test_report_ci_out_of_range_is_type_error(self):
+        src = """
+lang vela 0.1
+controller Probe {
+  compose Detect
+}
+contract DualGate vs BBRv3approx {
+  seeds = [13, 7, 42, 99, 123]
+  scenario leo_fast_ho duration 90s
+  assert terrestrial.goodput >= 77 Mbps
+  report ci(1.5)
+}
+"""
+        res = check(parse(src, "bad-ci.vela"))
+        self.assertFalse(res.ok)
+        self.assertTrue(any("CI level must be in (0, 1)" in e for e in res.errors))
 
 
 class TestComposeCutsAndGrowth(unittest.TestCase):

@@ -6,7 +6,7 @@
       "safe": true,
       "public": true,
       "note": "Eval: observe-only Reach must match LeoAware on seed 7 45s. Language passthrough rail is landed.",
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "interval-n2",
@@ -75,6 +75,22 @@
       "public": true,
       "note": "Observe-only Loss must match Mobility|Congestive|Unknown; Mobility holds; Unknown cut needs delay_ratio > 1.35",
       "status": "done"
+    },
+    {
+      "id": "report-ci",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "report ci emits mean+/-std (not a bootstrap)",
+      "status": "done"
+    },
+    {
+      "id": "power-low-align",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Align power=low: checker n<5 vs harness n<8",
+      "status": "pending"
     }
   ]
 }

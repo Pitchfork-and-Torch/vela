@@ -124,6 +124,8 @@ contract DualGate vs BBRv3approx {
 
 `vela eval` runs the contract. The compiler will **not** emit a `// beats BBR` comment. The JSON verdict is ACCEPT / FAIL / INCOMPLETE (missing terrestrial, too few seeds, etc.). The harness now emits that top-level `INCOMPLETE` when terrestrial is missing or `n_seeds` is below the contract minimum; a measured miss on a present assert is `FAIL`, and `INCOMPLETE` is never `ACCEPT`.
 
+When the contract says `report ci(0.95)` (or bare `report ci`), the JSON includes a `ci` object: sample mean +/- sample std per scenario/CCA, method `mean+/-std`. That is not a bootstrap or t-interval. The requested level is recorded; coverage is not claimed.
+
 A one-sided t-test or bootstrap CI on 5 seeds is weak. VELA reports that weakness instead of hiding it: `power=low` is a first-class field. Claiming `p < 0.05` with n=5 and no paired path is a contract warning, not a badge.
 
 ### Path models (sim and constraint)

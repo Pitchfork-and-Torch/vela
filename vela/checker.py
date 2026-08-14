@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from vela.ast import Controller, Program, Stmt, View
 from vela.digest import compose_digest
+from vela.ir import parse_report_ci
 from vela.types import (
     HINT_ARMS,
     HINT_CHANNELS,
@@ -72,6 +73,10 @@ def check(prog: Program) -> CheckResult:
             res.warnings.append(
                 f"contract {con.name}: missing terrestrial assert (INCOMPLETE if not added)"
             )
+        _level, ci_errs = parse_report_ci(con.reports)
+        for err in ci_errs:
+            res.ok = False
+            res.errors.append(f"contract {con.name}: {err}")
     return res
 
 
