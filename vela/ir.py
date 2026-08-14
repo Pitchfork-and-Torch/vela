@@ -58,6 +58,7 @@ class VelaConfig:
     compose_digest: str = ""
     posture: str = "observe"
     observe_only: bool = True
+    passthrough: bool = False
 
 
 def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
@@ -120,6 +121,9 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
         cfg.observe_only = True
     else:
         cfg.observe_only = is_observe_only(cfg.mechanisms)
+    from vela.checker import controller_is_passthrough
+
+    cfg.passthrough = controller_is_passthrough(c)
     if prog.contracts:
         con = prog.contracts[0]
         cfg.seeds = list(con.seeds)

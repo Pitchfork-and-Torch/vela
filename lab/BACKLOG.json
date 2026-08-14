@@ -5,7 +5,7 @@
       "kind": "eval",
       "safe": true,
       "public": true,
-      "note": "Observe-only Reach must match LeoAware on seed 7 45s",
+      "note": "Eval: observe-only Reach must match LeoAware on seed 7 45s. Language passthrough rail is landed.",
       "status": "pending"
     },
     {
@@ -58,6 +58,14 @@
       "safe": true,
       "public": true,
       "note": "Observe-only Reconfig must match RttHop|Flicker; house cut stays 0.58",
+      "status": "done"
+    },
+    {
+      "id": "passthrough-law",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Observe-only when/every cannot write pace/cwnd; Reach is a LeoAware wrap at check time",
       "status": "done"
     }
   ]

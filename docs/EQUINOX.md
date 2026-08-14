@@ -16,7 +16,7 @@ binaries.
 
 1. **Level vs integrator.** `when { pace *= k }` is a type error.
    Horizon seed 7 (55 / 173) is now unrepresentable unless the author
-   writes `integrate when` and accepts the warning.
+   writes `integrate when` under `posture review` and accepts the warning.
 2. **No ambient authority.** A `WriteCap<cwnd> @ epoch` plus
    `authority { cwnd: 0 }` refuses cruise writes. Reconfig still
    invalidates samples. Observe is the default power.
@@ -33,6 +33,9 @@ binaries.
 6. **Views.** `view Observe of Equinox { compose ... }` is a morphism
    of the same controller. `vela eval --view Observe` cannot pretend
    it ran the other compose.
+7. **Passthrough.** Observe `when` / `every` cannot write `pace`,
+   `cwnd`, `chase`, or `cut`. Reach is a LeoAware wrap at check time.
+   Sample `freeze` stays legal. Review may name a cruise write.
 
 ## Commands
 

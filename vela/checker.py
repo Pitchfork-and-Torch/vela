@@ -50,6 +50,7 @@ def check(prog: Program) -> CheckResult:
         res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
         res.hint_fail_closed = _has_hint_surface(first)
         res.typed_reconfig = _has_typed_reconfig(first)
+        res.passthrough = controller_is_passthrough(first)
     for con in prog.contracts:
         if not con.seeds:
             res.ok = False
@@ -213,6 +214,7 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
             for arm in o.match_arms:
                 _check_house_cut_in_stmts(c.name, arm.body, res)
 
+    _check_passthrough_cruise(c, res)
     _check_hint_surface(c, prog, res)
     hints = _hint_names(c)
 
@@ -399,6 +401,58 @@ def house_cut_error(cname: str, n: float) -> str:
         f"{cname}: observe-only Reprobe cut({n}) must be {HOUSE_ENDPOINT_CUT} "
         "(house endpoint; SoftFlicker is review)"
     )
+
+
+def cruise_write_error(cname: str, what: str) -> str:
+    return (
+        f"{cname}: observe-only cruise write `{what}` "
+        "(passthrough; LeoAware wrap; no packet-path write)"
+    )
+
+
+def _cruise_write_label(st: Stmt) -> str | None:
+    if st.kind == "assign" and st.name in WRITE_TARGETS:
+        op = str(st.args[0]) if st.args else "="
+        return f"{st.name} {op}"
+    if st.kind == "chase":
+        return "chase"
+    if st.kind == "cut":
+        return "cut"
+    if st.kind == "enter":
+        return f"enter {st.name}" if st.name else "enter"
+    return None
+
+
+def controller_cruise_writes(c: Controller) -> list[str]:
+    found: list[str] = []
+    bodies = [w.body for w in c.whens] + [e.body for e in c.everys]
+    for body in bodies:
+        for st in _flatten_stmts(body):
+            label = _cruise_write_label(st)
+            if label:
+                found.append(label)
+    return found
+
+
+def controller_is_passthrough(c: Controller) -> bool:
+    return (
+        c.posture == "observe"
+        and is_observe_only(c.compose)
+        and _has_typed_reconfig(c)
+        and not controller_cruise_writes(c)
+    )
+
+
+def _check_passthrough_cruise(c: Controller, res: CheckResult) -> None:
+    if c.posture != "observe":
+        return
+    seen: set[str] = set()
+    for label in controller_cruise_writes(c):
+        if label in seen:
+            continue
+        seen.add(label)
+        res.ok = False
+        res.errors.append(cruise_write_error(c.name, label))
 
 
 def _has_typed_reconfig(c: Controller) -> bool:

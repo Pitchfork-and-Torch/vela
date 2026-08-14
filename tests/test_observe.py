@@ -4,7 +4,13 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from vela.checker import check, closed_write_error, house_cut_error, typed_reconfig_error
+from vela.checker import (
+    check,
+    closed_write_error,
+    cruise_write_error,
+    house_cut_error,
+    typed_reconfig_error,
+)
 from vela.compile import compile_source
 from vela.parser import ParseError, parse
 from vela.types import CLOSED_WRITE_OPERATORS, HOUSE_ENDPOINT_CUT, is_observe_only, review_writes_in
@@ -40,9 +46,11 @@ class TestObservePosture(unittest.TestCase):
         self.assertEqual(res.posture, "observe")
         self.assertTrue(res.observe_only)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.passthrough)
         self.assertEqual(res.closed_writes, [])
         _, cfg = compile_source(src, "reach.vela")
         self.assertTrue(cfg.observe_only)
+        self.assertTrue(cfg.passthrough)
         self.assertFalse(cfg.horizon_chase)
         self.assertFalse(cfg.quiet_reach)
         self.assertFalse(cfg.trim_hold)
@@ -56,6 +64,7 @@ class TestObservePosture(unittest.TestCase):
             self.assertTrue(res.observe_only, name)
             self.assertEqual(res.posture, "observe", name)
             self.assertTrue(res.typed_reconfig, name)
+            self.assertTrue(res.passthrough, name)
 
     def test_default_posture_is_observe(self):
         src = _src(
@@ -70,6 +79,7 @@ class TestObservePosture(unittest.TestCase):
         res = check(prog)
         self.assertTrue(res.ok, res.errors)
         self.assertTrue(res.observe_only)
+        self.assertFalse(res.passthrough)
 
     def test_quiet_reach_on_observe_is_error(self):
         src = _src(
@@ -274,6 +284,7 @@ view Sneak of Base {
         self.assertTrue(res.ok, res.errors)
         self.assertTrue(res.typed_reconfig)
         self.assertTrue(res.observe_only)
+        self.assertTrue(res.passthrough)
         self.assertEqual(res.closed_writes, [])
 
     def test_review_may_keep_bare_reconfig(self):
@@ -313,6 +324,94 @@ view Sneak of Base {
         self.assertFalse(res.ok)
         self.assertIn(closed_write_error("Probe", ["QuietReach"]), res.errors)
         self.assertTrue(res.typed_reconfig)
+        self.assertFalse(res.observe_only)
+
+    def test_observe_pace_assign_is_cruise_write(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    bw: Interval<bps> @ epoch
+  when bw.n >= 2 {
+    pace = bw.mid
+  }
+"""
+        )
+        res = check(parse(src, "cruise-pace.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(cruise_write_error("Probe", "pace ="), res.errors)
+        self.assertFalse(res.passthrough)
+        self.assertTrue(res.observe_only)
+
+    def test_observe_chase_is_cruise_write(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+  every ack {
+    chase delivery toward 1
+  }
+"""
+        )
+        res = check(parse(src, "cruise-chase.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(cruise_write_error("Probe", "chase"), res.errors)
+        self.assertFalse(res.passthrough)
+
+    def test_observe_cut_on_when_is_cruise_write(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+  when p_ho > 0.5 {
+    cut(0.58)
+  }
+"""
+        )
+        res = check(parse(src, "cruise-cut.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(cruise_write_error("Probe", "cut"), res.errors)
+
+    def test_observe_freeze_is_not_a_cruise_write(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {
+    RttHop => hold
+    Flicker => hold
+  }
+  when p_ho > 0.55 {
+    freeze min_rtt, bw for 1.4 * rtt
+  }
+"""
+        )
+        res = check(parse(src, "freeze-ok.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertTrue(res.passthrough)
+        self.assertTrue(res.observe_only)
+
+    def test_review_may_keep_cruise_write(self):
+        src = _src(
+            """
+  posture review
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    bw: Interval<bps> @ epoch
+  when bw.n >= 2 {
+    pace = bw.mid
+  }
+"""
+        )
+        res = check(parse(src, "review-cruise.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertFalse(res.passthrough)
         self.assertFalse(res.observe_only)
 
     def test_review_writes_helper(self):

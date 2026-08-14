@@ -118,6 +118,8 @@ def main(argv: list[str] | None = None) -> int:
             print("    hint=fail-closed  (missing is None, not a hop oracle)")
         if res.typed_reconfig:
             print("    reconfig=RttHop|Flicker  (house cut 0.58)")
+        if res.passthrough:
+            print("    passthrough  (LeoAware wrap; no cruise write)")
         if c.cuts_compose:
             print(f"    cuts_compose={c.cuts_compose}")
         if c.growth_compose:

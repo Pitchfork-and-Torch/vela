@@ -16,7 +16,7 @@ Write results to `lab/journal.jsonl`. If seed 7 45s moves more than 0.05 Mbps / 
 
 ## Language
 
-Implement one LANGUAGE.md gap per session. Interval n>=2, compose cuts/growth, harness INCOMPLETE, observe posture, and hint law already landed (PRs 4/5/6/7/8). Typed reconfig is the next observe rail: Reach must match `RttHop | Flicker` and keep the 0.58 house cut; a bare Reconfig or 0.85 flicker cut is a type error. Closed-write compose still needs `posture review`. Tests must stay green (`py -3 -m unittest discover -s tests -q`). No packet-path writes.
+Implement one LANGUAGE.md gap per session. Interval n>=2, compose cuts/growth, harness INCOMPLETE, observe posture, hint law, typed reconfig, and passthrough already landed (PRs 4/5/6/7/8/9/10). Closed-write compose still needs `posture review`. Observe `when`/`every` cannot write pace/cwnd. Tests must stay green (`py -3 -m unittest discover -s tests -q`). No packet-path writes.
 
 ## Publisher
 

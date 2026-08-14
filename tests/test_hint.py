@@ -48,6 +48,7 @@ class TestHintLaw(unittest.TestCase):
         self.assertEqual(res.posture, "observe")
         self.assertTrue(res.observe_only)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.passthrough)
         self.assertEqual(res.closed_writes, [])
         self.assertEqual(prog.controllers[0].posture, "observe")
         self.assertEqual(
@@ -57,6 +58,7 @@ class TestHintLaw(unittest.TestCase):
         _, cfg = compile_source(src, "ascent.vela")
         self.assertEqual(cfg.name, "Ascent")
         self.assertTrue(cfg.observe_only)
+        self.assertTrue(cfg.passthrough)
         self.assertFalse(cfg.horizon_chase)
         self.assertFalse(cfg.quiet_reach)
         self.assertFalse(cfg.trim_hold)
@@ -68,6 +70,7 @@ class TestHintLaw(unittest.TestCase):
         self.assertFalse(res.hint_fail_closed)
         self.assertTrue(res.observe_only)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.passthrough)
         self.assertEqual(res.posture, "observe")
 
     def test_bare_hint_as_point_is_error(self):

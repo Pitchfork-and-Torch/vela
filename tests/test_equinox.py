@@ -25,6 +25,7 @@ class TestEquinox(unittest.TestCase):
         self.assertTrue(res.ok, res.errors)
         self.assertTrue(res.observe_only)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.passthrough)
         self.assertEqual(res.posture, "observe")
         self.assertTrue(res.compose_digest)
         self.assertIn("Observe", res.views)
@@ -54,6 +55,7 @@ controller Bad {
         src = """
 lang vela 0.3
 controller Risky {
+  posture review
   compose Detect
   signals:
     epoch: Epoch
@@ -160,6 +162,7 @@ controller Bad {
         src = """
 lang vela 0.3
 controller Ok {
+  posture review
   compose Detect + IntervalBw
   signals:
     epoch: Epoch
