@@ -7,6 +7,21 @@ from typing import Iterable
 
 LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
+HINT_ARMS = ("Some", "None")
+HINT_TYPE_NAMES = frozenset({"Hint", "Option"})
+HINT_CHANNELS = frozenset({"ascent", "orb", "orbital"})
+STDLIB_MODULES = frozenset(
+    {
+        "std.epoch",
+        "std.loss",
+        "std.measure",
+        "std.control",
+        "std.path",
+        "std.hint",
+        "std.eval",
+        "std.mech",
+    }
+)
 WRITE_TARGETS = ("cwnd", "pace")
 INTEGRATOR_OPS = ("*=", "+=", "-=", "/=")
 POSTURES = ("observe", "review")
@@ -146,6 +161,7 @@ class CheckResult:
     posture: str = "observe"
     observe_only: bool = False
     closed_writes: list[str] = field(default_factory=list)
+    hint_fail_closed: bool = False
 
     def raise_if_error(self) -> None:
         if not self.ok:

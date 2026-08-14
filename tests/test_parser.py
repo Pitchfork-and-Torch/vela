@@ -156,6 +156,7 @@ controller Bad {
             "luff.vela",
             "leoaware_oce.vela",
             "equinox.vela",
+            "ascent.vela",
         ):
             src = (EX / name).read_text(encoding="utf-8")
             prog = parse(src, name)

@@ -114,6 +114,8 @@ def main(argv: list[str] | None = None) -> int:
             print("    observe-only  (no closed-write)")
         else:
             print(f"    posture={c.posture}")
+        if res.hint_fail_closed:
+            print("    hint=fail-closed  (missing is None, not a hop oracle)")
         if c.cuts_compose:
             print(f"    cuts_compose={c.cuts_compose}")
         if c.growth_compose:

@@ -16,7 +16,7 @@ Write results to `lab/journal.jsonl`. If seed 7 45s moves more than 0.05 Mbps / 
 
 ## Language
 
-Implement one LANGUAGE.md gap per session. Interval n>=2, compose cuts/growth, and harness INCOMPLETE already landed (PRs 4/5/6). Observe posture is the rail: Reach must check observe-only; closed-write compose needs `posture review`. Tests must stay green (`py -3 -m unittest discover -s tests -q`). No packet-path writes.
+Implement one LANGUAGE.md gap per session. Interval n>=2, compose cuts/growth, and harness INCOMPLETE already landed (PRs 4/5/6). Observe posture is the rail: Reach must check observe-only; closed-write compose needs `posture review`. Hint law is the Starlink assist rail: missing hints are None, not a hop oracle. Tests must stay green (`py -3 -m unittest discover -s tests -q`). No packet-path writes.
 
 ## Publisher
 

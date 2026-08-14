@@ -1,0 +1,70 @@
+lang vela 0.1
+
+use std.epoch
+use std.loss
+use std.measure
+use std.control
+use std.path
+use std.hint
+use std.eval
+
+// Ascent: fail-closed assist path for Starlink-class hints.
+//
+// Today's Starlink has no official path-hint API. A missing or
+// erased ASCENT-D / Orb hint is None, not the next hop time.
+// Acting on None is a type error (hint law).
+//
+// Observe-only. No closed-write. LeoAware remains the engine.
+// When the hint is Some, freeze samples. When it is None, hold.
+// The packet path is still Detect + SoftReprobe + Calendar.
+
+controller Ascent {
+  posture observe
+  compose Detect + SoftReprobe + Calendar + IntervalBw + DualGateGuard
+
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+    bw: Interval<bps> @ epoch
+    delay_ratio: Ratio
+    p_ho: Prob
+    hint: Hint<PathHint>
+
+  on Reconfig(e) {
+    invalidate min_rtt, bw
+    enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+  }
+
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => require delay_ratio > 1.35 then cut(0.72) else hold
+  }
+
+  on Hint(h) match h {
+    Some => {
+      freeze min_rtt, bw for 1.4 * rtt
+    }
+    None => hold
+  }
+
+  when hint.ascent {
+    freeze min_rtt, bw for 1.4 * rtt
+  }
+}
+
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+
+contract DualGate vs BBRv3approx {
+  seeds = [13, 7, 42, 99, 123]
+  scenario leo_fast_ho duration 90s
+  assert mean(goodput) >= baseline.goodput
+  assert mean(p95) <= baseline.p95
+  assert terrestrial.goodput >= 77 Mbps
+  report ci(0.95), ablation
+}

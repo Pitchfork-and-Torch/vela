@@ -37,7 +37,7 @@ use std.hint
 use std.eval
 ```
 
-`use` only imports **named** stdlib surfaces. There is no `import *` of measurement state. That is how stale samples sneak in.
+`use` only imports **named** stdlib surfaces (`std.epoch`, `std.loss`, `std.measure`, `std.control`, `std.path`, `std.hint`, `std.eval`, `std.mech`). There is no `import *` of measurement state. That is how stale samples sneak in. An unknown `use` is a type error.
 
 ### Types
 
@@ -52,11 +52,11 @@ use std.eval
 | `Hint<T>` | External signal (ASCENT-D, Orb, orbital). Fail-closed: corrupt => `None`. |
 | `Contract` | Multi-seed assertion set. Not executable on the packet path. |
 
-**Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`.
+**Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`. The checker now rejects that assign.
 
 **Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth. The checker now enforces this as a type error unless the same block proves `n >= 2`.
 
-**Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level.
+**Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level. The checker now enforces it: `on Hint(h)` must match `Some | None`; `when hint.ascent` / `require hint.ascent then` prove Some; a bare `hint.ascent` in arithmetic is illegal. `use std.hint` is required to mention Hint. Today's Starlink has no official path-hint API, so absence is None, not a hop oracle. Flagship Reach stays defined without hints.
 
 ### Events
 
@@ -266,12 +266,12 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority) |
-| `vela/types.py` `checker.py` | Freshness, loss, reconfig kinds, WriteCap, integrators, observe posture |
+| `vela/types.py` `checker.py` | Freshness, loss, reconfig kinds, WriteCap, integrators, observe posture, hint law |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA |
 | `vela/eval_harness.py` | Dual-gate runner on leo-aware-transport |
-| `examples/*.vela` | Equinox (0.3), Reach, Horizon, Luff, OCE-class |
+| `examples/*.vela` | Equinox (0.3), Reach, Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
 ## G. Equinox (VELA 0.3)
 
