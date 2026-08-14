@@ -45,6 +45,7 @@ use std.eval
 // without results/eval_*.json.
 
 controller Reach {
+  posture observe
   compose Detect + SoftReprobe + Calendar + IntervalBw
         + WriteBudget + DualGateGuard
 

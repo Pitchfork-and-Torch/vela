@@ -41,6 +41,7 @@ KEYWORDS = {
     "of",
     "integrate",
     "authority",
+    "posture",
     "view",
     "duration",
     "scenario",

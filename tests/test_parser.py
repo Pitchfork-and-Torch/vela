@@ -28,8 +28,11 @@ class TestExamplesParse(unittest.TestCase):
         self.assertIn("TrimHold", prog.controllers[0].compose)
         res = check(prog)
         self.assertTrue(res.ok, res.errors)
+        self.assertEqual(prog.controllers[0].posture, "review")
         text, cfg = compile_source(src, "luff.vela")
         self.assertEqual(cfg.name, "Luff")
+        self.assertEqual(cfg.posture, "review")
+        self.assertFalse(cfg.observe_only)
         self.assertTrue(cfg.trim_hold)
         self.assertTrue(cfg.trim_fill)
         self.assertFalse(cfg.trim_reclaim)
@@ -45,10 +48,16 @@ class TestExamplesParse(unittest.TestCase):
         self.assertNotIn("QuietReach", prog.controllers[0].compose)
         self.assertNotIn("TrimFill", prog.controllers[0].compose)
         self.assertNotIn("HorizonChase", prog.controllers[0].compose)
+        self.assertEqual(prog.controllers[0].posture, "observe")
         res = check(prog)
         self.assertTrue(res.ok, res.errors)
+        self.assertTrue(res.observe_only)
+        self.assertEqual(res.posture, "observe")
+        self.assertEqual(res.closed_writes, [])
         text, cfg = compile_source(src, "reach.vela")
         self.assertEqual(cfg.name, "Reach")
+        self.assertEqual(cfg.posture, "observe")
+        self.assertTrue(cfg.observe_only)
         self.assertFalse(cfg.soft_flicker)
         self.assertFalse(cfg.quiet_shield)
         self.assertFalse(cfg.trim_hold)
@@ -56,6 +65,7 @@ class TestExamplesParse(unittest.TestCase):
         self.assertFalse(cfg.trim_fill)
         self.assertFalse(cfg.trim_reclaim)
         self.assertFalse(cfg.horizon_chase)
+        self.assertFalse(cfg.oce_legacy)
 
     def test_oce_parses(self):
         src = (EX / "leoaware_oce.vela").read_text(encoding="utf-8")
@@ -202,6 +212,7 @@ controller DualCut {
         src = """
 lang vela 0.1
 controller Grow {
+  posture review
   compose OCE + HorizonChase
   compose growth = max
 }
@@ -218,6 +229,7 @@ controller Grow {
         src = """
 lang vela 0.1
 controller Grow {
+  posture review
   compose OCE + HorizonChase
 }
 """
@@ -230,6 +242,7 @@ controller Grow {
             src = f"""
 lang vela 0.1
 controller Grow {{
+  posture review
   compose TrimFill + QuietReach
   compose growth = {val}
 }}
@@ -243,6 +256,7 @@ controller Grow {{
         src = """
 lang vela 0.1
 controller Mix {
+  posture review
   compose SoftReprobe + SoftReprobe + OCE + TrimReclaim compose cuts = min
   compose growth = min
 }

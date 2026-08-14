@@ -14,6 +14,7 @@ use std.eval
 // + dual-gate contract (eval horizon).
 
 controller Horizon {
+  posture observe
   compose Detect + SoftReprobe + IntervalBw + PredictiveFreeze + DualGateGuard
 
   signals:

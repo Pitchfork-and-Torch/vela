@@ -19,6 +19,7 @@ from vela.ast import (
     WhenClause,
 )
 from vela.lexer import LexError, Token, tokenize
+from vela.types import POSTURES
 
 ALLOWED_CUTS_COMPOSE = frozenset({"min"})
 ALLOWED_GROWTH_COMPOSE = frozenset({"min", "max", "sum"})
@@ -132,6 +133,8 @@ class Parser:
         whens: list[WhenClause] = []
         everys: list[EveryClause] = []
         authority: dict = {}
+        posture = "observe"
+        posture_set = False
         while not self.at("RBRACE"):
             if self.at("compose"):
                 self.eat("compose")
@@ -150,6 +153,22 @@ class Parser:
             elif self.at("authority"):
                 self.eat("authority")
                 authority.update(self._authority())
+            elif self.at("posture"):
+                self.eat("posture")
+                val_tok = self.cur()
+                val = self._name()
+                if val not in POSTURES:
+                    raise ParseError(
+                        f"{self.name}:{val_tok.line}:{val_tok.col}: "
+                        f"posture must be observe | review, got {val!r}"
+                    )
+                if posture_set and posture != val:
+                    raise ParseError(
+                        f"{self.name}:{val_tok.line}:{val_tok.col}: "
+                        f"conflicting posture {val!r} (already {posture})"
+                    )
+                posture = val
+                posture_set = True
             elif self.at("on"):
                 ons.append(self._on())
             elif self.at("integrate"):
@@ -183,6 +202,7 @@ class Parser:
             authority=authority,
             cuts_compose=cuts_compose,
             growth_compose=growth_compose,
+            posture=posture,
             span=sp,
         )
 

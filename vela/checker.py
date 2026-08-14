@@ -10,6 +10,8 @@ from vela.types import (
     STDLIB_MECHANISMS,
     WRITE_TARGETS,
     CheckResult,
+    is_observe_only,
+    review_writes_in,
 )
 
 # Check-time cwnd raisers. Closed-write operators stay off the packet path
@@ -31,8 +33,12 @@ def check(prog: Program) -> CheckResult:
         _check_view(v, prog, res)
     res.views = [v.name for v in prog.views]
     if prog.controllers:
-        res.compose_digest = compose_digest(prog.controllers[0].compose)
-        res.authority = dict(prog.controllers[0].authority)
+        first = prog.controllers[0]
+        res.compose_digest = compose_digest(first.compose)
+        res.authority = dict(first.authority)
+        res.posture = first.posture
+        res.closed_writes = review_writes_in(first.compose)
+        res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
     for con in prog.contracts:
         if not con.seeds:
             res.ok = False
@@ -64,6 +70,12 @@ def _check_view(v: View, prog: Program, res: CheckResult) -> None:
     for m in unknown:
         res.ok = False
         res.errors.append(f"view {v.name}: unknown mechanism {m}")
+    parent = next((c for c in prog.controllers if c.name == v.of_controller), None)
+    if parent is not None and parent.posture == "observe":
+        sneaks = review_writes_in(v.compose)
+        if sneaks:
+            res.ok = False
+            res.errors.append(closed_write_error(f"view {v.name}", sneaks))
 
 
 def _check_controller(c: Controller, res: CheckResult) -> None:
@@ -72,6 +84,21 @@ def _check_controller(c: Controller, res: CheckResult) -> None:
         res.ok = False
         res.errors.append(f"{c.name}: unknown mechanism {m}")
     res.mechanisms.extend(m for m in c.compose if m in STDLIB_MECHANISMS)
+
+    writes = review_writes_in(c.compose)
+    if c.posture == "observe" and writes:
+        res.ok = False
+        res.errors.append(closed_write_error(c.name, writes))
+    elif c.posture == "review" and writes:
+        res.warnings.append(
+            f"{c.name}: posture review; closed-write {writes} stay off the "
+            "packet path (ablation only)"
+        )
+    elif c.posture == "review" and not writes:
+        res.warnings.append(
+            f"{c.name}: posture review with no closed-write operator "
+            "(flagship Reach is observe)"
+        )
 
     hard = [m for m in c.compose if STDLIB_MECHANISMS.get(m, {}).get("cuts") == "hard"]
     # SoftReprobe + TypedLoss both hard-cut but on different events (epoch vs loss).
@@ -315,6 +342,13 @@ def _check_write_cap(c: Controller, res: CheckResult) -> None:
 
 
 INTERVAL_COUNT_ATTRS = frozenset({"n", "e"})
+
+
+def closed_write_error(cname: str, writes: list[str]) -> str:
+    return (
+        f"{cname}: closed-write {writes} require posture review "
+        "(observe-only compose; no control-loop write)"
+    )
 
 
 def interval_point_error(cname: str, name: str) -> str:

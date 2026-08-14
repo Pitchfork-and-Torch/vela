@@ -23,7 +23,10 @@ use std.eval
 // terrestrial >= 77 @ 40.
 // Do not claim it without results/eval_*.json.
 
+// Review-only. TrimHold + TrimFill write the control loop.
+// Not the flagship. Do not merge this compose as Reach.
 controller Luff {
+  posture review
   compose Detect + SoftReprobe + Calendar + IntervalBw
         + WriteBudget + TrimHold + TrimFill + DualGateGuard
 

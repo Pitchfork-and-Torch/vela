@@ -208,6 +208,8 @@ def evaluate(
     summary["config"] = {
         "name": cfg.name,
         "mechanisms": cfg.mechanisms,
+        "posture": cfg.posture,
+        "observe_only": cfg.observe_only,
         "seeds": seeds,
         "scenarios": scenarios,
         "duration_s": duration_s,

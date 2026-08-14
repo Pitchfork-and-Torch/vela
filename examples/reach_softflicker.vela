@@ -11,7 +11,9 @@ use std.eval
 // to 55.24 / 123.8 vs LeoAware 88.65 / 108.4. Not the flagship.
 // Keep this file so the next session does not re-guess 0.85.
 
+// Review-only. SoftFlicker writes the 0.58 cut. Not the flagship.
 controller ReachSoftFlicker {
+  posture review
   compose Detect + SoftReprobe + Calendar + IntervalBw
         + WriteBudget + SoftFlicker + DualGateGuard
 

@@ -20,6 +20,7 @@ use std.eval
 // The leap is that a claim without a receipt does not compile as truth.
 
 controller Equinox {
+  posture observe
   compose Detect + SoftReprobe + Calendar + IntervalBw
         + WriteBudget + DualGateGuard
 

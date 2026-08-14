@@ -97,6 +97,7 @@ class Controller:
     authority: dict = field(default_factory=dict)
     cuts_compose: Optional[str] = None
     growth_compose: Optional[str] = None
+    posture: str = "observe"
     span: Optional[Span] = None
 
 
