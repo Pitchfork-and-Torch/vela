@@ -84,7 +84,9 @@ Mechanism names are an operator sum. After the list, optional combinators may si
 - `compose cuts = min` -- required when two `hard` epoch cuts share an event. Soft cuts still compose as `min` without a clause. Check-time only; the kernel does not merge two soft cuts at runtime.
 - `compose growth = min | max | sum` -- required when two cwnd raisers share a compose (any pair among `OCE`, `HorizonChase`, `TrimFill`, `QuietReach`, `TrimReclaim`). Wrong picks still check if they are explicit.
 
-Existing programs need neither clause. Shipped examples stay observe-only.
+Existing programs need neither clause. Shipped flagship examples stay observe-only.
+
+**Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
 
 Each mechanism declares:
 
@@ -199,7 +201,7 @@ The leftover vs BBR on seeds 7 and 123 is **not a missing fill**. Seed 7 90s run
 
 **Reach** is the beam reach: name the typed reconfig, keep the house-winning cut, and make every failed successor a stdlib operator you have to *choose*.
 
-Shipped compose: `Detect + SoftReprobe + Calendar + IntervalBw + WriteBudget + DualGateGuard`. Observe-only. Bit-identical to LeoAware when the write flags are off.
+Shipped compose: `Detect + SoftReprobe + Calendar + IntervalBw + WriteBudget + DualGateGuard`. `posture observe` (the default). Bit-identical to LeoAware when the write flags are off. `vela check examples/reach.vela` proves observe-only: a closed-write operator in this compose is a type error unless the author writes `posture review`.
 
 Typed reconfig (in the stdlib, not in this compose):
 
@@ -264,7 +266,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority) |
-| `vela/types.py` `checker.py` | Freshness, loss, reconfig kinds, WriteCap, integrators |
+| `vela/types.py` `checker.py` | Freshness, loss, reconfig kinds, WriteCap, integrators, observe posture |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA |

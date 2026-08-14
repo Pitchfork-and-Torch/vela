@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from vela.ast import Program
+from vela.types import is_observe_only
 
 
 @dataclass
@@ -55,6 +56,8 @@ class VelaConfig:
     contract_name: str = "DualGate"
     view: str = ""
     compose_digest: str = ""
+    posture: str = "observe"
+    observe_only: bool = True
 
 
 def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
@@ -64,7 +67,6 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
         "SoftReprobe",
         "IntervalBw",
         "PredictiveFreeze",
-        "HorizonChase",
         "DualGateGuard",
     ]
     cfg = VelaConfig(name=c.name, mechanisms=mechs)
@@ -103,6 +105,21 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
     from vela.digest import compose_digest
 
     cfg.compose_digest = compose_digest(cfg.mechanisms)
+    cfg.posture = c.posture
+    if cfg.posture == "observe":
+        # Observe-only rail: compose may name a write, but the kernel
+        # flags stay off. Checker already errors; this is the compile bind.
+        cfg.horizon_chase = False
+        cfg.trim_hold = False
+        cfg.trim_fill = False
+        cfg.trim_reclaim = False
+        cfg.quiet_reach = False
+        cfg.quiet_shield = False
+        cfg.soft_flicker = False
+        cfg.oce_legacy = False
+        cfg.observe_only = True
+    else:
+        cfg.observe_only = is_observe_only(cfg.mechanisms)
     if prog.contracts:
         con = prog.contracts[0]
         cfg.seeds = list(con.seeds)

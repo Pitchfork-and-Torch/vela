@@ -23,6 +23,8 @@ from vela.kernel import HorizonCCA, make_cca
 VELA_CONFIG = VelaConfig(
     name={name!r},
     mechanisms={mechs!r},
+    posture={posture!r},
+    observe_only={observe},
     predictive_freeze={pred},
     interval_bw={ibw},
     horizon_chase={chase},
@@ -69,6 +71,8 @@ def compile_program(prog: Program, *, strict: bool = True) -> tuple[str, VelaCon
         src_name=prog.source_name,
         name=cfg.name,
         mechs=cfg.mechanisms,
+        posture=cfg.posture,
+        observe=cfg.observe_only,
         pred=cfg.predictive_freeze,
         ibw=cfg.interval_bw,
         chase=cfg.horizon_chase,

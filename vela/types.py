@@ -2,12 +2,39 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Iterable
 
 
 LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 WRITE_TARGETS = ("cwnd", "pace")
 INTEGRATOR_OPS = ("*=", "+=", "-=", "/=")
+POSTURES = ("observe", "review")
+
+# LANGUAGE.md D2 closed-write class. Stdlib only until a named ablation is green.
+CLOSED_WRITE_OPERATORS = frozenset(
+    {
+        "HorizonChase",
+        "TrimFill",
+        "TrimReclaim",
+        "QuietReach",
+        "QuietShield",
+        "SoftFlicker",
+        "TrimHold",
+    }
+)
+
+# Closed-write class plus legacy OCE. Any of these writes the control loop.
+REVIEW_WRITE_OPERATORS = CLOSED_WRITE_OPERATORS | frozenset({"OCE"})
+
+
+def review_writes_in(names: Iterable[str]) -> list[str]:
+    return [n for n in names if n in REVIEW_WRITE_OPERATORS]
+
+
+def is_observe_only(names: Iterable[str]) -> bool:
+    return not review_writes_in(names)
+
 
 STDLIB_MECHANISMS = {
     "Detect": {"reads": {"rtt", "epoch"}, "writes": {"reconfig"}, "cuts": "none", "phase": "ack"},
@@ -116,6 +143,9 @@ class CheckResult:
     compose_digest: str = ""
     authority: dict = field(default_factory=dict)
     views: list[str] = field(default_factory=list)
+    posture: str = "observe"
+    observe_only: bool = False
+    closed_writes: list[str] = field(default_factory=list)
 
     def raise_if_error(self) -> None:
         if not self.ok:

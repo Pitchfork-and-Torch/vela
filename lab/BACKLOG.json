@@ -14,7 +14,8 @@
       "safe": true,
       "public": true,
       "note": "Type error when Interval is used as a point with n < 2",
-      "status": "pending"
+      "status": "done",
+      "pr": 5
     },
     {
       "id": "compose-cuts",
@@ -22,7 +23,8 @@
       "safe": true,
       "public": true,
       "note": "Parse compose cuts = min and compose growth = min|max|sum",
-      "status": "pending"
+      "status": "done",
+      "pr": 6
     },
     {
       "id": "incomplete-verdict",
@@ -30,7 +32,16 @@
       "safe": true,
       "public": true,
       "note": "Harness top-level INCOMPLETE when terrestrial is missing",
-      "status": "pending"
+      "status": "done",
+      "pr": 4
+    },
+    {
+      "id": "observe-posture",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Reach is checkable observe-only; closed-write compose needs posture review",
+      "status": "done"
     }
   ]
 }
