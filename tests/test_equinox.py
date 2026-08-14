@@ -24,6 +24,7 @@ class TestEquinox(unittest.TestCase):
         res = check(prog)
         self.assertTrue(res.ok, res.errors)
         self.assertTrue(res.observe_only)
+        self.assertTrue(res.typed_reconfig)
         self.assertEqual(res.posture, "observe")
         self.assertTrue(res.compose_digest)
         self.assertIn("Observe", res.views)

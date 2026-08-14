@@ -52,6 +52,7 @@ class TestExamplesParse(unittest.TestCase):
         res = check(prog)
         self.assertTrue(res.ok, res.errors)
         self.assertTrue(res.observe_only)
+        self.assertTrue(res.typed_reconfig)
         self.assertEqual(res.posture, "observe")
         self.assertEqual(res.closed_writes, [])
         text, cfg = compile_source(src, "reach.vela")
@@ -91,9 +92,12 @@ controller Bad {
   signals:
     epoch: Epoch
     rtt: Sample<ms> @ epoch
-  on Reconfig(e) {
-    invalidate min_rtt
-    let x = min_rtt
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt
+      let x = min_rtt
+    }
+    Flicker => hold
   }
   on Loss(k) match k {
     Mobility => hold

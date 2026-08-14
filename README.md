@@ -59,9 +59,15 @@ controller Horizon {
     bw: Interval<bps> @ epoch
     p_ho: Prob
 
-  on Reconfig(e) {
-    invalidate min_rtt, bw
-    enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+    Flicker => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
   }
 
   on Loss(k) match k {
@@ -95,7 +101,7 @@ contract DualGate vs BBRv3approx {
 
 **Reach** is the current VELA program on top of LeoAware. It names typed reconfig (RTT hop vs flicker) and keeps the load-bearing 0.58 cut. Every additive write we tried failed a house seed. Those operators live in the stdlib so the next gift to LeoAware cannot be an unnamed flag.
 
-`examples/reach.vela`. `vela check` proves it is observe-only: closed-write operators are a type error unless the author writes `posture review`. Horizon stays as the first observe-only compose. `examples/ascent.vela` is the fail-closed Starlink assist path: a missing hint is None, not a hop oracle. See [docs/LANGUAGE.md](docs/LANGUAGE.md) and [docs/EVAL-NOTES.md](docs/EVAL-NOTES.md).
+`examples/reach.vela`. `vela check` proves it is observe-only and names typed reconfig (`RttHop | Flicker`, house cut 0.58). Closed-write operators are a type error unless the author writes `posture review`. Horizon stays as the first observe-only compose. `examples/ascent.vela` is the fail-closed Starlink assist path: a missing hint is None, not a hop oracle. See [docs/LANGUAGE.md](docs/LANGUAGE.md) and [docs/EVAL-NOTES.md](docs/EVAL-NOTES.md).
 
 ## Layout
 

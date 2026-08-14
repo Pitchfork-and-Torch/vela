@@ -21,8 +21,9 @@ binaries.
    `authority { cwnd: 0 }` refuses cruise writes. Reconfig still
    invalidates samples. Observe is the default power.
 3. **Kinded reconfig.** `on Reconfig match` is a closed taxonomy
-   (`RttHop | Flicker`), same shape as `Loss`. SoftFlicker 0.85
-   dumped seed 7. The kinds exist so the next cut is named, not guessed.
+   (`RttHop | Flicker`), same shape as `Loss`. On the observe rail
+   a bare Reconfig is a type error, and `enter Reprobe(cut: x)` must
+   stay 0.58. SoftFlicker 0.85 dumped seed 7 and stays review.
 4. **Content-addressed stdlib.** Each mechanism has a domain-separated
    SHA-256 of its effect row (`VELA1|mech|...`). Compose order is part
    of the digest. `vela mech` prints the catalog.

@@ -7,6 +7,8 @@ from typing import Iterable
 
 LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
+# Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
+HOUSE_ENDPOINT_CUT = 0.58
 HINT_ARMS = ("Some", "None")
 HINT_TYPE_NAMES = frozenset({"Hint", "Option"})
 HINT_CHANNELS = frozenset({"ascent", "orb", "orbital"})
@@ -162,6 +164,7 @@ class CheckResult:
     observe_only: bool = False
     closed_writes: list[str] = field(default_factory=list)
     hint_fail_closed: bool = False
+    typed_reconfig: bool = False
 
     def raise_if_error(self) -> None:
         if not self.ok:
