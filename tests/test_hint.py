@@ -48,6 +48,7 @@ class TestHintLaw(unittest.TestCase):
         self.assertEqual(res.posture, "observe")
         self.assertTrue(res.observe_only)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.typed_loss)
         self.assertTrue(res.passthrough)
         self.assertEqual(res.closed_writes, [])
         self.assertEqual(prog.controllers[0].posture, "observe")
@@ -70,6 +71,7 @@ class TestHintLaw(unittest.TestCase):
         self.assertFalse(res.hint_fail_closed)
         self.assertTrue(res.observe_only)
         self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.typed_loss)
         self.assertTrue(res.passthrough)
         self.assertEqual(res.posture, "observe")
 

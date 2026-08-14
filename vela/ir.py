@@ -74,7 +74,9 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
     cfg.predictive_freeze = "PredictiveFreeze" in mechs
     cfg.interval_bw = "IntervalBw" in mechs
     cfg.horizon_chase = "HorizonChase" in mechs
-    cfg.typed_loss = "TypedLoss" in mechs or any(o.event == "Loss" for o in c.ons)
+    from vela.checker import controller_has_typed_loss
+
+    cfg.typed_loss = "TypedLoss" in mechs or controller_has_typed_loss(c)
     cfg.dual_gate_guard = "DualGateGuard" in mechs
     cfg.oce_legacy = "OCE" in mechs and "HorizonChase" not in mechs
     cfg.trim_hold = "TrimHold" in mechs

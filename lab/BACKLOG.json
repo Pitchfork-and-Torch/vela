@@ -67,6 +67,14 @@
       "public": true,
       "note": "Observe-only when/every cannot write pace/cwnd; Reach is a LeoAware wrap at check time",
       "status": "done"
+    },
+    {
+      "id": "typed-loss",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Observe-only Loss must match Mobility|Congestive|Unknown; Mobility holds; Unknown cut needs delay_ratio > 1.35",
+      "status": "done"
     }
   ]
 }
