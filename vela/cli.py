@@ -9,6 +9,7 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
+from vela.types import POWER_OK_MIN_SEEDS
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -122,6 +123,12 @@ def main(argv: list[str] | None = None) -> int:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
+        if res.power == "low":
+            print(
+                f"    power=low  (n<{POWER_OK_MIN_SEEDS}; means ACCEPT still legal)"
+            )
+        elif res.power == "ok":
+            print(f"    power=ok  (n>={POWER_OK_MIN_SEEDS})")
         if c.cuts_compose:
             print(f"    cuts_compose={c.cuts_compose}")
         if c.growth_compose:

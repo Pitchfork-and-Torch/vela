@@ -126,7 +126,7 @@ contract DualGate vs BBRv3approx {
 
 When the contract says `report ci(0.95)` (or bare `report ci`), the JSON includes a `ci` object: sample mean +/- sample std per scenario/CCA, method `mean+/-std`. That is not a bootstrap or t-interval. The requested level is recorded; coverage is not claimed.
 
-A one-sided t-test or bootstrap CI on 5 seeds is weak. VELA reports that weakness instead of hiding it: `power=low` is a first-class field. Claiming `p < 0.05` with n=5 and no paired path is a contract warning, not a badge.
+A one-sided t-test or bootstrap CI on 5 seeds is weak. VELA reports that weakness instead of hiding it: `power=low` is a first-class field. Checker and harness share one floor: `n < 8` is `power=low`. House DualGate is 5 seeds, so `vela check` warns and `vela eval` labels `low`. Claiming `p < 0.05` with n<8 and no paired path is a contract warning, not a badge.
 
 ### Path models (sim and constraint)
 
@@ -257,7 +257,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Information.** IntervalBw needs samples. The first 1-2 RTT of an epoch are supposed to be uncertain. Forcing a tight interval early is the same bug as a stale min-RTT, with extra ceremony.
 
-**Statistics.** Five seeds do not make a journal result. VELA will mark `power=low` and still allow ACCEPT on the dual-gate *means* (the OrbitStack house rule) while refusing a `p < 0.05` badge unless the contract asks for more seeds or a paired bootstrap and gets them.
+**Statistics.** Five seeds do not make a journal result. VELA marks `power=low` when n<8 (check warning + eval JSON) and still allows ACCEPT on the dual-gate *means* (the OrbitStack house rule). It refuses a `p < 0.05` badge unless the contract asks for n>=8 or a paired bootstrap and gets them.
 
 **Deployment.** The working backend is Python on the LeoAware discrete-event sim, which is a research path, not quiche. Rust emit is a typed IR sketch (`vela emit-rust`), not a congestion controller you can ship in production QUIC tomorrow. Porting still requires a real ACK clock, pacing, and loss signal.
 
@@ -278,7 +278,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority) |
-| `vela/types.py` `checker.py` | Freshness, typed loss, typed reconfig, WriteCap, integrators, observe posture, hint law, passthrough |
+| `vela/types.py` `checker.py` | Freshness, typed loss, typed reconfig, WriteCap, integrators, observe posture, hint law, passthrough, power=low n<8 |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA |
@@ -304,12 +304,14 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Compose digest | silent operator swap |
 | Eval receipt | a verdict detached from its source |
 | Views | eval of compose A claimed as compose B |
+| Power label | silent n<8 p-value; checker and harness share `power=low` |
 
 Existing `lang vela 0.1` programs still parse. WriteCap stays opt-in.
 Reconfig match is required on the observe rail (`RttHop | Flicker`,
 house cut 0.58). Observe Loss must match `Mobility | Congestive | Unknown`
 (Mobility holds; Unknown needs `delay_ratio > 1.35`). Observe `when`/`every`
-cannot write pace/cwnd (passthrough). Flagship sources:
+cannot write pace/cwnd (passthrough). `power=low` is n<8 at check and
+eval; five-seed ACCEPT on means stays legal. Flagship sources:
 `examples/equinox.vela` (language) and `examples/reach.vela` (house policy).
 
 Version: VELA 0.3.0 (Equinox: authority, receipts, views).

@@ -10,9 +10,11 @@ from vela.types import (
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
     INTEGRATOR_OPS,
+    POWER_OK_MIN_SEEDS,
     UNKNOWN_DELAY_RATIO,
     LOSS_KINDS,
     RECONFIG_KINDS,
+    eval_power,
     STDLIB_MECHANISMS,
     STDLIB_MODULES,
     WRITE_TARGETS,
@@ -64,10 +66,9 @@ def check(prog: Program) -> CheckResult:
             res.warnings.append(
                 f"contract {con.name}: no leo_fast_ho scenario and no terrestrial assert"
             )
-        if len(con.seeds) < 5:
-            res.warnings.append(
-                f"contract {con.name}: {len(con.seeds)} seeds (power=low for p-values)"
-            )
+        n_seeds = len(con.seeds)
+        if eval_power(n_seeds) == "low":
+            res.warnings.append(power_low_warning(con.name, n_seeds))
         terr = [a for a in con.asserts if "terrestrial" in a.left]
         if not terr:
             res.warnings.append(
@@ -77,6 +78,12 @@ def check(prog: Program) -> CheckResult:
         for err in ci_errs:
             res.ok = False
             res.errors.append(f"contract {con.name}: {err}")
+    if prog.contracts:
+        res.power = (
+            "low"
+            if any(eval_power(len(c.seeds)) == "low" for c in prog.contracts)
+            else "ok"
+        )
     return res
 
 
@@ -439,6 +446,13 @@ def house_cut_error(cname: str, n: float) -> str:
     return (
         f"{cname}: observe-only Reprobe cut({n}) must be {HOUSE_ENDPOINT_CUT} "
         "(house endpoint; SoftFlicker is review)"
+    )
+
+
+def power_low_warning(name: str, n_seeds: int) -> str:
+    return (
+        f"contract {name}: {n_seeds} seeds "
+        f"(power=low for p-values; n<{POWER_OK_MIN_SEEDS})"
     )
 
 

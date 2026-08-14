@@ -7,6 +7,7 @@ Only JSON under `results/` is a claim. This file is the lab log.
 - Do not mix OPE-fair v3.7 prompt numbers (58.78 / 152.09) with this machine's coupled-RNG LeoAware v3.4-p95 (73.57 / 138.37).
 - `--fast` is 45s / 2 seeds. Not the house gate.
 - House gate: seeds 13,7,42,99,123 · 90s · `leo_fast_ho` + terrestrial.
+- `power=low` when n<8 (checker warning + eval JSON). Five-seed ACCEPT on means is still legal. Not a p-value.
 
 ## Runs
 

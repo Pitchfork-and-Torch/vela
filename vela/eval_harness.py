@@ -12,6 +12,7 @@ from typing import Callable
 
 from vela.ir import VelaConfig, parse_report_ci
 from vela.kernel import make_cca, oce_cca_factory
+from vela.types import POWER_OK_MIN_SEEDS, eval_power
 
 # Seed 7 45s locked LeoAware rails (WORKDAY / EVAL-NOTES). Not house-gate.
 LEO_S7_45_GP = 88.65
@@ -453,11 +454,12 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
         )
     out = {
         "verdict": _decide_verdict(verdicts, n_seeds, contract_min),
-        "power": "low" if n_seeds < 8 else "ok",
+        "power": eval_power(n_seeds),
         "tables": tables,
         "asserts": verdicts,
         "honesty": (
             "Means only. p-values are not claimed. "
+            f"power=low when n<{POWER_OK_MIN_SEEDS}. "
             "Do not mix these numbers with OPE-fair v3.7 prompt figures."
         ),
     }

@@ -89,7 +89,15 @@
       "kind": "language",
       "safe": true,
       "public": true,
-      "note": "Align power=low: checker n<5 vs harness n<8",
+      "note": "Align power=low: checker and harness share n<8. Five-seed ACCEPT stays legal.",
+      "status": "done"
+    },
+    {
+      "id": "kernel-no-oracle",
+      "kind": "kernel",
+      "safe": true,
+      "public": true,
+      "note": "Kernel refuse of next_capacity / future PathState (no-oracle law).",
       "status": "pending"
     }
   ]

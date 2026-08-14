@@ -11,6 +11,16 @@ RECONFIG_KINDS = ("RttHop", "Flicker")
 HOUSE_ENDPOINT_CUT = 0.58
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
+# Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays
+# legal, but n < 8 is power=low (no p-value). Checker and harness share this.
+POWER_OK_MIN_SEEDS = 8
+
+
+def eval_power(n_seeds: int) -> str:
+    """Honesty label: 'low' when n < POWER_OK_MIN_SEEDS, else 'ok'."""
+    return "low" if int(n_seeds) < POWER_OK_MIN_SEEDS else "ok"
+
+
 HINT_ARMS = ("Some", "None")
 HINT_TYPE_NAMES = frozenset({"Hint", "Option"})
 HINT_CHANNELS = frozenset({"ascent", "orb", "orbital"})
@@ -169,6 +179,7 @@ class CheckResult:
     typed_reconfig: bool = False
     typed_loss: bool = False
     passthrough: bool = False
+    power: str = ""
 
     def raise_if_error(self) -> None:
         if not self.ok:
