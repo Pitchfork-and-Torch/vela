@@ -210,6 +210,7 @@ def evaluate(
         "mechanisms": cfg.mechanisms,
         "posture": cfg.posture,
         "observe_only": cfg.observe_only,
+        "passthrough": cfg.passthrough,
         "seeds": seeds,
         "scenarios": scenarios,
         "duration_s": duration_s,

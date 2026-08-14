@@ -165,6 +165,7 @@ class CheckResult:
     closed_writes: list[str] = field(default_factory=list)
     hint_fail_closed: bool = False
     typed_reconfig: bool = False
+    passthrough: bool = False
 
     def raise_if_error(self) -> None:
         if not self.ok:

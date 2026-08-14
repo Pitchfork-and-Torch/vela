@@ -19,10 +19,11 @@ LOSS = """
 """
 
 
-def _src(body: str) -> str:
+def _src(body: str, posture: str = "observe") -> str:
     return f"""
 lang vela 0.1
 controller Probe {{
+  posture {posture}
   compose Detect + IntervalBw
   signals:
     epoch: Epoch
@@ -68,7 +69,8 @@ class TestIntervalN2(unittest.TestCase):
   when bw.n >= 2 {
     pace = bw.mid
   }
-"""
+""",
+            posture="review",
         )
         res = check(parse(src, "guarded.vela"))
         self.assertTrue(res.ok, res.errors)
@@ -90,7 +92,8 @@ class TestIntervalN2(unittest.TestCase):
   when p_ho > 0.5 {
     require bw.n >= 2 then pace = bw.lo
   }
-"""
+""",
+            posture="review",
         )
         res = check(parse(src, "require.vela"))
         self.assertTrue(res.ok, res.errors)
@@ -101,7 +104,8 @@ class TestIntervalN2(unittest.TestCase):
   when p_ho > 0.5 {
     if bw.n >= 2 then pace = bw.hi
   }
-"""
+""",
+            posture="review",
         )
         res = check(parse(src, "if.vela"))
         self.assertTrue(res.ok, res.errors)

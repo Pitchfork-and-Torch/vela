@@ -88,7 +88,9 @@ Mechanism names are an operator sum. After the list, optional combinators may si
 
 Existing programs need neither clause. Shipped flagship examples stay observe-only.
 
-**Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only` and `reconfig=RttHop|Flicker`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
+**Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only`, `reconfig=RttHop|Flicker`, and `passthrough`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
+
+**Passthrough law.** Observe-only is not yet a LeoAware wrap if a `when` or `every` body writes the packet path. `pace =`, `cwnd =`, `chase`, `cut`, and `enter Reprobe` on the cruise path are type errors under `posture observe`. Sample `freeze` and typed Reconfig/Loss policy stay legal: those are LeoAware. Horizon's leftover `pace = bw.mid` dumped seed 7 (65/181) and is now unrepresentable on observe. Review may keep a cruise write so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `passthrough` (LeoAware wrap; no cruise write).
 
 **Typed reconfig (observe rail).** `on Reconfig` under `posture observe` must match the closed taxonomy `RttHop | Flicker`. A bare `on Reconfig(e) { ... }` is a type error: hop and flicker are not the same event. SoftFlicker (cut 0.85 on flicker) dumped seed 7; the house endpoint cut stays 0.58 on both arms. `enter Reprobe(cut: x)` or `cut(x)` inside an observe Reconfig body must be 0.58. Review may keep a bare Reconfig or a different cut so ablation stays named.
 
@@ -205,7 +207,7 @@ The leftover vs BBR on seeds 7 and 123 is **not a missing fill**. Seed 7 90s run
 
 **Reach** is the beam reach: name the typed reconfig, keep the house-winning cut, and make every failed successor a stdlib operator you have to *choose*.
 
-Shipped compose: `Detect + SoftReprobe + Calendar + IntervalBw + WriteBudget + DualGateGuard`. `posture observe` (the default). Bit-identical to LeoAware when the write flags are off. `vela check examples/reach.vela` proves observe-only and typed reconfig: a closed-write operator in this compose is a type error unless the author writes `posture review`. A bare Reconfig or a 0.85 flicker cut is a type error on the observe rail.
+Shipped compose: `Detect + SoftReprobe + Calendar + IntervalBw + WriteBudget + DualGateGuard`. `posture observe` (the default). Bit-identical to LeoAware when the write flags are off. `vela check examples/reach.vela` proves observe-only, typed reconfig, and passthrough: a closed-write operator in this compose is a type error unless the author writes `posture review`. A bare Reconfig or a 0.85 flicker cut is a type error on the observe rail. A cruise `pace`/`cwnd`/`chase` write is a type error on the observe rail.
 
 Typed reconfig (check-time on observe; SoftFlicker stays review):
 
@@ -270,7 +272,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority) |
-| `vela/types.py` `checker.py` | Freshness, loss, typed reconfig, WriteCap, integrators, observe posture, hint law |
+| `vela/types.py` `checker.py` | Freshness, loss, typed reconfig, WriteCap, integrators, observe posture, hint law, passthrough |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA |
@@ -289,6 +291,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 |-----|-----------------|
 | Level vs integrator | `when { pace *= k }` without `integrate when` |
 | WriteCap | cruise writes with `authority` budget 0 |
+| Passthrough | observe `when`/`every` writing pace/cwnd/chase |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Cut refinement | `cut(1.2)` |
 | Compose digest | silent operator swap |
@@ -297,7 +300,8 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 
 Existing `lang vela 0.1` programs still parse. WriteCap stays opt-in.
 Reconfig match is required on the observe rail (`RttHop | Flicker`,
-house cut 0.58). Flagship sources: `examples/equinox.vela` (language)
+house cut 0.58). Observe `when`/`every` cannot write pace/cwnd
+(passthrough). Flagship sources: `examples/equinox.vela` (language)
 and `examples/reach.vela` (house policy).
 
 Version: VELA 0.3.0 (Equinox: authority, receipts, views).

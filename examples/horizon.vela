@@ -43,14 +43,11 @@ controller Horizon {
 
   when p_ho > 0.55 {
     freeze min_rtt, bw for 1.4 * rtt
-    when bw.n >= 2 {
-      pace = bw.mid
-    }
   }
 
-  // HorizonChase is in the stdlib but not in this compose.
-  // Seed-7 ablation: uncapped chase 55 Mbps / 173 ms vs LeoAware 89 / 108.
-  // Re-enable only after scripts/ablate_seed7.py is green.
+  // pace = bw.mid is a cruise write (seed 7 dump: 65/181). Observe
+  // passthrough refuses it. HorizonChase stays stdlib, not this compose.
+  // Re-enable a write only after scripts/ablate_seed7.py is green.
 }
 
 path LeoFastHO {
