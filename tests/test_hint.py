@@ -47,6 +47,7 @@ class TestHintLaw(unittest.TestCase):
         self.assertTrue(res.hint_fail_closed)
         self.assertEqual(res.posture, "observe")
         self.assertTrue(res.observe_only)
+        self.assertTrue(res.typed_reconfig)
         self.assertEqual(res.closed_writes, [])
         self.assertEqual(prog.controllers[0].posture, "observe")
         self.assertEqual(
@@ -66,6 +67,7 @@ class TestHintLaw(unittest.TestCase):
         self.assertTrue(res.ok, res.errors)
         self.assertFalse(res.hint_fail_closed)
         self.assertTrue(res.observe_only)
+        self.assertTrue(res.typed_reconfig)
         self.assertEqual(res.posture, "observe")
 
     def test_bare_hint_as_point_is_error(self):
@@ -209,9 +211,12 @@ controller Probe {
   signals:
     epoch: Epoch
     rtt: Sample<ms> @ epoch
-  on Reconfig(e) {
-    invalidate min_rtt
-    min_rtt = prior.min_rtt
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt
+      min_rtt = prior.min_rtt
+    }
+    Flicker => hold
   }
   on Loss(k) match k {
     Mobility => hold

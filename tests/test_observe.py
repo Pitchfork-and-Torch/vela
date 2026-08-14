@@ -4,10 +4,10 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from vela.checker import check, closed_write_error
+from vela.checker import check, closed_write_error, house_cut_error, typed_reconfig_error
 from vela.compile import compile_source
 from vela.parser import ParseError, parse
-from vela.types import CLOSED_WRITE_OPERATORS, is_observe_only, review_writes_in
+from vela.types import CLOSED_WRITE_OPERATORS, HOUSE_ENDPOINT_CUT, is_observe_only, review_writes_in
 
 ROOT = Path(__file__).resolve().parents[1]
 EX = ROOT / "examples"
@@ -39,6 +39,7 @@ class TestObservePosture(unittest.TestCase):
         self.assertTrue(res.ok, res.errors)
         self.assertEqual(res.posture, "observe")
         self.assertTrue(res.observe_only)
+        self.assertTrue(res.typed_reconfig)
         self.assertEqual(res.closed_writes, [])
         _, cfg = compile_source(src, "reach.vela")
         self.assertTrue(cfg.observe_only)
@@ -54,6 +55,7 @@ class TestObservePosture(unittest.TestCase):
             self.assertTrue(res.ok, (name, res.errors))
             self.assertTrue(res.observe_only, name)
             self.assertEqual(res.posture, "observe", name)
+            self.assertTrue(res.typed_reconfig, name)
 
     def test_default_posture_is_observe(self):
         src = _src(
@@ -186,6 +188,132 @@ view Sneak of Base {
         with self.assertRaises(ParseError) as ctx:
             parse(src, "bad-posture.vela")
         self.assertIn("posture must be observe | review", str(ctx.exception))
+
+    def test_observe_bare_reconfig_is_error(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) {
+    invalidate min_rtt, bw
+    enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+  }
+"""
+        )
+        res = check(parse(src, "bare-re.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(typed_reconfig_error("Probe"), res.errors)
+        self.assertFalse(res.typed_reconfig)
+
+    def test_observe_reconfig_must_name_flicker(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+  }
+"""
+        )
+        res = check(parse(src, "hop-only.vela"))
+        self.assertFalse(res.ok)
+        self.assertTrue(any("Flicker" in e for e in res.errors))
+        self.assertFalse(res.typed_reconfig)
+
+    def test_observe_softflicker_cut_is_error(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+    Flicker => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.85, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+  }
+"""
+        )
+        res = check(parse(src, "soft-cut.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(house_cut_error("Probe", 0.85), res.errors)
+        self.assertTrue(res.typed_reconfig)
+
+    def test_observe_kinded_reconfig_with_house_cut_ok(self):
+        src = _src(
+            f"""
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {{
+    RttHop => {{
+      invalidate min_rtt, bw
+      enter Reprobe(cut: {HOUSE_ENDPOINT_CUT}, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }}
+    Flicker => {{
+      invalidate min_rtt, bw
+      enter Reprobe(cut: {HOUSE_ENDPOINT_CUT}, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }}
+  }}
+"""
+        )
+        res = check(parse(src, "kinded.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertTrue(res.typed_reconfig)
+        self.assertTrue(res.observe_only)
+        self.assertEqual(res.closed_writes, [])
+
+    def test_review_may_keep_bare_reconfig(self):
+        src = _src(
+            """
+  posture review
+  compose Detect + SoftReprobe + SoftFlicker
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) {
+    invalidate min_rtt, bw
+    enter Reprobe(cut: 0.85, explore: 1.15 * rtt, fill: 1.85 * rtt)
+  }
+"""
+        )
+        res = check(parse(src, "review-bare.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertFalse(res.typed_reconfig)
+        self.assertFalse(res.observe_only)
+        self.assertEqual(res.closed_writes, ["SoftFlicker"])
+
+    def test_kinded_observe_still_rejects_closed_write(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe + QuietReach
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {
+    RttHop => hold
+    Flicker => hold
+  }
+"""
+        )
+        res = check(parse(src, "kinded-sneak.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(closed_write_error("Probe", ["QuietReach"]), res.errors)
+        self.assertTrue(res.typed_reconfig)
+        self.assertFalse(res.observe_only)
 
     def test_review_writes_helper(self):
         self.assertEqual(review_writes_in(["Detect", "QuietReach", "OCE"]), ["QuietReach", "OCE"])

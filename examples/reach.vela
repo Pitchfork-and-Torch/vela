@@ -56,10 +56,15 @@ controller Reach {
     delay_ratio: Ratio
     p_ho: Prob
 
-  on Reconfig(e) {
-    invalidate min_rtt, bw
-    enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
-    // WriteBudget resets here: hold latch, reach shots, clean clock.
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+    Flicker => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
   }
 
   on Loss(k) match k {

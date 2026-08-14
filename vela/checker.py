@@ -7,6 +7,7 @@ from vela.types import (
     HINT_ARMS,
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
+    HOUSE_ENDPOINT_CUT,
     INTEGRATOR_OPS,
     LOSS_KINDS,
     RECONFIG_KINDS,
@@ -48,6 +49,7 @@ def check(prog: Program) -> CheckResult:
         res.closed_writes = review_writes_in(first.compose)
         res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
         res.hint_fail_closed = _has_hint_surface(first)
+        res.typed_reconfig = _has_typed_reconfig(first)
     for con in prog.contracts:
         if not con.seeds:
             res.ok = False
@@ -190,18 +192,26 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
 
     reconf_ons = [o for o in c.ons if o.event == "Reconfig"]
     for o in reconf_ons:
-        if o.match_arms:
-            pats = {a.pattern for a in o.match_arms}
-            missing = [k for k in RECONFIG_KINDS if k not in pats]
-            extra = [p for p in pats if p not in RECONFIG_KINDS]
-            if missing:
+        if not o.match_arms:
+            if c.posture == "observe":
                 res.ok = False
-                res.errors.append(
-                    f"{c.name}: Reconfig match missing {missing} (taxonomy must be closed)"
-                )
-            for p in extra:
-                res.ok = False
-                res.errors.append(f"{c.name}: unknown reconfig kind {p}")
+                res.errors.append(typed_reconfig_error(c.name))
+            continue
+        pats = {a.pattern for a in o.match_arms}
+        missing = [k for k in RECONFIG_KINDS if k not in pats]
+        extra = [p for p in pats if p not in RECONFIG_KINDS]
+        if missing:
+            res.ok = False
+            res.errors.append(
+                f"{c.name}: Reconfig match missing {missing} (taxonomy must be closed)"
+            )
+        for p in extra:
+            res.ok = False
+            res.errors.append(f"{c.name}: unknown reconfig kind {p}")
+        if c.posture == "observe":
+            _check_house_cut_in_stmts(c.name, o.body, res)
+            for arm in o.match_arms:
+                _check_house_cut_in_stmts(c.name, arm.body, res)
 
     _check_hint_surface(c, prog, res)
     hints = _hint_names(c)
@@ -215,6 +225,8 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
         _check_prior_min_rtt(c.name, o.body, res)
         for arm in o.match_arms:
             arm_proved = set(hints) if o.event == "Hint" and arm.pattern == "Some" else set()
+            if o.event != "Loss":
+                _check_stale_in_stmts(c.name, arm.body, res)
             _check_cuts_in_stmts(c.name, arm.body, res)
             _check_interval_in_stmts(c.name, arm.body, intervals, set(), res)
             _check_hint_in_stmts(c.name, arm.body, hints, arm_proved, res)
@@ -373,6 +385,55 @@ def closed_write_error(cname: str, writes: list[str]) -> str:
         f"{cname}: closed-write {writes} require posture review "
         "(observe-only compose; no control-loop write)"
     )
+
+
+def typed_reconfig_error(cname: str) -> str:
+    return (
+        f"{cname}: observe-only Reconfig must match RttHop | Flicker "
+        "(typed reconfig; hop and flicker are not the same event)"
+    )
+
+
+def house_cut_error(cname: str, n: float) -> str:
+    return (
+        f"{cname}: observe-only Reprobe cut({n}) must be {HOUSE_ENDPOINT_CUT} "
+        "(house endpoint; SoftFlicker is review)"
+    )
+
+
+def _has_typed_reconfig(c: Controller) -> bool:
+    reconf = [o for o in c.ons if o.event == "Reconfig"]
+    if not reconf:
+        return False
+    for o in reconf:
+        if not o.match_arms:
+            return False
+        pats = {a.pattern for a in o.match_arms}
+        if any(k not in pats for k in RECONFIG_KINDS):
+            return False
+    return True
+
+
+def _reprobe_cut(st: Stmt) -> float | None:
+    if st.kind != "enter" or st.name != "Reprobe":
+        return None
+    for a in st.args:
+        if isinstance(a, tuple) and len(a) == 2 and a[0] == "cut":
+            return _lit_num(a[1])
+    return None
+
+
+def _check_house_cut_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -> None:
+    for st in _flatten_stmts(stmts):
+        n = _reprobe_cut(st)
+        if n is not None and abs(n - HOUSE_ENDPOINT_CUT) > 1e-9:
+            res.ok = False
+            res.errors.append(house_cut_error(cname, n))
+        if st.kind == "cut":
+            cn = _lit_num(st.expr)
+            if cn is not None and abs(cn - HOUSE_ENDPOINT_CUT) > 1e-9:
+                res.ok = False
+                res.errors.append(house_cut_error(cname, cn))
 
 
 def hint_law_error(cname: str, name: str) -> str:

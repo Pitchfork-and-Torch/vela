@@ -51,6 +51,14 @@
       "public": true,
       "note": "Hint law: missing ASCENT-D/Orb is None, not a hop oracle",
       "status": "done"
+    },
+    {
+      "id": "typed-reconfig",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Observe-only Reconfig must match RttHop|Flicker; house cut stays 0.58",
+      "status": "done"
     }
   ]
 }
