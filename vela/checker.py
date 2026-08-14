@@ -225,6 +225,8 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
         _check_prior_min_rtt(c.name, o.body, res)
         for arm in o.match_arms:
             arm_proved = set(hints) if o.event == "Hint" and arm.pattern == "Some" else set()
+            if o.event != "Loss":
+                _check_stale_in_stmts(c.name, arm.body, res)
             _check_cuts_in_stmts(c.name, arm.body, res)
             _check_interval_in_stmts(c.name, arm.body, intervals, set(), res)
             _check_hint_in_stmts(c.name, arm.body, hints, arm_proved, res)
