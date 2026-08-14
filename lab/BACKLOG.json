@@ -41,6 +41,15 @@
       "safe": true,
       "public": true,
       "note": "Reach is checkable observe-only; closed-write compose needs posture review",
+      "status": "done",
+      "pr": 7
+    },
+    {
+      "id": "hint-fail-closed",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Hint law: missing ASCENT-D/Orb is None, not a hop oracle",
       "status": "done"
     }
   ]

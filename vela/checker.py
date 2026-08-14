@@ -4,10 +4,14 @@ from __future__ import annotations
 from vela.ast import Controller, Program, Stmt, View
 from vela.digest import compose_digest
 from vela.types import (
+    HINT_ARMS,
+    HINT_CHANNELS,
+    HINT_TYPE_NAMES,
     INTEGRATOR_OPS,
     LOSS_KINDS,
     RECONFIG_KINDS,
     STDLIB_MECHANISMS,
+    STDLIB_MODULES,
     WRITE_TARGETS,
     CheckResult,
     is_observe_only,
@@ -27,8 +31,12 @@ def check(prog: Program) -> CheckResult:
         return res
     if len(prog.controllers) > 1:
         res.warnings.append("multiple controllers; eval uses the first")
+    for u in prog.uses:
+        if u not in STDLIB_MODULES:
+            res.ok = False
+            res.errors.append(f"unknown module {u} (use only named stdlib surfaces)")
     for c in prog.controllers:
-        _check_controller(c, res)
+        _check_controller(c, prog, res)
     for v in prog.views:
         _check_view(v, prog, res)
     res.views = [v.name for v in prog.views]
@@ -39,6 +47,7 @@ def check(prog: Program) -> CheckResult:
         res.posture = first.posture
         res.closed_writes = review_writes_in(first.compose)
         res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
+        res.hint_fail_closed = _has_hint_surface(first)
     for con in prog.contracts:
         if not con.seeds:
             res.ok = False
@@ -78,7 +87,7 @@ def _check_view(v: View, prog: Program, res: CheckResult) -> None:
             res.errors.append(closed_write_error(f"view {v.name}", sneaks))
 
 
-def _check_controller(c: Controller, res: CheckResult) -> None:
+def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
     unknown = [m for m in c.compose if m not in STDLIB_MECHANISMS]
     for m in unknown:
         res.ok = False
@@ -194,14 +203,22 @@ def _check_controller(c: Controller, res: CheckResult) -> None:
                 res.ok = False
                 res.errors.append(f"{c.name}: unknown reconfig kind {p}")
 
+    _check_hint_surface(c, prog, res)
+    hints = _hint_names(c)
+
     intervals = {s.name for s in c.signals if s.typ.name == "Interval"}
     for o in c.ons:
         _check_stale_in_stmts(c.name, o.body, res)
         _check_cuts_in_stmts(c.name, o.body, res)
         _check_interval_in_stmts(c.name, o.body, intervals, set(), res)
+        _check_hint_in_stmts(c.name, o.body, hints, set(), res)
+        _check_prior_min_rtt(c.name, o.body, res)
         for arm in o.match_arms:
+            arm_proved = set(hints) if o.event == "Hint" and arm.pattern == "Some" else set()
             _check_cuts_in_stmts(c.name, arm.body, res)
             _check_interval_in_stmts(c.name, arm.body, intervals, set(), res)
+            _check_hint_in_stmts(c.name, arm.body, hints, arm_proved, res)
+            _check_prior_min_rtt(c.name, arm.body, res)
     for w in c.whens:
         _check_stale_in_stmts(c.name, w.body, res)
         _check_cuts_in_stmts(c.name, w.body, res)
@@ -209,10 +226,17 @@ def _check_controller(c: Controller, res: CheckResult) -> None:
         proved = _proved_n_ge_2(w.pred, intervals)
         _walk_interval_point(c.name, w.pred, intervals, set(), res)
         _check_interval_in_stmts(c.name, w.body, intervals, proved, res)
+        hinted = _proved_hints(w.pred, hints)
+        if not _is_hint_presence(w.pred, hints):
+            _walk_hint_act(c.name, w.pred, hints, set(), res)
+        _check_hint_in_stmts(c.name, w.body, hints, hinted, res)
+        _check_prior_min_rtt(c.name, w.body, res)
     for e in c.everys:
         _check_stale_in_stmts(c.name, e.body, res)
         _check_cuts_in_stmts(c.name, e.body, res)
         _check_interval_in_stmts(c.name, e.body, intervals, set(), res)
+        _check_hint_in_stmts(c.name, e.body, hints, set(), res)
+        _check_prior_min_rtt(c.name, e.body, res)
 
     _check_write_cap(c, res)
 
@@ -349,6 +373,176 @@ def closed_write_error(cname: str, writes: list[str]) -> str:
         f"{cname}: closed-write {writes} require posture review "
         "(observe-only compose; no control-loop write)"
     )
+
+
+def hint_law_error(cname: str, name: str) -> str:
+    return (
+        f"{cname}: Hint {name} used without a Some-proof "
+        "(hint law; fail-closed)"
+    )
+
+
+def _has_hint_surface(c: Controller) -> bool:
+    if any(o.event == "Hint" for o in c.ons):
+        return True
+    return any(s.typ.name in HINT_TYPE_NAMES for s in c.signals)
+
+
+def _hint_names(c: Controller) -> set[str]:
+    names = {s.name for s in c.signals if s.typ.name in HINT_TYPE_NAMES}
+    if _has_hint_surface(c):
+        names.add("hint")
+        for o in c.ons:
+            if o.event == "Hint" and o.binder:
+                names.add(o.binder)
+    return names
+
+
+def _check_hint_surface(c: Controller, prog: Program, res: CheckResult) -> None:
+    if not _has_hint_surface(c):
+        return
+    if "std.hint" not in prog.uses:
+        res.ok = False
+        res.errors.append(
+            f"{c.name}: Hint requires `use std.hint` "
+            "(fail-closed; no ambient hop oracle)"
+        )
+    hint_ons = [o for o in c.ons if o.event == "Hint"]
+    for o in hint_ons:
+        if not o.match_arms:
+            res.ok = False
+            res.errors.append(
+                f"{c.name}: Hint must match Some | None "
+                "(fail-closed; missing hint is not a hop oracle)"
+            )
+            continue
+        pats = {a.pattern for a in o.match_arms}
+        missing = [k for k in HINT_ARMS if k not in pats]
+        extra = [p for p in pats if p not in HINT_ARMS]
+        if missing:
+            res.ok = False
+            res.errors.append(
+                f"{c.name}: Hint match missing {missing} (fail-closed)"
+            )
+        for p in extra:
+            res.ok = False
+            res.errors.append(f"{c.name}: unknown Hint arm {p} (expected Some | None)")
+
+
+def _hint_subject_of(expr, hints: set[str]) -> str | None:
+    if expr is None or not hasattr(expr, "kind"):
+        return None
+    if expr.kind == "name" and expr.name in hints:
+        return expr.name
+    if expr.kind == "attr" and expr.left is not None and expr.left.kind == "name":
+        base = expr.left.name
+        if base in hints:
+            return base
+        if base == "hint" and expr.name in HINT_CHANNELS and "hint" in hints:
+            return "hint"
+    if expr.kind == "attr" and expr.left is not None and expr.left.kind == "attr":
+        return _hint_subject_of(expr.left, hints)
+    return None
+
+
+def _is_hint_presence(expr, hints: set[str]) -> bool:
+    if expr is None or not hasattr(expr, "kind"):
+        return False
+    if expr.kind == "name" and expr.name in hints:
+        return True
+    if expr.kind == "attr" and expr.left is not None and expr.left.kind == "name":
+        if expr.left.name in hints and expr.name in HINT_CHANNELS:
+            return True
+        if expr.left.name == "hint" and expr.name in HINT_CHANNELS and "hint" in hints:
+            return True
+    return False
+
+
+def _proved_hints(expr, hints: set[str]) -> set[str]:
+    if _is_hint_presence(expr, hints):
+        sub = _hint_subject_of(expr, hints)
+        return {sub} if sub else set()
+    return set()
+
+
+def _walk_hint_act(
+    cname: str,
+    expr,
+    hints: set[str],
+    proved: set[str],
+    res: CheckResult,
+) -> None:
+    if expr is None or not hasattr(expr, "kind") or not hints:
+        return
+    sub = _hint_subject_of(expr, hints)
+    if sub and sub not in proved:
+        res.ok = False
+        res.errors.append(hint_law_error(cname, sub))
+        return
+    _walk_hint_act(cname, expr.left, hints, proved, res)
+    _walk_hint_act(cname, expr.right, hints, proved, res)
+    for a in getattr(expr, "args", []) or []:
+        _walk_hint_act(cname, a, hints, proved, res)
+
+
+def _check_hint_in_stmts(
+    cname: str,
+    stmts: list[Stmt],
+    hints: set[str],
+    proved: set[str],
+    res: CheckResult,
+) -> None:
+    if not hints:
+        return
+    for st in stmts:
+        if st.kind in ("assign", "let", "chase", "cut") and st.expr is not None:
+            _walk_hint_act(cname, st.expr, hints, proved, res)
+        if st.kind == "chase":
+            for a in st.args:
+                _walk_hint_act(cname, a, hints, proved, res)
+        if st.kind == "freeze" and st.expr is not None:
+            _walk_hint_act(cname, st.expr, hints, proved, res)
+        if st.kind == "enter":
+            for a in st.args:
+                if isinstance(a, tuple) and len(a) == 2:
+                    _walk_hint_act(cname, a[1], hints, proved, res)
+                else:
+                    _walk_hint_act(cname, a, hints, proved, res)
+        if st.kind in ("when", "if", "require"):
+            extra = proved | _proved_hints(st.expr, hints)
+            if not _is_hint_presence(st.expr, hints):
+                _walk_hint_act(cname, st.expr, hints, proved, res)
+            _check_hint_in_stmts(cname, st.body, hints, extra, res)
+            else_body = _stmt_else_body(st)
+            if else_body:
+                _check_hint_in_stmts(cname, else_body, hints, proved, res)
+        elif st.body:
+            _check_hint_in_stmts(cname, st.body, hints, proved, res)
+
+
+def _expr_has_prior_min_rtt(expr) -> bool:
+    if expr is None or not hasattr(expr, "kind"):
+        return False
+    if (
+        expr.kind == "attr"
+        and expr.name == "min_rtt"
+        and expr.left is not None
+        and expr.left.kind == "name"
+        and expr.left.name == "prior"
+    ):
+        return True
+    if _expr_has_prior_min_rtt(expr.left) or _expr_has_prior_min_rtt(expr.right):
+        return True
+    return any(_expr_has_prior_min_rtt(a) for a in getattr(expr, "args", []) or [])
+
+
+def _check_prior_min_rtt(cname: str, stmts: list[Stmt], res: CheckResult) -> None:
+    for st in _flatten_stmts(stmts):
+        if st.kind == "assign" and st.name == "min_rtt" and _expr_has_prior_min_rtt(st.expr):
+            res.ok = False
+            res.errors.append(
+                f"{cname}: cannot write min_rtt from prior.min_rtt (freshness law)"
+            )
 
 
 def interval_point_error(cname: str, name: str) -> str:

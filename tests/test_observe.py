@@ -48,7 +48,7 @@ class TestObservePosture(unittest.TestCase):
         self.assertFalse(cfg.oce_legacy)
 
     def test_equinox_and_horizon_are_observe_only(self):
-        for name in ("equinox.vela", "horizon.vela"):
+        for name in ("equinox.vela", "horizon.vela", "ascent.vela"):
             src = (EX / name).read_text(encoding="utf-8")
             res = check(parse(src, name))
             self.assertTrue(res.ok, (name, res.errors))

@@ -177,7 +177,13 @@ controller Ok {
         self.assertTrue(res.ok, res.errors)
 
     def test_existing_examples_still_check(self):
-        for name in ("horizon.vela", "reach.vela", "luff.vela", "leoaware_oce.vela"):
+        for name in (
+            "horizon.vela",
+            "reach.vela",
+            "luff.vela",
+            "leoaware_oce.vela",
+            "ascent.vela",
+        ):
             src = (EX / name).read_text(encoding="utf-8")
             res = check(parse(src, name))
             self.assertTrue(res.ok, (name, res.errors))
