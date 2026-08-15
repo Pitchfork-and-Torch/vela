@@ -25,6 +25,7 @@ The compiler still emits ordinary sender code (Python now, Rust-shaped IR next) 
 ## Quick start
 
 ```bash
+py -3 -m vela check examples/reach.vela
 py -3 -m vela check examples/equinox.vela
 py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
@@ -32,14 +33,19 @@ py -3 -m vela compile examples/equinox.vela -o emit/equinox_cca.py
 py -3 -m unittest discover -s tests -v
 ```
 
+`vela check examples/reach.vela` must print `observe-only` and `passthrough`. That is the no-regress rail, not a rival CCA.
+
 Evaluate against the OrbitStack / LeoAware research sim (`~/Projects/leo-aware-transport`):
 
 ```bash
-py -3 -m vela eval examples/horizon.vela --fast
-py -3 -m vela eval examples/horizon.vela --seeds 13,7,42,99,123
+py -3 -m vela eval examples/reach.vela --fast
+py -3 -m vela eval examples/reach.vela --seeds 13,7,42,99,123
 ```
 
 ## Language in one screen
+
+Flagship Reach. Observe-only. A cruise `pace` or `chase` write is a type error
+(passthrough; that leftover dumped seed 7). Not a rival CCA.
 
 ```vela
 lang vela 0.1
@@ -48,15 +54,19 @@ use std.epoch
 use std.loss
 use std.measure
 use std.control
+use std.path
 use std.eval
 
-controller Horizon {
-  compose Detect + SoftReprobe + IntervalBw + PredictiveFreeze + DualGateGuard
+controller Reach {
+  posture observe
+  compose Detect + SoftReprobe + Calendar + IntervalBw
+        + WriteBudget + DualGateGuard
 
   signals:
     epoch: Epoch
     rtt: Sample<ms> @ epoch
     bw: Interval<bps> @ epoch
+    delay_ratio: Ratio
     p_ho: Prob
 
   on Reconfig(e) match e {
@@ -74,16 +84,6 @@ controller Horizon {
     Mobility => hold
     Congestive => cut(0.72)
     Unknown => require delay_ratio > 1.35 then cut(0.72) else hold
-  }
-
-  when p_ho > 0.35 {
-    freeze min_rtt, bw for 1.4 * rtt
-    pace = bw.mid
-  }
-
-  every ack {
-    chase delivery toward bw.quantile(0.35 + 0.40 * (1 - epoch.uncertainty)) / (1.26 * bdp)
-      rollback if delay_ratio > 1.40
   }
 }
 

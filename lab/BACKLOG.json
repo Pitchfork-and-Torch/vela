@@ -93,6 +93,14 @@
       "status": "done"
     },
     {
+      "id": "teaser-safety",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Public README teaser is observe-only Reach. Cruise pace/chase is not the language intro.",
+      "status": "done"
+    },
+    {
       "id": "kernel-no-oracle",
       "kind": "kernel",
       "safe": true,

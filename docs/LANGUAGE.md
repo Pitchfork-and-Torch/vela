@@ -69,7 +69,7 @@ every epoch { ... }         # epoch horizon
 when <pred> { ... }         # guarded continuous action
 ```
 
-`when p_ho > 0.35` is not a thread. It is a predicate evaluated on each ACK against the path model. The body may `freeze`, scale `pace`, or suppress max-filters. It may not invent capacity.
+`when p_ho > 0.35` is not a thread. It is a predicate evaluated on each ACK against the path model. Under `posture observe` the body may `freeze` samples. It may not scale `pace`, write `cwnd`, `chase`, or `cut` (passthrough; Horizon's leftover `pace = bw.mid` dumped seed 7). Review may name a cruise write so ablation stays named. It may not invent capacity.
 
 `on Reconfig` under `posture observe` must match `RttHop | Flicker`. A bare Reconfig body is legal only under `posture review`.
 
@@ -168,7 +168,7 @@ The same model object is used by the discrete-event simulator **and** by `Predic
 
 **OCE** is provided as a legacy mechanism so v3.7-class controllers can be *expressed* in VELA and compared by ablation (`compose ... + OCE` vs `+ HorizonChase`).
 
-## D. Flagship program: Horizon (named compose on LeoAware, after OCE)
+## D. Horizon (named compose on LeoAware, after OCE; not the current flagship)
 
 LeoAware v3.7 OCE (prompt SoT, OPE-fair `leo_fast_ho`) sits at **58.78 Mbps / 152.09 ms p95** vs BBRv3approx **58.21 / 152.89** - a dual-gate clearance of +0.57 Mbps and -0.80 ms. That is a real win and also a warning: the next hand-stacked module will not buy 10%.
 
@@ -224,7 +224,7 @@ Typed reconfig (check-time on observe; SoftFlicker stays review):
 
 Closed write class (stdlib only): `HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`.
 
-Source: [`examples/reach.vela`](../examples/reach.vela). The language result is the failure class. The packet policy that still clears the house dual-gate is LeoAware v3.4-p95.
+Source: [`examples/reach.vela`](../examples/reach.vela). The public README teaser is this program, not a cruise-write Horizon. The language result is the failure class. The packet policy that still clears the house dual-gate is LeoAware v3.4-p95.
 
 A reconstructed OCE-class controller lives in [`examples/leoaware_oce.vela`](../examples/leoaware_oce.vela) so ablation is a compose-list change, not a fork.
 
@@ -283,7 +283,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA |
 | `vela/eval_harness.py` | Dual-gate runner on leo-aware-transport |
-| `examples/*.vela` | Equinox (0.3), Reach, Horizon, Ascent (fail-closed hint), Luff, OCE-class |
+| `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
 ## G. Equinox (VELA 0.3)
 

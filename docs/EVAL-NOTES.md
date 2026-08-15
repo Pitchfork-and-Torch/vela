@@ -117,6 +117,8 @@ Thesis: the leftover is the quiet middle of an epoch on easy paths (seeds 7, 123
 
 **typed-loss:** `vela check examples/reach.vela` now stamps `loss=Mobility|Congestive|Unknown`. A bare Loss, a Mobility cut, or an Unknown cut without `delay_ratio > 1.35` is a type error on observe. Compile no longer stamps `typed_loss` for a bare handler. No packet-path change.
 
+**teaser-safety:** README "Language in one screen" was the old Horizon cruise write (`pace = bw.mid` / `chase`). That dumped seed 7 and is a type error on observe. The teaser is now Reach. `vela` fences in README must check observe-only + passthrough. No packet-path change.
+
 ### reach-passthrough confirm (2026-08-14)
 
 Isolated workers. `leo_fast_ho` seed 7, 45s. Observe-only Reach.

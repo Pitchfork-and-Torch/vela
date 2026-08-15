@@ -1,5 +1,5 @@
 {
-  "updated": "2026-08-14",
+  "updated": "2026-08-15",
   "title": "OrbitStack / VELA research progress",
   "honesty": "Means only. Coupled-RNG house numbers on this lab machine are not mixed with OPE-fair v3.7 site-tab figures. No dish Mbps claim.",
   "engine": {
@@ -35,6 +35,11 @@
     {
       "date": "2026-08-14",
       "note": "Language: power=low is n<8 at check and eval. House 5-seed ACCEPT stays legal.",
+      "verdict": "done"
+    },
+    {
+      "date": "2026-08-15",
+      "note": "Teaser: README flagship is observe-only Reach. Not a cruise-write intro.",
       "verdict": "done"
     }
   ]

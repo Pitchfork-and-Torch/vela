@@ -40,6 +40,8 @@ binaries.
 8. **Passthrough.** Observe `when` / `every` cannot write `pace`,
    `cwnd`, `chase`, or `cut`. Reach is a LeoAware wrap at check time.
    Sample `freeze` stays legal. Review may name a cruise write.
+   The public README teaser must check as observe-only Reach.
+   A cruise write is not the language intro.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.

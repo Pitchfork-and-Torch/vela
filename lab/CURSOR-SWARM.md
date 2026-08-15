@@ -16,7 +16,7 @@ Write results to `lab/journal.jsonl`. If seed 7 45s moves more than 0.05 Mbps / 
 
 ## Language
 
-Implement one LANGUAGE.md gap per session. Interval n>=2, compose cuts/growth, harness INCOMPLETE, observe posture, hint law, typed reconfig, passthrough, and typed loss already landed (PRs 4/5/6/7/8/9/10/11). Closed-write compose still needs `posture review`. Observe `when`/`every` cannot write pace/cwnd. Observe Loss is type-directed (Mobility holds; Unknown needs delay_ratio). Tests must stay green (`py -3 -m unittest discover -s tests -q`). No packet-path writes.
+Implement one LANGUAGE.md gap per session. Interval n>=2, compose cuts/growth, harness INCOMPLETE, observe posture, hint law, typed reconfig, passthrough, typed loss, and teaser safety already landed (PRs 4/5/6/7/8/9/10/11 plus teaser). Closed-write compose still needs `posture review`. Observe `when`/`every` cannot write pace/cwnd. Observe Loss is type-directed (Mobility holds; Unknown needs delay_ratio). Public README teaser is Reach (observe-only, passthrough), not a cruise-write Horizon. Tests must stay green (`py -3 -m unittest discover -s tests -q`). No packet-path writes.
 
 ## Publisher
 
