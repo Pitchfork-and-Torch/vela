@@ -154,6 +154,7 @@ def publish(
     src: Path | None = None,
     dest: Path | None = None,
     sanitizer: Path | None = None,
+    dry_run: bool = False,
 ) -> int:
     """Merge lab PUBLIC_PROGRESS through the orbitstack sanitizer.
 
@@ -169,10 +170,10 @@ def publish(
     if not src.is_file():
         print(f"FAIL publish: missing lab progress {src}")
         return 2
-    proc = subprocess.run(
-        [sys.executable, str(sanitizer), "--src", str(src), "--dest", str(dest)],
-        check=False,
-    )
+    cmd = [sys.executable, str(sanitizer), "--src", str(src), "--dest", str(dest)]
+    if dry_run:
+        cmd.append("--dry-run")
+    proc = subprocess.run(cmd, check=False)
     if proc.returncode != 0:
         print(f"FAIL publish: sanitizer exit {proc.returncode}")
     return int(proc.returncode)
@@ -182,12 +183,17 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--publish", action="store_true")
+    ap.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --publish, run the sanitizer without writing dest.",
+    )
     args = ap.parse_args(argv)
     LAB.mkdir(parents=True, exist_ok=True)
     if not JOURNAL.exists():
         JOURNAL.write_text("", encoding="utf-8")
     if args.publish:
-        code = publish()
+        code = publish(dry_run=args.dry_run)
         if code != 0:
             return code
         if not args.once:

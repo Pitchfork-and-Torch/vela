@@ -24,4 +24,4 @@ py -3 -m unittest discover -s tests -v
 ## Honesty
 
 Never claim a dual-gate win without the eval harness JSON. Coupled-RNG historical numbers (v3.4-p95 73.57 / 138.37) are not comparable to OPE-fair figures.
-`--publish` must call `~/orbitstack/scripts/publish_progress.py`. Never copy `lab/PUBLIC_PROGRESS.json` onto the public site.
+`--publish` must call `~/orbitstack/scripts/publish_progress.py` (desk-check `--dry-run` first). Never copy `lab/PUBLIC_PROGRESS.json` onto the public site.

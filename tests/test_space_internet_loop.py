@@ -154,13 +154,38 @@ class TestPublishWire(unittest.TestCase):
             self.assertIn("JON-14", notes)
             self.assertIn("Mission lock", notes)
 
+    def test_publish_dry_run_does_not_write(self) -> None:
+        sanitizer = Path.home() / "orbitstack" / "scripts" / "publish_progress.py"
+        if not sanitizer.is_file():
+            self.skipTest("orbitstack sanitizer not on this machine")
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            src = tmp_path / "lab.json"
+            dest = tmp_path / "progress.json"
+            src.write_text(json.dumps(LAB_CLOBBER), encoding="utf-8")
+            dest.write_text(json.dumps(CREST_DEST), encoding="utf-8")
+            before = dest.read_text(encoding="utf-8")
+            code = LOOP.publish(src=src, dest=dest, sanitizer=sanitizer, dry_run=True)
+            self.assertEqual(code, 0)
+            self.assertEqual(dest.read_text(encoding="utf-8"), before)
+
     def test_main_publish_returns_sanitizer_fail(self) -> None:
         from unittest import mock
 
         with mock.patch.object(LOOP, "publish", return_value=2) as pub:
             code = LOOP.main(["--publish"])
         self.assertEqual(code, 2)
-        pub.assert_called_once_with()
+        pub.assert_called_once_with(dry_run=False)
+
+    def test_main_publish_dry_run_flag(self) -> None:
+        from unittest import mock
+
+        with mock.patch.object(LOOP, "publish", return_value=0) as pub:
+            with mock.patch.object(LOOP, "tick") as tick:
+                code = LOOP.main(["--publish", "--dry-run"])
+        self.assertEqual(code, 0)
+        pub.assert_called_once_with(dry_run=True)
+        tick.assert_not_called()
 
     def test_main_publish_once_skips_tick_on_fail(self) -> None:
         from unittest import mock
