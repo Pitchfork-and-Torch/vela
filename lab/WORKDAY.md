@@ -20,7 +20,7 @@
 powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\vela\scripts\Start-SpaceInternetLoop.ps1 -Hours 9
 ```
 
-Optional: `-Publish` copies sanitized progress to orbitstack and deploys that site only.
+Optional: `-Publish` runs `space_internet_loop.py --publish` (orbitstack `publish_progress.py` sanitizer) and deploys that site only if the sanitizer exits 0. Never naive-copy the lab JSON.
 
 If the PC is **off**, do not start this script. Use `lab/PC-OFF.md` (Cursor Cloud + KnockNGrok VPS kicks).
 If the PC is on: stays ON + LOCKED + AC. Do not create Task Scheduler jobs.

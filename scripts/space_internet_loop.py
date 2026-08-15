@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -13,6 +15,8 @@ STATE = LAB / "STATE.md"
 JOURNAL = LAB / "journal.jsonl"
 PUBLIC = LAB / "PUBLIC_PROGRESS.json"
 STOP = LAB / "STOP"
+SANITIZER = Path.home() / "orbitstack" / "scripts" / "publish_progress.py"
+ORBIT_PROGRESS = Path.home() / "orbitstack" / "public" / "progress.json"
 
 
 def _now() -> str:
@@ -145,23 +149,47 @@ def tick() -> int:
     return 0 if result["ok"] else 3
 
 
-def publish() -> None:
-    dest = Path.home() / "orbitstack" / "public" / "progress.json"
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    dest.write_text(PUBLIC.read_text(encoding="utf-8"), encoding="utf-8", newline="\n")
-    print(f"wrote {dest}")
+def publish(
+    *,
+    src: Path | None = None,
+    dest: Path | None = None,
+    sanitizer: Path | None = None,
+) -> int:
+    """Merge lab PUBLIC_PROGRESS through the orbitstack sanitizer.
+
+    Never naive-copy the lab file onto public/progress.json. That clobbers
+    the locked Current (v3.9 Crest 82.07 / 76.26) with coupled-era notes.
+    """
+    src = src or PUBLIC
+    dest = dest or ORBIT_PROGRESS
+    sanitizer = sanitizer or SANITIZER
+    if not sanitizer.is_file():
+        print(f"FAIL publish: missing sanitizer {sanitizer}")
+        return 2
+    if not src.is_file():
+        print(f"FAIL publish: missing lab progress {src}")
+        return 2
+    proc = subprocess.run(
+        [sys.executable, str(sanitizer), "--src", str(src), "--dest", str(dest)],
+        check=False,
+    )
+    if proc.returncode != 0:
+        print(f"FAIL publish: sanitizer exit {proc.returncode}")
+    return int(proc.returncode)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--once", action="store_true")
     ap.add_argument("--publish", action="store_true")
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     LAB.mkdir(parents=True, exist_ok=True)
     if not JOURNAL.exists():
         JOURNAL.write_text("", encoding="utf-8")
     if args.publish:
-        publish()
+        code = publish()
+        if code != 0:
+            return code
         if not args.once:
             return 0
     return tick()

@@ -20,7 +20,11 @@ Implement one LANGUAGE.md gap per session. Interval n>=2, compose cuts/growth, h
 
 ## Publisher
 
-Copy `lab/PUBLIC_PROGRESS.json` to `orbitstack/public/progress.json`. Never copy ablation dumps, kernel source, or failed-operator names. Deploy orbitstack only after the JSON is sanitized.
+```
+py -3 scripts/space_internet_loop.py --publish
+```
+
+That must call `~/orbitstack/scripts/publish_progress.py`. Never naive-copy `lab/PUBLIC_PROGRESS.json` onto `orbitstack/public/progress.json` (lab file is coupled-era and would clobber Current Crest). Never copy ablation dumps, kernel source, or failed-operator names. Deploy orbitstack only after the sanitizer exits 0.
 
 ## Stop
 

@@ -28,10 +28,14 @@ while ((Get-Date) -lt $Deadline) {
     $code = $LASTEXITCODE
     if ($Publish) {
         & $Py -3 (Join-Path $Root "scripts\space_internet_loop.py") --publish
-        $deploy = Join-Path $env:USERPROFILE "orbitstack\deploy.ps1"
-        if (Test-Path $deploy) {
-            Write-Host "[LOOP] publish orbitstack progress"
-            powershell -ExecutionPolicy Bypass -File $deploy
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[LOOP] publish sanitizer failed exit=$LASTEXITCODE. Skip deploy."
+        } else {
+            $deploy = Join-Path $env:USERPROFILE "orbitstack\deploy.ps1"
+            if (Test-Path $deploy) {
+                Write-Host "[LOOP] publish orbitstack progress"
+                powershell -ExecutionPolicy Bypass -File $deploy
+            }
         }
     }
     $backlog = Get-Content (Join-Path $Root "lab\BACKLOG.json") -Raw
