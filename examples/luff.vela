@@ -1,0 +1,78 @@
+lang vela 0.1
+
+use std.epoch
+use std.loss
+use std.measure
+use std.control
+use std.path
+use std.eval
+
+// Luff: epoch-budgeted sail trim.
+//
+// House-gate autopsy (Horizon):
+//   pace *= k every ACK              -> integrator death (seed 7: 55/173)
+//   chase into post-hop BDP          -> cwnd flood
+//   unlimited per-ACK reclaim        -> seed 123: 57/192
+//
+// Luff writes are scarce, mutually exclusive, and reset each epoch.
+// A when-body is a LEVEL (hold the sheet), never an integrator.
+// That is the thing Python/C++ could not make illegal.
+//
+// Desired end: improve space internet on top of LeoAware. Dual-gate
+// vs BBR (70.88 / 138.83), no engine regress vs 73.57 / 138.37,
+// terrestrial >= 77 @ 40.
+// Do not claim it without results/eval_*.json.
+
+// Review-only. TrimHold + TrimFill write the control loop.
+// Not the flagship. Do not merge this compose as Reach.
+controller Luff {
+  posture review
+  compose Detect + SoftReprobe + Calendar + IntervalBw
+        + WriteBudget + TrimHold + TrimFill + DualGateGuard
+
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+    bw: Interval<bps> @ epoch
+    delay_ratio: Ratio
+    p_ho: Prob
+
+  on Reconfig(e) {
+    invalidate min_rtt, bw
+    enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    // WriteBudget resets here: hold latch, fill steps, reclaim MSS.
+  }
+
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => require delay_ratio > 1.35 then cut(0.72) else hold
+  }
+
+  // LEVEL. Latch cwnd when the calendar says a hop is close.
+  // Do not multiply pace. Do not cut. One latch per approach.
+  when p_ho > 0.72 {
+    freeze min_rtt, bw for 1.2 * rtt
+  }
+
+  // At most one cwnd write per ACK. Priority: Hold > Fill.
+  // Fill: at most 6 steps, only if cwnd < 0.65 * prior.bdp, 100ms after REPROBE.
+  // TrimReclaim (yield-undo) is stdlib-only. Seed-7 45s with it: 83.8 / 184.9
+  // vs LeoAware 88.7 / 108.4. Do not compose it until a new ablation is green.
+}
+
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+
+contract DualGate vs BBRv3approx {
+  seeds = [13, 7, 42, 99, 123]
+  scenario leo_fast_ho duration 90s
+  assert mean(goodput) >= baseline.goodput
+  assert mean(p95) <= baseline.p95
+  assert terrestrial.goodput >= 77 Mbps
+  report ci(0.95), ablation
+}

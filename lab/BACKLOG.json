@@ -1,0 +1,128 @@
+{
+  "items": [
+    {
+      "id": "confirm-passthrough",
+      "kind": "eval",
+      "safe": true,
+      "public": true,
+      "note": "Eval: observe-only Reach must match LeoAware on seed 7 45s. Language passthrough rail is landed.",
+      "status": "done"
+    },
+    {
+      "id": "interval-n2",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Type error when Interval is used as a point with n < 2",
+      "status": "done",
+      "pr": 5
+    },
+    {
+      "id": "compose-cuts",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Parse compose cuts = min and compose growth = min|max|sum",
+      "status": "done",
+      "pr": 6
+    },
+    {
+      "id": "incomplete-verdict",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Harness top-level INCOMPLETE when terrestrial is missing",
+      "status": "done",
+      "pr": 4
+    },
+    {
+      "id": "observe-posture",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Reach is checkable observe-only; closed-write compose needs posture review",
+      "status": "done",
+      "pr": 7
+    },
+    {
+      "id": "hint-fail-closed",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Hint law: missing ASCENT-D/Orb is None, not a hop oracle",
+      "status": "done"
+    },
+    {
+      "id": "typed-reconfig",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Observe-only Reconfig must match RttHop|Flicker; house cut stays 0.58",
+      "status": "done"
+    },
+    {
+      "id": "passthrough-law",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Observe-only when/every cannot write pace/cwnd; Reach is a LeoAware wrap at check time",
+      "status": "done"
+    },
+    {
+      "id": "typed-loss",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Observe-only Loss must match Mobility|Congestive|Unknown; Mobility holds; Unknown cut needs delay_ratio > 1.35",
+      "status": "done"
+    },
+    {
+      "id": "report-ci",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "report ci emits mean+/-std (not a bootstrap)",
+      "status": "done"
+    },
+    {
+      "id": "power-low-align",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Align power=low: checker and harness share n<8. Five-seed ACCEPT stays legal.",
+      "status": "done"
+    },
+    {
+      "id": "teaser-safety",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Public README teaser is observe-only Reach. Cruise pace/chase is not the language intro.",
+      "status": "done"
+    },
+    {
+      "id": "kernel-no-oracle",
+      "kind": "kernel",
+      "safe": true,
+      "public": true,
+      "note": "Kernel refuse of next_capacity / future PathState (no-oracle law).",
+      "status": "done"
+    },
+    {
+      "id": "leo-multi-jain",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Optional fairness assert on leo_multi as a contract scenario.",
+      "status": "done"
+    },
+    {
+      "id": "soft-cut-min-runtime",
+      "kind": "kernel",
+      "safe": true,
+      "public": true,
+      "note": "Soft-cut min at runtime when two soft cuts share an event.",
+      "status": "done"
+    }
+  ]
+}

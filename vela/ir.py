@@ -1,0 +1,179 @@
+"""VELA mechanism IR (config the kernel runs)."""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+from vela.ast import Program
+from vela.types import assert_names_jain, is_observe_only, parse_jain_floor
+
+
+@dataclass
+class VelaConfig:
+    name: str = "Horizon"
+    mechanisms: list[str] = field(default_factory=list)
+    predictive_freeze: bool = True
+    interval_bw: bool = True
+    horizon_chase: bool = False
+    typed_loss: bool = True
+    dual_gate_guard: bool = True
+    oce_legacy: bool = False
+    freeze_lead_rtts: float = 1.40
+    chase_rtts: float = 2.60
+    chase_bdp_div: float = 1.26
+    rollback_delay: float = 1.40
+    pre_ho_pace: float = 0.94
+    trim_hold: bool = False
+    trim_fill: bool = False
+    trim_reclaim: bool = False
+    trim_hold_p_ho: float = 0.72
+    trim_fill_frac: float = 0.65
+    trim_fill_steps: int = 6
+    trim_fill_window_s: float = 0.10
+    trim_reclaim_budget_mss: float = 12.0
+    quiet_shield: bool = False
+    quiet_shield_age_s: float = 7.5
+    quiet_shield_dr: float = 1.40
+    quiet_shield_min_gaps: int = 2
+    soft_flicker: bool = False
+    soft_flicker_cut: float = 0.85
+    soft_flicker_dr: float = 1.20
+    quiet_reach: bool = False
+    quiet_reach_age_s: float = 2.2
+    quiet_reach_clean_s: float = 0.28
+    quiet_reach_p_ho: float = 0.22
+    quiet_reach_dr: float = 1.16
+    quiet_reach_frac: float = 1.28
+    quiet_reach_shots: int = 3
+    quiet_reach_shot_gap_s: float = 1.0
+    quiet_reach_max_mult: float = 1.22
+    quiet_reach_max_mss: float = 18.0
+    quiet_reach_max_uncert: float = 0.90
+    slack_p90_s: float = 0.130
+    seeds: list[int] = field(default_factory=lambda: [13, 7, 42, 99, 123])
+    scenarios: list[str] = field(default_factory=lambda: ["leo_fast_ho", "terrestrial"])
+    duration_s: float = 90.0
+    baseline: str = "BBRv3approx"
+    contract_name: str = "DualGate"
+    reports: list[str] = field(default_factory=list)
+    view: str = ""
+    compose_digest: str = ""
+    posture: str = "observe"
+    observe_only: bool = True
+    passthrough: bool = False
+    cuts_compose: str | None = None
+    growth_compose: str | None = None
+    no_oracle: bool = True
+    jain_min: float | None = None
+
+
+def parse_report_ci(reports: list[str]) -> tuple[float | None, list[str]]:
+    """Read `report ci` / `report ci(0.95)` from a contract.
+
+    Returns (level, errors). Level is None when the contract does not
+    ask for a CI. Errors are check-time; a bad level is not a silent skip.
+    """
+    level: float | None = None
+    errors: list[str] = []
+    for item in reports:
+        text = str(item).strip()
+        if text == "ci":
+            level = 0.95
+            continue
+        if not text.startswith("ci("):
+            continue
+        raw = text[3:-1].strip() if text.endswith(")") else ""
+        try:
+            val = float(raw)
+        except ValueError:
+            errors.append(f"report {text}: CI level must be a number in (0, 1)")
+            continue
+        if not (0.0 < val < 1.0):
+            errors.append(f"report {text}: CI level must be in (0, 1)")
+            continue
+        level = val
+    return level, errors
+
+
+def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
+    c = prog.controllers[0]
+    mechs = list(c.compose) or [
+        "Detect",
+        "SoftReprobe",
+        "IntervalBw",
+        "PredictiveFreeze",
+        "DualGateGuard",
+    ]
+    cfg = VelaConfig(name=c.name, mechanisms=mechs)
+    cfg.predictive_freeze = "PredictiveFreeze" in mechs
+    cfg.interval_bw = "IntervalBw" in mechs
+    cfg.horizon_chase = "HorizonChase" in mechs
+    from vela.checker import controller_has_typed_loss
+
+    cfg.typed_loss = "TypedLoss" in mechs or controller_has_typed_loss(c)
+    cfg.dual_gate_guard = "DualGateGuard" in mechs
+    cfg.oce_legacy = "OCE" in mechs and "HorizonChase" not in mechs
+    cfg.trim_hold = "TrimHold" in mechs
+    cfg.trim_fill = "TrimFill" in mechs
+    cfg.trim_reclaim = "TrimReclaim" in mechs
+    cfg.quiet_reach = "QuietReach" in mechs
+    cfg.quiet_shield = "QuietShield" in mechs
+    cfg.soft_flicker = "SoftFlicker" in mechs
+    if view:
+        found = [v for v in prog.views if v.name == view]
+        if not found:
+            raise ValueError(f"unknown view {view!r}")
+        mechs = list(found[0].compose)
+        cfg.mechanisms = mechs
+        cfg.name = f"{c.name}/{view}"
+        cfg.view = view
+        cfg.predictive_freeze = "PredictiveFreeze" in mechs
+        cfg.interval_bw = "IntervalBw" in mechs
+        cfg.horizon_chase = "HorizonChase" in mechs
+        cfg.dual_gate_guard = "DualGateGuard" in mechs
+        cfg.trim_hold = "TrimHold" in mechs
+        cfg.trim_fill = "TrimFill" in mechs
+        cfg.trim_reclaim = "TrimReclaim" in mechs
+        cfg.quiet_reach = "QuietReach" in mechs
+        cfg.quiet_shield = "QuietShield" in mechs
+        cfg.soft_flicker = "SoftFlicker" in mechs
+    if cfg.trim_hold or cfg.trim_fill or cfg.trim_reclaim or cfg.quiet_reach:
+        cfg.interval_bw = True
+    from vela.digest import compose_digest
+
+    cfg.compose_digest = compose_digest(cfg.mechanisms)
+    cfg.posture = c.posture
+    if cfg.posture == "observe":
+        # Observe-only rail: compose may name a write, but the kernel
+        # flags stay off. Checker already errors; this is the compile bind.
+        cfg.horizon_chase = False
+        cfg.trim_hold = False
+        cfg.trim_fill = False
+        cfg.trim_reclaim = False
+        cfg.quiet_reach = False
+        cfg.quiet_shield = False
+        cfg.soft_flicker = False
+        cfg.oce_legacy = False
+        cfg.observe_only = True
+    else:
+        cfg.observe_only = is_observe_only(cfg.mechanisms)
+    from vela.checker import controller_is_passthrough
+
+    cfg.passthrough = controller_is_passthrough(c)
+    cfg.cuts_compose = c.cuts_compose or "min"
+    cfg.growth_compose = c.growth_compose
+    cfg.no_oracle = True
+    if prog.contracts:
+        con = prog.contracts[0]
+        cfg.seeds = list(con.seeds)
+        cfg.scenarios = list(con.scenarios)
+        if "terrestrial" not in cfg.scenarios:
+            cfg.scenarios.append("terrestrial")
+        cfg.duration_s = float(con.duration_s)
+        cfg.baseline = con.baseline
+        cfg.contract_name = con.name
+        cfg.reports = list(con.reports)
+        for a in con.asserts:
+            if assert_names_jain(a.left):
+                cfg.jain_min = parse_jain_floor(a.right)
+                break
+    return cfg

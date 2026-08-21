@@ -1,0 +1,48 @@
+lang vela 0.1
+
+use std.epoch
+use std.loss
+use std.measure
+use std.control
+use std.eval
+
+// Reconstructed LeoAware v3.7-class OCE in VELA.
+// Point-estimate chase after SER / REPROBE. Kept so Horizon can be
+// ablated against a named compose list instead of a fork.
+
+// Review-only. OCE writes cwnd. Ablation artifact, not the flagship.
+controller LeoAwareOCE {
+  posture review
+  compose Detect + SoftReprobe + OCE + DualGateGuard
+
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+    bw: Sample<bps> @ epoch
+    delay_ratio: Ratio
+
+  on Reconfig(e) {
+    invalidate min_rtt, bw
+    enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+  }
+
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => require delay_ratio > 1.35 then cut(0.72) else hold
+  }
+
+  every ack {
+    chase delivery toward bw / (1.42 * bdp)
+      rollback if delay_ratio > 1.42
+  }
+}
+
+contract DualGate vs BBRv3approx {
+  seeds = [13, 7, 42, 99, 123]
+  scenario leo_fast_ho duration 90s
+  assert mean(goodput) >= baseline.goodput
+  assert mean(p95) <= baseline.p95
+  assert terrestrial.goodput >= 77 Mbps
+  report ci(0.95)
+}
