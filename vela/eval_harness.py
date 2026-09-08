@@ -17,6 +17,7 @@ from vela.path import (
     HOUSE_HANDOVER_JITTER_S,
     path_overlay,
 )
+from vela.receipt import eval_gate
 from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power
 
 # Seed 7 45s locked LeoAware rails (WORKDAY / EVAL-NOTES). Not house-gate.
@@ -57,8 +58,10 @@ def write_passthrough_result(
         ),
         "honesty": (
             "Means only. Do not mix with OPE-fair v3.7 prompt figures. "
-            "House champion remains LeoAware v3.4-p95 73.57/138.37 vs BBR 70.88/138.83."
+            "House champion remains LeoAware v3.4-p95 73.57/138.37 vs BBR 70.88/138.83. "
+            "gate=fast. Not a house-gate dual-gate claim."
         ),
+        "gate": "fast",
         "scenario": "leo_fast_ho",
         "seed": 7,
         "duration_s": 45.0,
@@ -258,7 +261,12 @@ def run_one_isolated(
             print(f"  retry after timeout ({attempt + 1})", flush=True)
             continue
         if proc.returncode == 0 and proc.stdout.strip():
-            return json.loads(proc.stdout.strip().splitlines()[-1])
+            rec = parse_worker_stdout(proc.stdout)
+            if rec is not None:
+                return rec
+            last_err = "worker stdout had no result row"
+            print(f"  worker fail attempt {attempt + 1}: {last_err}", flush=True)
+            continue
         last_err = (proc.stderr or proc.stdout or f"exit {proc.returncode}")[-500:]
         print(f"  worker fail attempt {attempt + 1}: {last_err[:180]}", flush=True)
     raise RuntimeError(f"isolated sim failed {algo} {scenario} seed={seed}: {last_err}")
@@ -317,6 +325,9 @@ def evaluate(
                 )
 
     summary = _summarize(rows, cfg)
+    gate = eval_gate(seeds, duration_s, scenarios)
+    summary["gate"] = gate
+    summary["honesty"] = honesty_text(gate)
     summary["elapsed_s"] = round(time.time() - t0, 2)
     summary["rows"] = rows
     summary["config"] = {
@@ -337,8 +348,34 @@ def evaluate(
         "handover_jitter_s": cfg.handover_jitter_s,
         "paths": list(cfg.paths or []),
         "path_digest": cfg.path_digest,
+        "gate": gate,
     }
     return summary
+
+
+def parse_worker_stdout(text: str) -> dict | None:
+    """Last JSON object with a result row. Logs above it are ignored."""
+    for ln in reversed((text or "").splitlines()):
+        raw = ln.strip()
+        if not raw or raw[0] not in "{[":
+            continue
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict) and "goodput_mbps" in obj:
+            return obj
+    return None
+
+
+def honesty_text(gate: str) -> str:
+    return (
+        "Means only. p-values are not claimed. "
+        f"power=low when n<{POWER_OK_MIN_SEEDS}. "
+        f"gate={gate} (--fast is not the house gate). "
+        "Coupled-RNG house LeoAware is 73.57/138.37 vs BBR 70.88/138.83. "
+        "Do not mix these numbers with OPE-fair v3.7 prompt figures."
+    )
 
 
 def _mean(xs: list[float]) -> float:
@@ -562,18 +599,16 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
                 "contract_min": contract_min,
             }
         )
+    gate = eval_gate(cfg.seeds, cfg.duration_s, cfg.scenarios)
     out = {
         "verdict": _decide_verdict(
             verdicts, n_seeds, contract_min, _required_asserts(cfg)
         ),
         "power": eval_power(n_seeds),
+        "gate": gate,
         "tables": tables,
         "asserts": verdicts,
-        "honesty": (
-            "Means only. p-values are not claimed. "
-            f"power=low when n<{POWER_OK_MIN_SEEDS}. "
-            "Do not mix these numbers with OPE-fair v3.7 prompt figures."
-        ),
+        "honesty": honesty_text(gate),
     }
     ci_level, _ci_errs = parse_report_ci(list(getattr(cfg, "reports", []) or []))
     if ci_level is not None:

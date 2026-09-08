@@ -18,6 +18,7 @@ py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
 py -3 -m vela compile examples/equinox.vela
 py -3 -m vela eval examples/reach.vela --fast --tag reach-fast
+py -3 -m vela receipt results/receipt_reach-fast.json --source examples/reach.vela --eval results/eval_reach-fast.json
 py -3 -m unittest discover -s tests -v
 ```
 

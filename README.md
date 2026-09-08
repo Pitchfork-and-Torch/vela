@@ -36,6 +36,7 @@ py -3 -m vela check examples/fair.vela
 py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
 py -3 -m vela compile examples/equinox.vela -o emit/equinox_cca.py
+py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela --eval results/eval_reach.json
 py -3 -m unittest discover -s tests -v
 ```
 
@@ -123,9 +124,11 @@ emit/           compiled Python (generated)
 
 VELA does not violate causality or invent capacity. A Starlink-class path still has handovers, RTT jumps, and a real bottleneck. The language's job is to stop wasting the information the endpoint already has, and to refuse claims the numbers do not support.
 
-**v0.4 Ingress:** the endpoint cannot see the next hop (`next_capacity` is a type error and a kernel drop). Optional `scenario leo_multi` plus `assert mean(jain) >= 0.85` is a contract, not a README. Soft cuts compose as min at runtime (SoftFlicker cannot undo the 0.58 house cut). Flagship Reach stays observe-only. **v0.4.1:** a `path` block is the sim rails, not a comment. `vela check examples/reach.vela` prints the bound LeoFastHO house path.
+**v0.4 Ingress:** the endpoint cannot see the next hop (`next_capacity` is a type error and a kernel drop). Optional `scenario leo_multi` plus `assert mean(jain) >= 0.85` is a contract, not a README. Soft cuts compose as min at runtime (SoftFlicker cannot undo the 0.58 house cut). Flagship Reach stays observe-only. **v0.4.1:** a `path` block is the sim rails, not a comment. `vela check examples/reach.vela` prints the bound LeoFastHO house path. **v0.4.2:** a receipt without `--eval` cannot see the numbers.
 
-**v0.3 Equinox:** integrators in `when` are type errors. WriteCap is linear. Reconfig is a closed kind. Eval writes a SHA-256 receipt bound to source + compose + merkle of rows. Views are first-class compose morphisms. House LeoAware remains 73.57 / 138.37 vs BBR 70.88 / 138.83. JSON + receipt under `results/` are the only win table. See `docs/INGRESS.md`, `docs/EQUINOX.md`, and `docs/EVAL-NOTES.md`.
+**v0.4.2 receipt bind:** `vela receipt --source` checks the program text. `vela receipt --source --eval` binds the eval JSON. A swapped goodput fails then. `--fast` is `gate=fast`, not the house gate.
+
+**v0.3 Equinox:** integrators in `when` are type errors. WriteCap is linear. Reconfig is a closed kind. Eval writes a SHA-256 receipt bound to source + compose + merkle of rows. Views are first-class compose morphisms. House LeoAware (coupled-RNG, not OPE-fair) remains 73.57 / 138.37 vs BBR 70.88 / 138.83. JSON + receipt under `results/` are the only win table. See `docs/INGRESS.md`, `docs/EQUINOX.md`, and `docs/EVAL-NOTES.md`.
 
 ## License
 

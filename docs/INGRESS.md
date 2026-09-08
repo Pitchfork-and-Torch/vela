@@ -49,3 +49,7 @@ Version: VELA 0.4.0 (Ingress: no-oracle, leo_multi Jain, runtime min).
 
 0.4.1 binds the `path` block (check + eval + receipt). See
 `docs/LANGUAGE.md` section I. House LeoFastHO rails stay 12s+/-4s.
+
+0.4.2 binds the eval JSON to the receipt. See `docs/LANGUAGE.md`
+section J. `vela receipt --eval` is what makes a swapped number
+fail. `--fast` stamps `gate=fast`.

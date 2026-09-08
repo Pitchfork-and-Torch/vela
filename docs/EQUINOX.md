@@ -32,8 +32,11 @@ binaries.
    SHA-256 of its effect row (`VELA1|mech|...`). Compose order is part
    of the digest. `vela mech` prints the catalog.
 6. **Eval receipt.** `vela eval` writes `receipt_<tag>.json`: source
-   digest, compose digest, merkle of seed rows, verdict. `vela receipt
-   --source` verifies. A swapped number fails the hash.
+   digest, compose digest, config digest, path digest, merkle of seed
+   rows, verdict, gate. `vela receipt --source` checks the receipt
+   against the program text. `vela receipt --source --eval` binds the
+   eval JSON. A swapped goodput fails then. `--source` alone cannot
+   see the numbers. `vela eval` verifies the receipt it just wrote.
 7. **Views.** `view Observe of Equinox { compose ... }` is a morphism
    of the same controller. `vela eval --view Observe` cannot pretend
    it ran the other compose.
@@ -53,6 +56,7 @@ py -3 -m vela check examples/equinox.vela
 py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
 py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela
+py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela --eval results/eval_reach.json
 ```
 
 ## What 0.3 does not do

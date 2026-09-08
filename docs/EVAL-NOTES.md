@@ -8,6 +8,7 @@ Only JSON under `results/` is a claim. This file is the lab log.
 - `--fast` is 45s / 2 seeds. Not the house gate.
 - House gate: seeds 13,7,42,99,123 · 90s · `leo_fast_ho` + terrestrial.
 - `power=low` when n<8 (checker warning + eval JSON). Five-seed ACCEPT on means is still legal. Not a p-value.
+- A receipt without `--eval` is a self-check. `vela receipt --source --eval` is what fails a swapped goodput. `--fast` stamps `gate=fast`.
 
 ## Runs
 

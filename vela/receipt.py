@@ -16,6 +16,35 @@ from vela.digest import (
 )
 from vela.path import path_digest
 
+# House DualGate rails (EVAL-NOTES). --fast is not this gate.
+HOUSE_GATE_SEEDS = frozenset({13, 7, 42, 99, 123})
+HOUSE_GATE_DURATION_S = 90.0
+HOUSE_GATE_SCENARIOS = frozenset({"leo_fast_ho", "terrestrial"})
+
+
+def eval_gate(
+    seeds: list | None,
+    duration_s: float | None,
+    scenarios: list | None,
+) -> str:
+    """Label the run that produced the numbers. Not a dual-gate win."""
+    got = {int(s) for s in (seeds or [])}
+    scens = set(scenarios or [])
+    dur = float(duration_s) if duration_s is not None else 0.0
+    if (
+        got == HOUSE_GATE_SEEDS
+        and abs(dur - HOUSE_GATE_DURATION_S) < 1e-9
+        and HOUSE_GATE_SCENARIOS <= scens
+    ):
+        return "house"
+    if abs(dur - 45.0) < 1e-9 and 0 < len(got) <= 2:
+        return "fast"
+    return "named"
+
+
+def rows_merkle(rows: list[dict]) -> str:
+    return merkle([row_digest(r) for r in rows])
+
 
 def build_receipt(
     *,
@@ -26,7 +55,6 @@ def build_receipt(
     summary: dict[str, Any],
 ) -> dict[str, Any]:
     rows = list(summary.get("rows") or [])
-    leaves = [row_digest(r) for r in rows]
     body = {
         "vela": __version__,
         "alg": "sha256",
@@ -39,16 +67,33 @@ def build_receipt(
         "paths": list(config.get("paths") or []),
         "path_digest": config.get("path_digest") or path_digest(config.get("paths") or []),
         "n_rows": len(rows),
-        "rows_merkle": merkle(leaves),
+        "rows_merkle": rows_merkle(rows),
         "verdict": summary.get("verdict"),
         "power": summary.get("power"),
         "honesty": summary.get("honesty"),
+        "gate": summary.get("gate") or eval_gate(
+            config.get("seeds"),
+            config.get("duration_s"),
+            config.get("scenarios"),
+        ),
     }
     body["receipt_digest"] = tagged("receipt", _canon(body))
     return body
 
 
-def verify_receipt(receipt: dict[str, Any], *, source: str | None = None) -> list[str]:
+def verify_receipt(
+    receipt: dict[str, Any],
+    *,
+    source: str | None = None,
+    config: dict[str, Any] | None = None,
+    rows: list | None = None,
+    summary: dict[str, Any] | None = None,
+) -> list[str]:
+    """Self-check the receipt. Bind source / config / rows when provided.
+
+    A swapped goodput only fails when rows (or an eval summary) are bound.
+    `vela receipt --source` alone cannot see the numbers.
+    """
     errs: list[str] = []
     if receipt.get("domain") != "VELA1" or receipt.get("alg") != "sha256":
         errs.append("unknown receipt suite")
@@ -69,6 +114,32 @@ def verify_receipt(receipt: dict[str, Any], *, source: str | None = None) -> lis
         pd = path_digest(list(receipt.get("paths") or []))
         if pd != receipt.get("path_digest"):
             errs.append("path_digest does not match paths")
+    if summary is not None:
+        if config is None and summary.get("config") is not None:
+            config = summary.get("config")
+        if rows is None and "rows" in summary:
+            rows = list(summary.get("rows") or [])
+        for key in ("verdict", "power", "honesty", "gate"):
+            if key in receipt and key in summary and receipt.get(key) != summary.get(key):
+                errs.append(f"{key} does not match eval")
+    if config is not None:
+        cd = config_digest(config)
+        if cd != receipt.get("config_digest"):
+            errs.append("config_digest does not match provided config")
+        if receipt.get("gate"):
+            expect_gate = eval_gate(
+                config.get("seeds"),
+                config.get("duration_s"),
+                config.get("scenarios"),
+            )
+            if receipt.get("gate") != expect_gate:
+                errs.append("gate does not match config seeds/duration/scenarios")
+    if rows is not None:
+        got_merkle = rows_merkle(list(rows))
+        if got_merkle != receipt.get("rows_merkle"):
+            errs.append("rows_merkle does not match provided rows")
+        if int(receipt.get("n_rows") or 0) != len(rows):
+            errs.append("n_rows does not match provided rows")
     return errs
 
 

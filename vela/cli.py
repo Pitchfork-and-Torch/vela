@@ -45,6 +45,12 @@ def main(argv: list[str] | None = None) -> int:
     p_rcpt = sub.add_parser("receipt", help="verify an eval receipt")
     p_rcpt.add_argument("file")
     p_rcpt.add_argument("--source", default=None)
+    p_rcpt.add_argument(
+        "--eval",
+        default=None,
+        dest="eval_json",
+        help="eval JSON whose rows the receipt commits",
+    )
 
     sub.add_parser("mech", help="list stdlib mechanisms with digests")
 
@@ -72,12 +78,22 @@ def main(argv: list[str] | None = None) -> int:
         src = None
         if args.source:
             src = Path(args.source).read_text(encoding="utf-8")
-        errs = verify_receipt(rec, source=src)
+        summary = None
+        if args.eval_json:
+            summary = json.loads(Path(args.eval_json).read_text(encoding="utf-8"))
+        errs = verify_receipt(rec, source=src, summary=summary)
         if errs:
             for e in errs:
                 print(f"error: {e}")
             return 1
-        print(f"ok  receipt={rec.get('receipt_digest', '')[:16]}  verdict={rec.get('verdict')}")
+        bound = "bound" if summary is not None else "unbound"
+        print(
+            f"ok  receipt={rec.get('receipt_digest', '')[:16]}  "
+            f"verdict={rec.get('verdict')}  gate={rec.get('gate') or '-'}  "
+            f"rows={bound}"
+        )
+        if summary is None:
+            print("    pass --eval to bind seed rows (a swapped number fails then)")
         return 0
 
     if not getattr(args, "file", None):
@@ -184,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         from vela.eval_harness import evaluate, write_result
         from vela.ir import program_to_config
-        from vela.receipt import build_receipt, write_receipt
+        from vela.receipt import build_receipt, verify_receipt, write_receipt
 
         view = getattr(args, "view", None)
         cfg = program_to_config(prog, view=view)
@@ -213,9 +229,18 @@ def main(argv: list[str] | None = None) -> int:
             summary=summary,
         )
         rp = write_receipt(receipt, out.with_name(f"receipt_{args.tag}.json"))
-        print(json.dumps({k: summary[k] for k in ("verdict", "power", "asserts", "tables")}, indent=2))
+        errs = verify_receipt(receipt, source=src, summary=summary)
+        if errs:
+            for e in errs:
+                print(f"error: {e}")
+            return 1
+        dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
+        print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
         print(f"wrote {out}")
-        print(f"receipt {rp}  {receipt['receipt_digest'][:16]}")
+        print(
+            f"receipt {rp}  {receipt['receipt_digest'][:16]}  "
+            f"gate={receipt.get('gate')}  verified"
+        )
         return 0 if summary["verdict"] == "ACCEPT" else 3
 
     return 1

@@ -282,7 +282,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority) |
 | `vela/types.py` `checker.py` | Freshness, typed loss, typed reconfig, WriteCap, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
 | `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
-| `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts |
+| `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
 | `vela/eval_harness.py` | Dual-gate runner on leo-aware-transport; optional leo_multi Jain; bound path rails |
@@ -306,7 +306,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
 | Cut refinement | `cut(1.2)` |
 | Compose digest | silent operator swap |
-| Eval receipt | a verdict detached from its source |
+| Eval receipt | a verdict detached from its source; a swapped row without `--eval` |
 | Views | eval of compose A claimed as compose B |
 | Power label | silent n<8 p-value; checker and harness share `power=low` |
 
@@ -318,7 +318,8 @@ cannot write pace/cwnd (passthrough). `power=low` is n<8 at check and
 eval; five-seed ACCEPT on means stays legal. Flagship sources:
 `examples/equinox.vela` (language) and `examples/reach.vela` (house policy).
 
-Version: VELA 0.4.1 (path bind: declared path is the sim rails).
+Version: VELA 0.4.2 (receipt bind: eval JSON is the number the hash sees).
+Prior: VELA 0.4.1 (path bind: declared path is the sim rails).
 Prior: VELA 0.4.0 (Ingress: no-oracle, leo_multi Jain, runtime min).
 Prior: VELA 0.3.0 (Equinox: authority, receipts, views).
 
@@ -358,3 +359,17 @@ or unparseable fields are type errors.
 
 Calendar `p_ho` still comes from past gaps. CSV traces stay
 unwired. The kernel still refuses `next_capacity`.
+
+## J. Receipt bind (VELA 0.4.2)
+
+A receipt without the eval JSON is a self-check, not a number
+check. `vela receipt --source` binds the program text. `vela
+receipt --source --eval` recomputes config digest and the merkle
+of seed rows. A swapped goodput or a relabeled verdict fails.
+`vela eval` verifies the receipt it just wrote.
+
+`gate=house` is seeds 13,7,42,99,123 at 90s with `leo_fast_ho`
+and terrestrial. `gate=fast` is the 45s two-seed path. `--fast`
+is not the house gate. Coupled-RNG house LeoAware remains
+73.57 / 138.37 vs BBR 70.88 / 138.83. Do not mix those figures
+with OPE-fair v3.7.

@@ -123,6 +123,14 @@
       "public": true,
       "note": "Soft-cut min at runtime when two soft cuts share an event.",
       "status": "done"
+    },
+    {
+      "id": "receipt-bind",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Receipt verify binds eval JSON. A swapped number fails with --eval. Eval self-verifies. gate=fast is not house.",
+      "status": "done"
     }
   ]
 }
