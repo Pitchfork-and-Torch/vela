@@ -1,0 +1,27 @@
+[project]
+name = "vela"
+version = "0.4.0"
+description = "VELA: epoch-typed language for LEO-aware congestion control"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Pitchfork-and-Torch" }]
+dependencies = []
+
+[project.urls]
+Homepage = "https://vela.jonbailey.xyz/"
+Repository = "https://github.com/Pitchfork-and-Torch/vela"
+Issues = "https://github.com/Pitchfork-and-Torch/vela/issues"
+
+[project.optional-dependencies]
+eval = ["numpy>=1.24", "pandas>=2.0"]
+
+[project.scripts]
+vela = "vela.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["vela*"]

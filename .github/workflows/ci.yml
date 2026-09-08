@@ -1,0 +1,32 @@
+# Tests on push. Manual dispatch still runs the LeoAware import smoke.
+# Does not enable closed-write CCA operators.
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Unit tests
+        run: python -m unittest discover -s tests -q
+      - name: Engine smoke (public repo only)
+        uses: actions/checkout@v4
+        with:
+          repository: Pitchfork-and-Torch/leo-aware-transport
+          path: leo-aware-transport
+      - name: Import LeoAware
+        env:
+          LEO_AWARE_TRANSPORT: ${{ github.workspace }}/leo-aware-transport
+        run: |
+          pip install -q numpy
+          python -c "import os, sys; sys.path.insert(0, os.environ['LEO_AWARE_TRANSPORT']); from leo_cc.ccas import LeoAwareCCA; print(LeoAwareCCA.name)"
+      - name: Summary
+        run: |
+          echo "VELA 0.4 tests green. Engine import OK. No write operators enabled." >> "$GITHUB_STEP_SUMMARY"
