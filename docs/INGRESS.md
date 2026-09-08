@@ -46,3 +46,6 @@ rail. It does not peek simulator RNG. It does not treat five
 seeds as a journal result. It does not claim dish Mbps.
 
 Version: VELA 0.4.0 (Ingress: no-oracle, leo_multi Jain, runtime min).
+
+0.4.1 binds the `path` block (check + eval + receipt). See
+`docs/LANGUAGE.md` section I. House LeoFastHO rails stay 12s+/-4s.

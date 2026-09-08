@@ -35,7 +35,7 @@ def run_job(
     from vela.eval_harness import _import_sim, run_one, scenario_cfg
 
     mod = _import_sim()
-    scfg, n_flows = scenario_cfg(mod, scenario, seed, duration_s)
+    scfg, n_flows = scenario_cfg(mod, scenario, seed, duration_s, cfg)
     rec = run_one(mod, _factory(algo, cfg), scfg, n_flows)
     rec.scenario = scenario
     rec.seed = seed

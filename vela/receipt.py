@@ -14,6 +14,7 @@ from vela.digest import (
     source_digest,
     tagged,
 )
+from vela.path import path_digest
 
 
 def build_receipt(
@@ -35,6 +36,8 @@ def build_receipt(
         "compose": list(compose),
         "compose_digest": compose_digest(compose),
         "config_digest": config_digest(config),
+        "paths": list(config.get("paths") or []),
+        "path_digest": config.get("path_digest") or path_digest(config.get("paths") or []),
         "n_rows": len(rows),
         "rows_merkle": merkle(leaves),
         "verdict": summary.get("verdict"),
@@ -62,6 +65,10 @@ def verify_receipt(receipt: dict[str, Any], *, source: str | None = None) -> lis
         cd = compose_digest(list(receipt["compose"]))
         if cd != receipt.get("compose_digest"):
             errs.append("compose_digest does not match compose list")
+    if receipt.get("paths") is not None or receipt.get("path_digest"):
+        pd = path_digest(list(receipt.get("paths") or []))
+        if pd != receipt.get("path_digest"):
+            errs.append("path_digest does not match paths")
     return errs
 
 

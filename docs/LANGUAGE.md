@@ -285,7 +285,8 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
-| `vela/eval_harness.py` | Dual-gate runner on leo-aware-transport; optional leo_multi Jain |
+| `vela/eval_harness.py` | Dual-gate runner on leo-aware-transport; optional leo_multi Jain; bound path rails |
+| `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
 ## G. Equinox (VELA 0.3)
@@ -317,7 +318,8 @@ cannot write pace/cwnd (passthrough). `power=low` is n<8 at check and
 eval; five-seed ACCEPT on means stays legal. Flagship sources:
 `examples/equinox.vela` (language) and `examples/reach.vela` (house policy).
 
-Version: VELA 0.4.0 (Ingress: no-oracle, leo_multi Jain, runtime min).
+Version: VELA 0.4.1 (path bind: declared path is the sim rails).
+Prior: VELA 0.4.0 (Ingress: no-oracle, leo_multi Jain, runtime min).
 Prior: VELA 0.3.0 (Equinox: authority, receipts, views).
 
 ## H. Ingress (VELA 0.4)
@@ -341,3 +343,18 @@ See [INGRESS.md](INGRESS.md). Summary:
 Reach plus `scenario leo_multi` and `assert mean(jain) >= 0.85`.
 `--fast` does not run that scenario, so the verdict is INCOMPLETE.
 That is the honest fast path, not a skip of the law.
+
+## I. Path bind (VELA 0.4.1)
+
+A `path` block is the model object, not a comment. Check parses
+handover / rtt_jump / capacity / mobility_loss. Eval binds the
+handover rails the sibling sim actually takes. The receipt commits
+the declared law. `use std.path` is required to name a path.
+
+`path LeoFastHO` binds `scenario leo_fast_ho`. Flagship examples
+already write the house rails (12s handover, 4s jitter). Unbound
+names warn; a leo_fast_ho that is not those rails warns. Unknown
+or unparseable fields are type errors.
+
+Calendar `p_ho` still comes from past gaps. CSV traces stay
+unwired. The kernel still refuses `next_capacity`.

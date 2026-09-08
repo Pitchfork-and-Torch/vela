@@ -51,6 +51,12 @@ VELA_CONFIG = VelaConfig(
     cuts_compose={cuts!r},
     jain_min={jain},
     no_oracle={oracle},
+    path_name={pname!r},
+    path_scenario={pscen!r},
+    handover_interval_s={hint},
+    handover_jitter_s={hjitter},
+    paths={paths!r},
+    path_digest={pdigest!r},
 )
 
 CCA_NAME = {name!r}
@@ -104,6 +110,12 @@ def compile_program(prog: Program, *, strict: bool = True) -> tuple[str, VelaCon
         cuts=cfg.cuts_compose,
         jain=cfg.jain_min,
         oracle=cfg.no_oracle,
+        pname=cfg.path_name,
+        pscen=cfg.path_scenario,
+        hint=cfg.handover_interval_s,
+        hjitter=cfg.handover_jitter_s,
+        paths=cfg.paths,
+        pdigest=cfg.path_digest,
     )
     return text, cfg
 

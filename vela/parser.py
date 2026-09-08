@@ -753,8 +753,10 @@ class Parser:
         return PathModel(name=name, fields=fields, span=sp)
 
     def _looks_like_field_start(self) -> bool:
+        # New path fields use `name ~ ...`. `p = 0.08` inside
+        # mobility_loss is a parameter, not a field.
         nxt = self.tokens[self.i + 1] if self.i + 1 < len(self.tokens) else None
-        return nxt is not None and nxt.kind in ("TILDE", "EQ_SIGN")
+        return nxt is not None and nxt.kind == "TILDE"
 
 
 def _num_text(e: Expr) -> str:

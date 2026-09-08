@@ -125,6 +125,8 @@ def main(argv: list[str] | None = None) -> int:
             print("    passthrough  (LeoAware wrap; no cruise write)")
         if res.no_oracle:
             print("    no-oracle  (endpoint cannot see next_capacity)")
+        if res.path_bound:
+            print(f"    path={res.path_bound}")
         if res.fairness:
             extra = f" jain>={res.jain_min}" if res.jain_min is not None else ""
             print(f"    fairness={res.fairness}{extra}")

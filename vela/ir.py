@@ -64,6 +64,12 @@ class VelaConfig:
     growth_compose: str | None = None
     no_oracle: bool = True
     jain_min: float | None = None
+    path_name: str = ""
+    path_scenario: str = ""
+    handover_interval_s: float | None = None
+    handover_jitter_s: float | None = None
+    paths: list = field(default_factory=list)
+    path_digest: str = ""
 
 
 def parse_report_ci(reports: list[str]) -> tuple[float | None, list[str]]:
@@ -162,6 +168,19 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
     cfg.cuts_compose = c.cuts_compose or "min"
     cfg.growth_compose = c.growth_compose
     cfg.no_oracle = True
+    from vela.path import parse_program_paths, path_digest
+
+    laws = parse_program_paths(prog.paths)
+    cfg.paths = [law.as_dict() for law in laws]
+    cfg.path_digest = path_digest(laws)
+    first_bound = next((law for law in laws if law.bound), None)
+    if first_bound is not None:
+        cfg.path_name = first_bound.name
+        cfg.path_scenario = first_bound.scenario
+        cfg.handover_interval_s = first_bound.handover_interval_s
+        cfg.handover_jitter_s = first_bound.handover_jitter_s
+    elif laws:
+        cfg.path_name = laws[0].name
     if prog.contracts:
         con = prog.contracts[0]
         cfg.seeds = list(con.seeds)

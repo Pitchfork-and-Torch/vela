@@ -12,6 +12,11 @@ from typing import Callable
 
 from vela.ir import VelaConfig, parse_report_ci
 from vela.kernel import leo_aware_root, make_cca, oce_cca_factory
+from vela.path import (
+    HOUSE_HANDOVER_INTERVAL_S,
+    HOUSE_HANDOVER_JITTER_S,
+    path_overlay,
+)
 from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power
 
 # Seed 7 45s locked LeoAware rails (WORKDAY / EVAL-NOTES). Not house-gate.
@@ -105,20 +110,38 @@ def _import_sim():
     }
 
 
-def scenario_cfg(mod, name: str, seed: int, duration_s: float):
+def scenario_cfg(
+    mod,
+    name: str,
+    seed: int,
+    duration_s: float,
+    cfg: VelaConfig | None = None,
+):
     LeoPathConfig = mod["LeoPathConfig"]
+    interval, jitter = path_overlay(name, cfg)
     if name == "leo_fast_ho":
         return (
             LeoPathConfig(
                 duration_s=duration_s,
-                handover_interval_s=12,
-                handover_jitter_s=4,
+                handover_interval_s=(
+                    HOUSE_HANDOVER_INTERVAL_S if interval is None else interval
+                ),
+                handover_jitter_s=(
+                    HOUSE_HANDOVER_JITTER_S if jitter is None else jitter
+                ),
                 seed=seed,
             ),
             1,
         )
     if name == "leo_single":
-        return (LeoPathConfig(duration_s=duration_s, handover_interval_s=22, seed=seed), 1)
+        return (
+            LeoPathConfig(
+                duration_s=duration_s,
+                handover_interval_s=22 if interval is None else interval,
+                seed=seed,
+            ),
+            1,
+        )
     if name == "terrestrial":
         d = min(duration_s, 60.0)
         return (LeoPathConfig(duration_s=d, seed=seed, terrestrial=True), 1)
@@ -126,7 +149,7 @@ def scenario_cfg(mod, name: str, seed: int, duration_s: float):
         return (
             LeoPathConfig(
                 duration_s=duration_s,
-                handover_interval_s=25,
+                handover_interval_s=25 if interval is None else interval,
                 seed=seed,
             ),
             3,
@@ -281,7 +304,7 @@ def evaluate(
                         "LeoAwareOCE": oce_cca_factory(),
                         cfg.name: make_cca(cfg),
                     }
-                    scfg, n_flows = scenario_cfg(mod, scen, seed, duration_s)
+                    scfg, n_flows = scenario_cfg(mod, scen, seed, duration_s, cfg)
                     one = run_one(mod, factories[algo_name], scfg, n_flows)
                     one.scenario = scen
                     one.seed = seed
@@ -308,6 +331,12 @@ def evaluate(
         "scenarios": scenarios,
         "duration_s": duration_s,
         "baseline": cfg.baseline,
+        "path_name": cfg.path_name,
+        "path_scenario": cfg.path_scenario,
+        "handover_interval_s": cfg.handover_interval_s,
+        "handover_jitter_s": cfg.handover_jitter_s,
+        "paths": list(cfg.paths or []),
+        "path_digest": cfg.path_digest,
     }
     return summary
 

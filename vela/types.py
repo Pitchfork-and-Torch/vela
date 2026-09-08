@@ -210,6 +210,8 @@ class CheckResult:
     fairness: str = ""
     jain_min: float | None = None
     cuts_compose: str = ""
+    path_bound: str = ""
+    path_digest: str = ""
 
     def raise_if_error(self) -> None:
         if not self.ok:

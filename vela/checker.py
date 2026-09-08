@@ -5,6 +5,13 @@ from vela.ast import Controller, Program, Stmt, View
 from vela.digest import compose_digest
 from vela.ir import parse_report_ci
 from vela.oracle import oracle_error, oracle_name_of
+from vela.path import (
+    house_mismatch_warning,
+    parse_program_paths,
+    path_digest,
+    path_needs_std_error,
+    unbound_path_warning,
+)
 from vela.types import (
     FAIRNESS_SCENARIO,
     HINT_ARMS,
@@ -63,6 +70,7 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+    _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:
             res.ok = False
@@ -483,6 +491,31 @@ def fairness_needs_multi_error(name: str) -> str:
         f"contract {name}: jain/fairness assert requires scenario {FAIRNESS_SCENARIO} "
         "(RFC 5166 holdout; not a silent README)"
     )
+
+
+def _check_paths(prog: Program, res: CheckResult) -> None:
+    if not prog.paths:
+        return
+    if "std.path" not in prog.uses:
+        res.ok = False
+        res.errors.append(path_needs_std_error())
+    laws = parse_program_paths(prog.paths)
+    for law in laws:
+        for err in law.errors:
+            res.ok = False
+            res.errors.append(err)
+        warn = house_mismatch_warning(law)
+        if warn:
+            res.warnings.append(warn)
+        unbound = unbound_path_warning(law)
+        if unbound:
+            res.warnings.append(unbound)
+    bound = [law for law in laws if law.bound]
+    if bound:
+        res.path_bound = bound[0].stamp()
+    elif laws:
+        res.path_bound = laws[0].stamp()
+    res.path_digest = path_digest(laws)
 
 
 def _check_fairness_contract(con, res: CheckResult) -> None:
