@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
@@ -215,6 +216,15 @@ def _cfg_json(cfg: VelaConfig) -> str:
     return json.dumps({f.name: getattr(cfg, f.name) for f in fields(cfg)})
 
 
+def parse_worker_result(*, out_text: str | None, stdout: str) -> dict | None:
+    """Prefer the --out file. Stdout logs after the row cannot replace it."""
+    if out_text:
+        rec = parse_worker_stdout(out_text)
+        if rec is not None:
+            return rec
+    return parse_worker_stdout(stdout)
+
+
 def run_one_isolated(
     algo: str,
     scenario: str,
@@ -226,49 +236,61 @@ def run_one_isolated(
 ) -> dict:
     """Run one sim in a child process. Retry once on interpreter crash."""
     root = Path(__file__).resolve().parents[1]
-    cmd = [
-        sys.executable,
-        "-m",
-        "vela.eval_worker",
-        "--algo",
-        algo,
-        "--scenario",
-        scenario,
-        "--seed",
-        str(seed),
-        "--duration",
-        str(duration_s),
-        "--config-json",
-        _cfg_json(cfg),
-    ]
     env = os.environ.copy()
     env["PYTHONPATH"] = str(root) + os.pathsep + env.get("PYTHONPATH", "")
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     last_err = ""
     for attempt in range(retries + 1):
+        fd, out_name = tempfile.mkstemp(prefix="vela-row-", suffix=".json")
+        os.close(fd)
+        out_path = Path(out_name)
+        cmd = [
+            sys.executable,
+            "-m",
+            "vela.eval_worker",
+            "--algo",
+            algo,
+            "--scenario",
+            scenario,
+            "--seed",
+            str(seed),
+            "--duration",
+            str(duration_s),
+            "--config-json",
+            _cfg_json(cfg),
+            "--out",
+            str(out_path),
+        ]
         try:
-            proc = subprocess.run(
-                cmd,
-                cwd=str(root),
-                env=env,
-                capture_output=True,
-                text=True,
-                timeout=max(120.0, duration_s * 8.0),
-                check=False,
-            )
-        except subprocess.TimeoutExpired as e:
-            last_err = f"timeout: {e}"
-            print(f"  retry after timeout ({attempt + 1})", flush=True)
-            continue
-        if proc.returncode == 0 and proc.stdout.strip():
-            rec = parse_worker_stdout(proc.stdout)
-            if rec is not None:
-                return rec
-            last_err = "worker stdout had no result row"
-            print(f"  worker fail attempt {attempt + 1}: {last_err}", flush=True)
-            continue
-        last_err = (proc.stderr or proc.stdout or f"exit {proc.returncode}")[-500:]
-        print(f"  worker fail attempt {attempt + 1}: {last_err[:180]}", flush=True)
+            try:
+                proc = subprocess.run(
+                    cmd,
+                    cwd=str(root),
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=max(120.0, duration_s * 8.0),
+                    check=False,
+                    start_new_session=True,
+                )
+            except subprocess.TimeoutExpired as e:
+                last_err = f"timeout: {e}"
+                print(f"  retry after timeout ({attempt + 1})", flush=True)
+                continue
+            out_text = ""
+            if out_path.is_file():
+                out_text = out_path.read_text(encoding="utf-8")
+            if proc.returncode == 0:
+                rec = parse_worker_result(out_text=out_text, stdout=proc.stdout)
+                if rec is not None:
+                    return rec
+                last_err = "worker wrote no result row"
+                print(f"  worker fail attempt {attempt + 1}: {last_err}", flush=True)
+                continue
+            last_err = (proc.stderr or proc.stdout or f"exit {proc.returncode}")[-500:]
+            print(f"  worker fail attempt {attempt + 1}: {last_err[:180]}", flush=True)
+        finally:
+            out_path.unlink(missing_ok=True)
     raise RuntimeError(f"isolated sim failed {algo} {scenario} seed={seed}: {last_err}")
 
 
@@ -324,10 +346,7 @@ def evaluate(
                     flush=True,
                 )
 
-    summary = _summarize(rows, cfg)
-    gate = eval_gate(seeds, duration_s, scenarios)
-    summary["gate"] = gate
-    summary["honesty"] = honesty_text(gate)
+    summary = _summarize(rows, cfg, duration_s=duration_s)
     summary["elapsed_s"] = round(time.time() - t0, 2)
     summary["rows"] = rows
     summary["config"] = {
@@ -348,7 +367,7 @@ def evaluate(
         "handover_jitter_s": cfg.handover_jitter_s,
         "paths": list(cfg.paths or []),
         "path_digest": cfg.path_digest,
-        "gate": gate,
+        "gate": summary["gate"],
     }
     return summary
 
@@ -470,7 +489,12 @@ def _decide_verdict(
     return "ACCEPT"
 
 
-def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
+def _summarize(
+    rows: list[dict],
+    cfg: VelaConfig,
+    *,
+    duration_s: float | None = None,
+) -> dict:
     by: dict[tuple[str, str], list[dict]] = {}
     for r in rows:
         by.setdefault((r["scenario"], r["cca"]), []).append(r)
@@ -599,7 +623,10 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
                 "contract_min": contract_min,
             }
         )
-    gate = eval_gate(cfg.seeds, cfg.duration_s, cfg.scenarios)
+    duration_s = float(duration_s if duration_s is not None else cfg.duration_s)
+    obs_seeds = sorted({int(r["seed"]) for r in rows}) if rows else list(cfg.seeds)
+    obs_scens = sorted({str(r["scenario"]) for r in rows}) if rows else list(cfg.scenarios)
+    gate = eval_gate(obs_seeds, duration_s, obs_scens)
     out = {
         "verdict": _decide_verdict(
             verdicts, n_seeds, contract_min, _required_asserts(cfg)
@@ -616,7 +643,7 @@ def _summarize(rows: list[dict], cfg: VelaConfig) -> dict:
     return out
 
 
-def write_result(summary: dict, tag: str = "horizon") -> Path:
+def write_result(summary: dict, tag: str = "eval") -> Path:
     out_dir = Path(__file__).resolve().parents[1] / "results"
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"eval_{tag}.json"

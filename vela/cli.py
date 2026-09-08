@@ -25,13 +25,24 @@ def main(argv: list[str] | None = None) -> int:
     p_cmp.add_argument("-o", "--out", default=None)
     p_cmp.add_argument("--view", default=None)
 
-    p_ev = sub.add_parser("eval", help="dual-gate eval on leo-aware-transport")
+    p_ev = sub.add_parser(
+        "eval",
+        help="run the contract on leo-aware-transport (JSON is the claim)",
+    )
     p_ev.add_argument("file")
     p_ev.add_argument("--seeds", default=None)
-    p_ev.add_argument("--fast", action="store_true", help="2 seeds, 45s, skip cubic")
+    p_ev.add_argument(
+        "--fast",
+        action="store_true",
+        help="2 seeds, 45s, gate=fast. Not the house gate. Do not mix --seeds/--duration.",
+    )
     p_ev.add_argument("--duration", type=float, default=None)
     p_ev.add_argument("--oce", action="store_true")
-    p_ev.add_argument("--tag", default="horizon")
+    p_ev.add_argument(
+        "--tag",
+        default=None,
+        help="result tag (default: controller name)",
+    )
     p_ev.add_argument("--view", default=None)
 
     p_rs = sub.add_parser("emit-rust", help="emit Rust IR sketch")
@@ -200,19 +211,35 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         from vela.eval_harness import evaluate, write_result
         from vela.ir import program_to_config
-        from vela.receipt import build_receipt, verify_receipt, write_receipt
+        from vela.receipt import (
+            build_receipt,
+            eval_gate,
+            gate_cli_line,
+            resolve_eval_rails,
+            verify_receipt,
+            write_receipt,
+        )
 
         view = getattr(args, "view", None)
         cfg = program_to_config(prog, view=view)
-        seeds = None
-        duration = args.duration
-        scenarios = None
-        if args.fast:
-            seeds = [13, 7]
-            duration = duration or 45.0
-            scenarios = ["leo_fast_ho", "terrestrial"]
+        seed_list = None
         if args.seeds:
-            seeds = [int(x) for x in args.seeds.split(",") if x.strip()]
+            seed_list = [int(x) for x in args.seeds.split(",") if x.strip()]
+        seeds, duration, scenarios, plan_errs = resolve_eval_rails(
+            fast=args.fast,
+            seeds=seed_list,
+            duration_s=args.duration,
+        )
+        if plan_errs:
+            for e in plan_errs:
+                print(f"error: {e}")
+            return 2
+        run_seeds = seeds if seeds is not None else list(cfg.seeds)
+        run_dur = duration if duration is not None else cfg.duration_s
+        run_scen = scenarios if scenarios is not None else list(cfg.scenarios)
+        planned = eval_gate(run_seeds, run_dur, run_scen)
+        print(f"eval  controller={cfg.name}  {gate_cli_line(planned)}", flush=True)
+        tag = args.tag or cfg.name.lower()
         summary = evaluate(
             cfg,
             seeds=seeds,
@@ -220,7 +247,7 @@ def main(argv: list[str] | None = None) -> int:
             duration_s=duration,
             include_oce=args.oce,
         )
-        out = write_result(summary, tag=args.tag)
+        out = write_result(summary, tag=tag)
         receipt = build_receipt(
             source=src,
             source_name=str(path),
@@ -228,7 +255,7 @@ def main(argv: list[str] | None = None) -> int:
             config=summary.get("config") or {},
             summary=summary,
         )
-        rp = write_receipt(receipt, out.with_name(f"receipt_{args.tag}.json"))
+        rp = write_receipt(receipt, out.with_name(f"receipt_{tag}.json"))
         errs = verify_receipt(receipt, source=src, summary=summary)
         if errs:
             for e in errs:
@@ -239,7 +266,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {out}")
         print(
             f"receipt {rp}  {receipt['receipt_digest'][:16]}  "
-            f"gate={receipt.get('gate')}  verified"
+            f"{gate_cli_line(str(summary.get('gate') or planned), summary.get('verdict'))}  "
+            f"verified"
         )
         return 0 if summary["verdict"] == "ACCEPT" else 3
 

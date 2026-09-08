@@ -53,3 +53,7 @@ Version: VELA 0.4.0 (Ingress: no-oracle, leo_multi Jain, runtime min).
 0.4.2 binds the eval JSON to the receipt. See `docs/LANGUAGE.md`
 section J. `vela receipt --eval` is what makes a swapped number
 fail. `--fast` stamps `gate=fast`.
+
+0.4.3 locks the gate label. See `docs/LANGUAGE.md` section K.
+`--fast` cannot become house. Workers write the result row to
+`--out`. ACCEPT on `gate=fast` is not a dual-gate win.

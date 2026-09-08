@@ -9,12 +9,14 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 from vela.cli import main
-from vela.eval_harness import parse_worker_stdout
+from vela.eval_harness import parse_worker_result, parse_worker_stdout
 from vela.ir import program_to_config
 from vela.parser import parse
 from vela.receipt import (
     build_receipt,
     eval_gate,
+    gate_cli_line,
+    resolve_eval_rails,
     rows_merkle,
     verify_receipt,
 )
@@ -84,6 +86,33 @@ class TestEvalGate(unittest.TestCase):
             eval_gate([13, 7, 42, 99, 123], 90.0, ["leo_fast_ho"]),
             "named",
         )
+
+    def test_fast_needs_both_scenarios(self):
+        self.assertEqual(eval_gate([13, 7], 45.0, ["leo_fast_ho"]), "named")
+        self.assertEqual(
+            eval_gate([7], 45.0, ["leo_fast_ho", "terrestrial"]),
+            "fast",
+        )
+
+    def test_fast_lock_refuses_house_overrides(self):
+        seeds, dur, scens, errs = resolve_eval_rails(
+            fast=True,
+            seeds=[13, 7, 42, 99, 123],
+            duration_s=90.0,
+        )
+        self.assertTrue(errs)
+        self.assertIsNone(seeds)
+        self.assertTrue(any("--fast" in e for e in errs), errs)
+
+    def test_fast_lock_is_the_two_seed_path(self):
+        seeds, dur, scens, errs = resolve_eval_rails(fast=True)
+        self.assertEqual(errs, [])
+        self.assertEqual(eval_gate(seeds, dur, scens), "fast")
+
+    def test_cli_line_refuses_fast_accept_as_win(self):
+        self.assertIn("not the house gate", gate_cli_line("fast"))
+        self.assertIn("not a dual-gate win", gate_cli_line("fast", "ACCEPT"))
+        self.assertNotIn("dual-gate win", gate_cli_line("house", "ACCEPT"))
 
 
 class TestReceiptVerify(unittest.TestCase):
@@ -209,6 +238,24 @@ class TestReceiptCli(unittest.TestCase):
             self.assertEqual(rc, 1)
             self.assertIn("rows_merkle", buf.getvalue())
 
+    def test_eval_fast_refuses_house_overrides(self):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            rc = main(
+                [
+                    "eval",
+                    str(EX / "reach.vela"),
+                    "--fast",
+                    "--seeds",
+                    "13,7,42,99,123",
+                    "--duration",
+                    "90",
+                ]
+            )
+        self.assertEqual(rc, 2)
+        self.assertIn("--fast", buf.getvalue())
+        self.assertIn("mislabel", buf.getvalue())
+
 
 class TestWorkerStdout(unittest.TestCase):
     def test_ignores_log_lines_before_row(self):
@@ -224,6 +271,18 @@ class TestWorkerStdout(unittest.TestCase):
     def test_empty_or_garbage_is_none(self):
         self.assertIsNone(parse_worker_stdout(""))
         self.assertIsNone(parse_worker_stdout("not json\n{bad"))
+
+    def test_out_file_wins_over_later_stdout_row(self):
+        out = '{"goodput_mbps": 88.65, "p95_rtt_ms": 108.4, "cca": "Reach"}\n'
+        stdout = (
+            "log line\n"
+            + out
+            + '{"goodput_mbps": 1.0, "p95_rtt_ms": 999.0, "cca": "FAKE"}\n'
+        )
+        rec = parse_worker_result(out_text=out, stdout=stdout)
+        self.assertEqual(rec["goodput_mbps"], 88.65)
+        stolen = parse_worker_stdout(stdout)
+        self.assertEqual(stolen["goodput_mbps"], 1.0)
 
 
 if __name__ == "__main__":

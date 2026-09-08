@@ -68,6 +68,7 @@ class TestEvalVerdict(unittest.TestCase):
     def test_incomplete_when_terrestrial_row_missing(self):
         summary = _summarize(_passing_leo_fast_ho(), _cfg())
         self.assertEqual(summary["verdict"], "INCOMPLETE")
+        self.assertEqual(summary["gate"], "named")
         terr = _assert_named(summary, "terrestrial_floor")
         self.assertFalse(terr["ok"])
         self.assertEqual(terr.get("note"), "INCOMPLETE")
@@ -103,7 +104,7 @@ class TestEvalVerdict(unittest.TestCase):
         summary = _summarize(rows, _cfg())
         self.assertEqual(summary["verdict"], "INCOMPLETE")
         self.assertEqual(summary["power"], "low")
-        self.assertEqual(summary["gate"], "house")
+        self.assertEqual(summary["gate"], "named")
         seed_count = _assert_named(summary, "seed_count")
         self.assertEqual(seed_count.get("note"), "INCOMPLETE")
         self.assertEqual(seed_count["n"], 2)

@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 
 from vela.ir import VelaConfig
 from vela.kernel import make_cca, oce_cca_factory
@@ -61,6 +62,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--duration", type=float, required=True)
     ap.add_argument("--config-json", default="")
+    ap.add_argument(
+        "--out",
+        default="",
+        help="write the result row here; parent trusts this over stdout",
+    )
     args = ap.parse_args(argv)
     cfg = VelaConfig()
     if args.config_json:
@@ -73,7 +79,10 @@ def main(argv: list[str] | None = None) -> int:
         duration_s=args.duration,
         cfg=cfg,
     )
-    sys.stdout.write(json.dumps(row))
+    blob = json.dumps(row)
+    if args.out:
+        Path(args.out).write_text(blob + "\n", encoding="utf-8", newline="\n")
+    sys.stdout.write(blob)
     sys.stdout.write("\n")
     return 0
 

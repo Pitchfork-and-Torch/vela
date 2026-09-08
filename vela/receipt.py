@@ -20,6 +20,8 @@ from vela.path import path_digest
 HOUSE_GATE_SEEDS = frozenset({13, 7, 42, 99, 123})
 HOUSE_GATE_DURATION_S = 90.0
 HOUSE_GATE_SCENARIOS = frozenset({"leo_fast_ho", "terrestrial"})
+FAST_GATE_SEEDS = frozenset({13, 7})
+FAST_GATE_DURATION_S = 45.0
 
 
 def eval_gate(
@@ -37,9 +39,49 @@ def eval_gate(
         and HOUSE_GATE_SCENARIOS <= scens
     ):
         return "house"
-    if abs(dur - 45.0) < 1e-9 and 0 < len(got) <= 2:
+    if (
+        got
+        and got <= FAST_GATE_SEEDS
+        and abs(dur - FAST_GATE_DURATION_S) < 1e-9
+        and HOUSE_GATE_SCENARIOS <= scens
+    ):
         return "fast"
     return "named"
+
+
+def resolve_eval_rails(
+    *,
+    fast: bool = False,
+    seeds: list[int] | None = None,
+    duration_s: float | None = None,
+) -> tuple[list[int] | None, float | None, list[str] | None, list[str]]:
+    """CLI rails. --fast is a lock: it cannot become the house gate."""
+    if fast and (seeds is not None or duration_s is not None):
+        return None, None, None, [
+            "--fast is the 45s two-seed path; drop --seeds/--duration "
+            "(house rails with --fast is a mislabel)"
+        ]
+    if fast:
+        return (
+            sorted(FAST_GATE_SEEDS, reverse=True),
+            FAST_GATE_DURATION_S,
+            ["leo_fast_ho", "terrestrial"],
+            [],
+        )
+    return seeds, duration_s, None, []
+
+
+def gate_cli_line(gate: str, verdict: str | None = None) -> str:
+    """One honest CLI line. ACCEPT on gate=fast is not a house win."""
+    if gate == "house":
+        line = "gate=house  (5 seeds, 90s, leo_fast_ho+terrestrial)"
+    elif gate == "fast":
+        line = "gate=fast  (not the house gate)"
+    else:
+        line = f"gate={gate}  (not the house gate)"
+    if verdict == "ACCEPT" and gate != "house":
+        line += ". ACCEPT here is not a dual-gate win"
+    return line
 
 
 def rows_merkle(rows: list[dict]) -> str:

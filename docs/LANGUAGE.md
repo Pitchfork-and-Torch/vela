@@ -282,10 +282,10 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority) |
 | `vela/types.py` `checker.py` | Freshness, typed loss, typed reconfig, WriteCap, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
 | `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
-| `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows |
+| `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
-| `vela/eval_harness.py` | Dual-gate runner on leo-aware-transport; optional leo_multi Jain; bound path rails |
+| `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
 | `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
@@ -318,7 +318,8 @@ cannot write pace/cwnd (passthrough). `power=low` is n<8 at check and
 eval; five-seed ACCEPT on means stays legal. Flagship sources:
 `examples/equinox.vela` (language) and `examples/reach.vela` (house policy).
 
-Version: VELA 0.4.2 (receipt bind: eval JSON is the number the hash sees).
+Version: VELA 0.4.3 (gate label: --fast cannot be house; worker --out).
+Prior: VELA 0.4.2 (receipt bind: eval JSON is the number the hash sees).
 Prior: VELA 0.4.1 (path bind: declared path is the sim rails).
 Prior: VELA 0.4.0 (Ingress: no-oracle, leo_multi Jain, runtime min).
 Prior: VELA 0.3.0 (Equinox: authority, receipts, views).
@@ -373,3 +374,14 @@ and terrestrial. `gate=fast` is the 45s two-seed path. `--fast`
 is not the house gate. Coupled-RNG house LeoAware remains
 73.57 / 138.37 vs BBR 70.88 / 138.83. Do not mix those figures
 with OPE-fair v3.7.
+
+## K. Gate label (VELA 0.4.3)
+
+`--fast` is a lock. Mixing `--seeds` or `--duration` with it
+is how a house run got a fast flag. The CLI refuses that mix.
+Gate is stamped from the rows that actually ran, not from the
+contract seed list. A 2-seed incomplete house contract is
+`gate=named`. Isolated workers write the result row to `--out`.
+A later stdout JSON line cannot replace it. The default `--tag`
+is the controller name, not `horizon`. ACCEPT on `gate=fast`
+prints that it is not a dual-gate win. No packet-path change.

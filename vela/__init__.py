@@ -1,6 +1,6 @@
 """VELA: Variance-aware Epoch Language for Adaptation."""
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 from vela.ast import Program
 from vela.parser import parse

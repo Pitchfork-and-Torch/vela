@@ -1,6 +1,6 @@
 [project]
 name = "vela"
-version = "0.4.2"
+version = "0.4.3"
 description = "VELA: epoch-typed language for LEO-aware congestion control"
 readme = "README.md"
 requires-python = ">=3.11"

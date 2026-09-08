@@ -37,6 +37,8 @@ binaries.
    against the program text. `vela receipt --source --eval` binds the
    eval JSON. A swapped goodput fails then. `--source` alone cannot
    see the numbers. `vela eval` verifies the receipt it just wrote.
+   `--fast` cannot mix `--seeds`/`--duration`. Gate comes from the
+   rows that ran. Workers write the result row to `--out`.
 7. **Views.** `view Observe of Equinox { compose ... }` is a morphism
    of the same controller. `vela eval --view Observe` cannot pretend
    it ran the other compose.

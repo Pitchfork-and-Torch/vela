@@ -131,6 +131,14 @@
       "public": true,
       "note": "Receipt verify binds eval JSON. A swapped number fails with --eval. Eval self-verifies. gate=fast is not house.",
       "status": "done"
+    },
+    {
+      "id": "gate-cli-honesty",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "CLI --fast cannot become house. Gate from rows. Worker --out. ACCEPT on fast is not a dual-gate win.",
+      "status": "done"
     }
   ]
 }
