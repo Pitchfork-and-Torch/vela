@@ -1,0 +1,61 @@
+lang vela 0.4
+
+use std.epoch
+use std.loss
+use std.measure
+use std.control
+use std.path
+use std.eval
+
+// Fairness holdout (VELA 0.4 Ingress). Same observe-only Reach wrap.
+// leo_multi is 3 flows on the sibling sim. Jain is a contract assert,
+// not a README sentence. Flagship Reach stays single-flow DualGate.
+// `vela eval --fast` skips this scenario and the harness is INCOMPLETE.
+
+controller Reach {
+  posture observe
+  compose Detect + SoftReprobe + Calendar + IntervalBw
+        + WriteBudget + DualGateGuard
+
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+    bw: Interval<bps> @ epoch
+    delay_ratio: Ratio
+    p_ho: Prob
+
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+    Flicker => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+  }
+
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => require delay_ratio > 1.35 then cut(0.72) else hold
+  }
+}
+
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+
+contract DualGate vs BBRv3approx {
+  seeds = [13, 7, 42, 99, 123]
+  scenario leo_fast_ho duration 90s
+  scenario leo_multi
+  assert mean(goodput) >= baseline.goodput
+  assert mean(p95) <= baseline.p95
+  assert terrestrial.goodput >= 77 Mbps
+  assert mean(jain) >= 0.85
+  report ci(0.95), ablation
+}
