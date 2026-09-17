@@ -181,6 +181,16 @@ class TestReceiptVerify(unittest.TestCase):
         self.assertTrue(any("n_rows" in e for e in errs), errs)
         self.assertTrue(any("rows_merkle" in e for e in errs), errs)
 
+    def test_non_object_receipt_is_an_error_not_a_crash(self):
+        for bad in ([], "receipt", 7, None):
+            errs = verify_receipt(bad)  # type: ignore[arg-type]
+            self.assertTrue(any("not a JSON object" in e for e in errs), (bad, errs))
+
+    def test_non_object_summary_is_an_error_not_a_crash(self):
+        rec, src, _ = _receipt()
+        errs = verify_receipt(rec, source=src, summary=[])  # type: ignore[arg-type]
+        self.assertTrue(any("eval summary" in e for e in errs), errs)
+
     def test_rows_merkle_stable(self):
         a = rows_merkle([_row(88.65), _row(70.0, seed=13)])
         b = rows_merkle([_row(88.65), _row(70.0, seed=13)])

@@ -12,7 +12,36 @@ from vela.parser import ParseError, parse
 from vela.types import POWER_OK_MIN_SEEDS
 
 
+class InputError(Exception):
+    """An input file could not be read or decoded. Exit 2, no traceback."""
+
+
+def _read_text(path: str | Path, what: str) -> str:
+    try:
+        return Path(path).read_text(encoding="utf-8")
+    except OSError as e:
+        raise InputError(f"cannot read {what} {path}: {e.strerror or e}") from e
+    except UnicodeDecodeError as e:
+        raise InputError(f"{what} {path} is not UTF-8 text: {e.reason}") from e
+
+
+def _read_json(path: str | Path, what: str):
+    text = _read_text(path, what)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as e:
+        raise InputError(f"{what} {path} is not valid JSON: {e.msg} (line {e.lineno})") from e
+
+
 def main(argv: list[str] | None = None) -> int:
+    try:
+        return _main(argv)
+    except InputError as e:
+        print(f"error: {e}")
+        return 2
+
+
+def _main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="vela", description="VELA compiler and eval")
     ap.add_argument("--version", action="version", version=f"VELA {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -85,13 +114,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "receipt":
         from vela.receipt import verify_receipt
 
-        rec = json.loads(Path(args.file).read_text(encoding="utf-8"))
+        rec = _read_json(args.file, "receipt")
         src = None
         if args.source:
-            src = Path(args.source).read_text(encoding="utf-8")
+            src = _read_text(args.source, "source")
         summary = None
         if args.eval_json:
-            summary = json.loads(Path(args.eval_json).read_text(encoding="utf-8"))
+            summary = _read_json(args.eval_json, "eval JSON")
         errs = verify_receipt(rec, source=src, summary=summary)
         if errs:
             for e in errs:
@@ -112,7 +141,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     path = Path(args.file)
-    src = path.read_text(encoding="utf-8")
+    src = _read_text(path, "program")
     try:
         prog = parse(src, str(path))
     except ParseError as e:

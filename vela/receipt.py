@@ -137,6 +137,12 @@ def verify_receipt(
     `vela receipt --source` alone cannot see the numbers.
     """
     errs: list[str] = []
+    if not isinstance(receipt, dict):
+        errs.append("receipt is not a JSON object")
+        return errs
+    if summary is not None and not isinstance(summary, dict):
+        errs.append("eval summary is not a JSON object")
+        return errs
     if receipt.get("domain") != "VELA1" or receipt.get("alg") != "sha256":
         errs.append("unknown receipt suite")
         return errs
