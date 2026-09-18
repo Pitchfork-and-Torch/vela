@@ -243,6 +243,54 @@ path LeoFastHO {
         rec["path_digest"] = path_digest([])
         self.assertTrue(verify_receipt(rec, source=src))
 
+    def test_zero_handover_interval_is_type_error(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 0s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+""",
+        )
+        res = check(parse(src, "zero-ho.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(path_parse_error("LeoFastHO", "handover"), res.errors)
+
+    def test_jitter_exceeds_interval_is_type_error(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 2s jitter 5s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+""",
+        )
+        res = check(parse(src, "jitter-ho.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(path_parse_error("LeoFastHO", "handover"), res.errors)
+
+    def test_equal_jitter_and_interval_still_ok(self):
+        # boundary: jitter == interval is tight but not inverted
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 4s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+""",
+        )
+        res = check(parse(src, "eq-ho.vela"))
+        self.assertTrue(res.ok, res.errors)
+
     def test_oce_without_path_still_checks(self):
         src = (EX / "leoaware_oce.vela").read_text(encoding="utf-8")
         res = check(parse(src, "leoaware_oce.vela"))

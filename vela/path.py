@@ -157,6 +157,22 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.handover_jitter_s = _to_seconds(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            # Zero/negative period is not a handover cadence. Jitter larger than
+            # the period can push the next handoff into the past (same class of
+            # bad rail as inverted uniform lo/hi on rtt_jump/capacity).
+            if law.handover_interval_s is None or law.handover_interval_s <= 0:
+                law.errors.append(path_parse_error(model.name, key))
+                law.handover_interval_s = None
+                law.handover_jitter_s = None
+                continue
+            if (
+                law.handover_jitter_s is not None
+                and law.handover_jitter_s > law.handover_interval_s
+            ):
+                law.errors.append(path_parse_error(model.name, key))
+                law.handover_interval_s = None
+                law.handover_jitter_s = None
         elif key == "rtt_jump":
             m = _UNIFORM.match(text)
             if not m:
