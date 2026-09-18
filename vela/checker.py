@@ -78,6 +78,13 @@ def check(prog: Program) -> CheckResult:
         if not con.seeds:
             res.ok = False
             res.errors.append(f"contract {con.name}: empty seeds")
+        # duration 0s (or negative) is not an eval window — check used to
+        # accept it and stamp cfg.duration_s=0, so eval ran an empty episode.
+        if con.duration_s is not None and float(con.duration_s) <= 0:
+            res.ok = False
+            res.errors.append(
+                f"contract {con.name}: duration must be positive, got {con.duration_s:g}s"
+            )
         if "leo_fast_ho" not in con.scenarios and not any(
             a.left.startswith("terrestrial") for a in con.asserts
         ):
