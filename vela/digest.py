@@ -50,14 +50,29 @@ def config_digest(obj: dict) -> str:
     return tagged("cfg", blob)
 
 
+def _row_metric(row: dict, key: str, fmt: str) -> str:
+    """Format a row metric for digest. None / junk coerce to 0.0 like a missing key.
+
+    Eval rows sometimes carry explicit nulls. float(None) raised TypeError and
+    aborted rows_merkle / receipt verify before any mismatch could be reported.
+    """
+    raw = row.get(key, 0.0)
+    if raw is None:
+        raw = 0.0
+    try:
+        return format(float(raw), fmt)
+    except (TypeError, ValueError):
+        return format(0.0, fmt)
+
+
 def row_digest(row: dict) -> str:
     leaf = "|".join(
         [
             str(row.get("scenario", "")),
             str(row.get("seed", "")),
             str(row.get("cca", "")),
-            f"{float(row.get('goodput_mbps', 0.0)):.4f}",
-            f"{float(row.get('p95_rtt_ms', 0.0)):.2f}",
+            _row_metric(row, "goodput_mbps", ".4f"),
+            _row_metric(row, "p95_rtt_ms", ".2f"),
         ]
     )
     return tagged("row", leaf)
