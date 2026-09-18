@@ -33,15 +33,18 @@ def parse_jain_floor(right: str) -> float | None:
     raw = str(right).strip()
     if raw.endswith("%"):
         try:
-            return float(raw[:-1]) / 100.0
+            val = float(raw[:-1]) / 100.0
         except ValueError:
             return None
-    try:
-        val = float(raw)
-    except ValueError:
-        return None
-    if val > 1.0 and val <= 100.0:
-        val = val / 100.0
+    else:
+        try:
+            val = float(raw)
+        except ValueError:
+            return None
+        if val > 1.0 and val <= 100.0:
+            val = val / 100.0
+    # Jain floors are fractions in (0, 1]. Percent form used to return early
+    # (e.g. 120% -> 1.2, -5% -> -0.05) and skip this guard.
     if 0.0 < val <= 1.0:
         return val
     return None

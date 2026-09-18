@@ -8,7 +8,7 @@ from vela.checker import check, fairness_needs_multi_error
 from vela.eval_harness import _summarize, jain_index
 from vela.ir import VelaConfig, program_to_config
 from vela.parser import parse
-from vela.types import FAIRNESS_SCENARIO
+from vela.types import FAIRNESS_SCENARIO, parse_jain_floor
 
 ROOT = Path(__file__).resolve().parents[1]
 EX = ROOT / "examples"
@@ -168,6 +168,23 @@ contract DualGate vs BBRv3approx {
         self.assertEqual(fair.get("note"), "INCOMPLETE")
         self.assertNotEqual(summary["verdict"], "ACCEPT")
 
+
+
+
+class TestParseJainFloor(unittest.TestCase):
+    def test_percent_in_range(self):
+        self.assertEqual(parse_jain_floor("85%"), 0.85)
+        self.assertEqual(parse_jain_floor("100%"), 1.0)
+
+    def test_percent_out_of_range_rejected(self):
+        self.assertIsNone(parse_jain_floor("120%"))
+        self.assertIsNone(parse_jain_floor("0%"))
+        self.assertIsNone(parse_jain_floor("-5%"))
+
+    def test_unit_form_still_ok(self):
+        self.assertEqual(parse_jain_floor("0.85"), 0.85)
+        self.assertEqual(parse_jain_floor("85"), 0.85)
+        self.assertIsNone(parse_jain_floor("0"))
 
 if __name__ == "__main__":
     unittest.main()
