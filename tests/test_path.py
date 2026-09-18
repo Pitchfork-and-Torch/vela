@@ -19,6 +19,7 @@ from vela.path import (
     path_needs_std_error,
     path_overlay,
     path_parse_error,
+    path_inverted_range_error,
     path_unknown_field_error,
 )
 from vela.receipt import build_receipt, verify_receipt
@@ -252,3 +253,45 @@ path LeoFastHO {
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_inverted_rtt_jump_is_type_error(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 90ms 20ms
+}
+""",
+        )
+        res = check(parse(src, "inv-rtt.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(path_inverted_range_error("LeoFastHO", "rtt_jump"), res.errors)
+
+    def test_inverted_capacity_is_type_error(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  capacity ~ uniform 120Mbps 20Mbps
+}
+""",
+        )
+        res = check(parse(src, "inv-cap.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(path_inverted_range_error("LeoFastHO", "capacity"), res.errors)
+
+    def test_equal_uniform_bounds_still_ok(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 40ms 40ms
+  capacity ~ uniform 50Mbps 50Mbps
+}
+""",
+        )
+        res = check(parse(src, "eq-bounds.vela"))
+        self.assertTrue(res.ok, res.errors)

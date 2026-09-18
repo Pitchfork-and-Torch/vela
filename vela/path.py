@@ -134,6 +134,10 @@ def path_empty_error(name: str) -> str:
     return f"path {name}: empty model (path law; a claim needs rails)"
 
 
+def path_inverted_range_error(name: str, field: str) -> str:
+    return f"path {name}: {field} low bound exceeds high bound (path law)"
+
+
 def parse_path_model(model: PathModel) -> PathLaw:
     law = PathLaw(name=model.name, fields=dict(model.fields))
     law.scenario = PATH_SCENARIO.get(model.name, "")
@@ -167,6 +171,11 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.rtt_jump_hi_s = _to_seconds(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if law.rtt_jump_lo_s > law.rtt_jump_hi_s:
+                law.errors.append(path_inverted_range_error(model.name, key))
+                law.rtt_jump_lo_s = None
+                law.rtt_jump_hi_s = None
         elif key == "capacity":
             m = _UNIFORM.match(text)
             if not m:
@@ -177,6 +186,11 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.capacity_hi_bps = _to_bps(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if law.capacity_lo_bps > law.capacity_hi_bps:
+                law.errors.append(path_inverted_range_error(model.name, key))
+                law.capacity_lo_bps = None
+                law.capacity_hi_bps = None
         elif key == "mobility_loss":
             m = _BURST.match(text)
             if not m:
