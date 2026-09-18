@@ -130,6 +130,14 @@ def path_parse_error(name: str, field: str) -> str:
     return f"path {name}: cannot parse {field} (path law)"
 
 
+def path_zero_capacity_error(name: str) -> str:
+    return (
+        f"path {name}: capacity upper bound must be positive "
+        "(a zero-capacity rail is not a path)"
+    )
+
+
+
 def path_empty_error(name: str) -> str:
     return f"path {name}: empty model (path law; a claim needs rails)"
 
@@ -177,6 +185,13 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.capacity_hi_bps = _to_bps(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            # Distinct from inverted lo/hi (#22): equal bounds are fine when
+            # positive, but a non-positive upper bound is a dead rail.
+            if law.capacity_hi_bps is not None and law.capacity_hi_bps <= 0:
+                law.errors.append(path_zero_capacity_error(model.name))
+                law.capacity_lo_bps = None
+                law.capacity_hi_bps = None
         elif key == "mobility_loss":
             m = _BURST.match(text)
             if not m:
