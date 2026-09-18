@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+emit/*.py
+emit/*.rs
+results/*.json
+!results/.gitkeep
+!emit/.gitkeep
+lab/journal.jsonl
+lab/STOP
+.orbit/
+.cursor/
+# Local ops notes. Never publish.
+lab/PC-OFF.md
+lab/HOLD.txt
+lab/cursor-agents.json
+scripts/launch_cursor_cloud.py
