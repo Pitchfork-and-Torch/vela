@@ -16,10 +16,15 @@ def compose_soft_cuts(factors: list[float]) -> float:
     A cut is a remaining window fraction. Negatives, zeros, NaNs, and values
     above 1.0 are not remaining fractions: drop them so a bad factor cannot
     drive cwnd negative, to NaN, or grow the window through the cut path.
+    Non-numeric junk (None, str, dict) must also be skipped — float() raising
+    would abort the compose path and leave cwnd undefined.
     """
     xs: list[float] = []
     for raw in factors:
-        x = float(raw)
+        try:
+            x = float(raw)
+        except (TypeError, ValueError):
+            continue
         if x != x:  # NaN
             continue
         if 0.0 < x <= 1.0:

@@ -44,5 +44,15 @@ class TestSoftCutMin(unittest.TestCase):
             before * 0.58,
         )
 
+    def test_non_numeric_factors_are_skipped(self):
+        before = 12000.0
+        # None / str / dict used to raise inside float() and abort compose.
+        self.assertEqual(compose_soft_cuts([None, "nope", {}, 0.58]), 0.58)
+        self.assertAlmostEqual(
+            apply_composed_cut(before, [None, "x", 0.58]),
+            before * 0.58,
+        )
+        self.assertEqual(compose_soft_cuts([None, "bad"]), 1.0)
+
 if __name__ == "__main__":
     unittest.main()
