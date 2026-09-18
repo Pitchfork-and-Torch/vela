@@ -11,8 +11,19 @@ from vela.types import STDLIB_MECHANISMS
 
 
 def compose_soft_cuts(factors: list[float]) -> float:
-    """Min of remaining fractions. Empty list is identity 1.0."""
-    xs = [float(x) for x in factors]
+    """Min of remaining fractions in (0, 1]. Empty / all-invalid is identity 1.0.
+
+    A cut is a remaining window fraction. Negatives, zeros, NaNs, and values
+    above 1.0 are not remaining fractions: drop them so a bad factor cannot
+    drive cwnd negative, to NaN, or grow the window through the cut path.
+    """
+    xs: list[float] = []
+    for raw in factors:
+        x = float(raw)
+        if x != x:  # NaN
+            continue
+        if 0.0 < x <= 1.0:
+            xs.append(x)
     if not xs:
         return 1.0
     return min(xs)

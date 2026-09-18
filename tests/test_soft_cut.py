@@ -31,5 +31,18 @@ class TestSoftCutMin(unittest.TestCase):
         self.assertNotIn("SoftReprobe", names)
 
 
+    def test_invalid_factors_do_not_corrupt_cwnd(self):
+        before = 12000.0
+        # Negatives, zero, NaN, and >1 are not remaining fractions.
+        self.assertEqual(compose_soft_cuts([-0.5, 0.0, float("nan"), 1.5]), 1.0)
+        self.assertAlmostEqual(apply_composed_cut(before, [-0.5]), before)
+        self.assertAlmostEqual(apply_composed_cut(before, [float("nan")]), before)
+        self.assertAlmostEqual(apply_composed_cut(before, [1.5]), before)
+        # Valid factors still win; junk beside them is ignored.
+        self.assertAlmostEqual(
+            apply_composed_cut(before, [0.58, -1.0, 1.5, float("nan")]),
+            before * 0.58,
+        )
+
 if __name__ == "__main__":
     unittest.main()
