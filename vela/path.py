@@ -191,6 +191,14 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.mobility_window_s = _to_seconds(m.group(2), m.group(3))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            # A burst window of zero (or negative) is not a loss episode; the
+            # sim would treat it as an instantaneous no-op while still claiming
+            # mobility_loss rails. Reject like other non-positive path rails.
+            if law.mobility_window_s is None or law.mobility_window_s <= 0:
+                law.errors.append(path_parse_error(model.name, key))
+                law.mobility_p = None
+                law.mobility_window_s = None
     return law
 
 

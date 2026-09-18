@@ -250,5 +250,37 @@ path LeoFastHO {
         self.assertEqual(res.path_bound, "")
 
 
+    def test_zero_mobility_window_is_type_error(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=0ms
+}
+""",
+        )
+        res = check(parse(src, "zero-mob.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(path_parse_error("LeoFastHO", "mobility_loss"), res.errors)
+
+    def test_positive_mobility_window_still_ok(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=1ms
+}
+""",
+        )
+        res = check(parse(src, "tiny-mob.vela"))
+        self.assertTrue(res.ok, res.errors)
+
+
 if __name__ == "__main__":
     unittest.main()
