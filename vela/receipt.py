@@ -30,9 +30,18 @@ def eval_gate(
     scenarios: list | None,
 ) -> str:
     """Label the run that produced the numbers. Not a dual-gate win."""
-    got = {int(s) for s in (seeds or [])}
+    got: set[int] = set()
+    for s in seeds or []:
+        try:
+            got.add(int(s))
+        except (TypeError, ValueError):
+            # Junk seeds are not a house/fast claim; keep labeling named.
+            continue
     scens = set(scenarios or [])
-    dur = float(duration_s) if duration_s is not None else 0.0
+    try:
+        dur = float(duration_s) if duration_s is not None else 0.0
+    except (TypeError, ValueError):
+        dur = 0.0
     if (
         got == HOUSE_GATE_SEEDS
         and abs(dur - HOUSE_GATE_DURATION_S) < 1e-9

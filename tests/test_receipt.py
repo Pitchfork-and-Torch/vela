@@ -79,6 +79,14 @@ class TestEvalGate(unittest.TestCase):
             "house",
         )
         self.assertEqual(eval_gate([13, 7], 45.0, ["leo_fast_ho", "terrestrial"]), "fast")
+        self.assertEqual(
+            eval_gate([13, 7, "x", None], 45.0, ["leo_fast_ho", "terrestrial"]),
+            "fast",
+        )
+        self.assertEqual(
+            eval_gate([13, 7], "forty-five", ["leo_fast_ho", "terrestrial"]),
+            "named",
+        )
         self.assertEqual(eval_gate([7], 90.0, ["leo_fast_ho"]), "named")
 
     def test_house_needs_terrestrial(self):
