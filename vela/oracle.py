@@ -7,6 +7,13 @@ current epoch. Future PathState is a type error and a kernel drop.
 """
 from __future__ import annotations
 
+# Visible check / receipt stamp. Crystal-clear refuse of next_capacity / future PathState.
+NO_ORACLE_STAMP = "no-oracle"
+NO_ORACLE_CHECK_LINE = (
+    "no-oracle  (refuse next_capacity / future PathState)"
+)
+NO_ORACLE_RECEIPT_NOTE = "refuse next_capacity / future PathState"
+
 # Names a program may not read. Attr or bare.
 ORACLE_NAMES = frozenset(
     {

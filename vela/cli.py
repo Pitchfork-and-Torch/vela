@@ -127,9 +127,15 @@ def _main(argv: list[str] | None = None) -> int:
                 print(f"error: {e}")
             return 1
         bound = "bound" if summary is not None else "unbound"
+        from vela.receipt import no_oracle_cli_token
+
+        no_or = rec.get("no_oracle")
+        if no_or is None:
+            no_or = True
         print(
             f"ok  receipt={rec.get('receipt_digest', '')[:16]}  "
             f"verdict={rec.get('verdict')}  gate={rec.get('gate') or '-'}  "
+            f"{no_oracle_cli_token(bool(no_or))}  "
             f"rows={bound}"
         )
         if summary is None:
@@ -180,7 +186,9 @@ def _main(argv: list[str] | None = None) -> int:
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
         if res.no_oracle:
-            print("    no-oracle  (endpoint cannot see next_capacity)")
+            from vela.oracle import NO_ORACLE_CHECK_LINE
+
+            print(f"    {NO_ORACLE_CHECK_LINE}")
         if res.affine:
             print("    affine  (Sample @ e is use-once; e+1 is prior)")
         if res.hybrid:
@@ -301,9 +309,12 @@ def _main(argv: list[str] | None = None) -> int:
         dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
         print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
         print(f"wrote {out}")
+        from vela.receipt import no_oracle_cli_token
+
         print(
             f"receipt {rp}  {receipt['receipt_digest'][:16]}  "
             f"{gate_cli_line(str(summary.get('gate') or planned), summary.get('verdict'))}  "
+            f"{no_oracle_cli_token(bool(receipt.get('no_oracle', True)))}  "
             f"verified"
         )
         return 0 if summary["verdict"] == "ACCEPT" else 3

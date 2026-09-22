@@ -11,8 +11,11 @@ remaining LANGUAGE.md gaps checkable and runnable.
 1. **No-oracle.** The endpoint cannot see the next hop. A program
    that names `next_capacity` / future PathState is a type error.
    The kernel drops those kwargs even if the sibling sim offers a
-   v3.1 freeze-lead peek. `p_ho` may still be a calendar from *past*
-   gaps. Fail-closed Hint Some may name the current epoch.
+   v3.1 freeze-lead peek. `vela check` stamps
+   `no-oracle  (refuse next_capacity / future PathState)`. House
+   eval receipts carry `no_oracle=true` for CLI visibility.
+   `p_ho` may still be a calendar from *past* gaps. Fail-closed
+   Hint Some may name the current epoch.
 2. **Fairness holdout.** `scenario leo_multi` plus
    `assert mean(jain) >= 0.85` is a contract, not a README. The
    harness runs 3 flows and scores RFC 5166 Jain. A jain assert
@@ -34,7 +37,7 @@ py -3 -m unittest discover -s tests -v
 ```
 
 `vela check examples/reach.vela` must print `observe-only`,
-`passthrough`, and `no-oracle`.
+`passthrough`, and `no-oracle  (refuse next_capacity / future PathState)`.
 
 `vela eval examples/fair.vela --fast` is INCOMPLETE for Jain
 (fast skips `leo_multi`). That is honest.
