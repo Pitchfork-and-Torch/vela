@@ -131,3 +131,19 @@ Isolated workers. `leo_fast_ho` seed 7, 45s. Observe-only Reach.
 | Reach | 88.65 | 108.4 |
 
 MATCH within 0.05 Mbps / 0.2 ms. Locked Leo rail held. Not a dual-gate house-gate claim. JSON: `results/eval_reach-passthrough.json`.
+
+### flicker_dead_ms (2026-09-22)
+
+Separate Starlink efficacy arm from hop `dead_seconds` (PR #46).
+
+- **Definition:** milliseconds after a mid-epoch **Flicker** capacity step
+  until goodput recovers to **80%** (`recover_frac=0.80`) of the pre-event
+  epoch median. Flicker is **not** RttHop / handover.
+- Stamped on each eval row (`flicker_dead_ms_*`) and on summary block
+  `flicker_dead_ms` (mean + p95 + labels).
+- `vela eval` CLI prints `flicker_dead_ms mean=... p95=... (Flicker; not RttHop)`.
+- SoftReprobe cut **0.58** held on both hop and flicker arms. Observe-only.
+  No Detect/SoftReprobe fork. No closed-write. No dish Mbps claim.
+
+Fixture: `tests/test_flicker_dead.py`. Module: `vela/flicker_dead.py`.
+

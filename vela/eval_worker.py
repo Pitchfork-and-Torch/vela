@@ -52,6 +52,14 @@ def run_job(
         "handovers": rec.handovers,
         "jain_fairness": rec.jain_fairness,
         "n_flows": rec.n_flows,
+        "flicker_dead_ms_mean": rec.flicker_dead_ms_mean,
+        "flicker_dead_ms_p95": rec.flicker_dead_ms_p95,
+        "flicker_dead_ms_n": rec.flicker_dead_ms_n,
+        "flicker_dead_ms_n_censored": rec.flicker_dead_ms_n_censored,
+        "flicker_dead_ms_recover_frac": rec.flicker_dead_ms_recover_frac,
+        "flicker_event_kind": rec.flicker_event_kind,
+        "flicker_not_rtt_hop": rec.flicker_not_rtt_hop,
+        "flicker_label": rec.flicker_label,
     }
 
 
