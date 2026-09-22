@@ -216,6 +216,9 @@ class CheckResult:
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True
+    # Level vs integrator: when/every body is a level; pace*=k needs integrate when.
+    # Visible check stamp when the refuse law holds (no integrate opt-in).
+    integrator_refuse: bool = True
     writecap: str = ""
     fairness: str = ""
     jain_min: float | None = None

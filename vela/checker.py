@@ -400,6 +400,7 @@ def _check_integrator(
                 f"(Horizon seed 7: 55/173). Write `{opt}` to opt in."
             )
         else:
+            res.integrator_refuse = False
             res.warnings.append(
                 f"{cname}: {opt} opted into a per-ACK {op} on {st.name}"
             )

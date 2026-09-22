@@ -18,7 +18,8 @@ binaries.
    Horizon seed 7 (55 / 173) is now unrepresentable unless the author
    writes `integrate when` under `posture review` and accepts the warning.
    `every ack { pace *= k }` is the same death class: write `integrate every`.
-   A nested `when` inside `on` cannot opt in.
+   A nested `when` inside `on` cannot opt in. `vela check` stamps
+   `integrator=refuse` when the refuse law holds. SoftReprobe cut stays 0.58.
 2. **No ambient authority.** A `WriteCap<cwnd> @ epoch` plus
    `authority { cwnd: 0 }` refuses cruise writes. Reconfig still
    invalidates samples. Observe is the default power.
