@@ -15,12 +15,17 @@ from vela.parser import parse
 from vela.path import (
     HOUSE_HANDOVER_INTERVAL_S,
     HOUSE_HANDOVER_JITTER_S,
+    STARLINK_V2_FLICKER_INTERVAL_S,
+    STARLINK_V2_FLICKER_JITTER_S,
+    flicker_not_hop_note,
+    parse_path_model,
     path_digest,
     path_needs_std_error,
     path_overlay,
     path_parse_error,
     path_unknown_field_error,
 )
+from vela.ast import PathModel
 from vela.receipt import build_receipt, verify_receipt
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +76,8 @@ class TestPathBind(unittest.TestCase):
             "fair.vela",
             "horizon.vela",
             "ascent.vela",
+            "ascent_erased.vela",
+            "starlink_flicker.vela",
             "luff.vela",
         ):
             src = (EX / name).read_text(encoding="utf-8")
@@ -242,6 +249,75 @@ path LeoFastHO {
         self.assertEqual(verify_receipt(rec, source=src), [])
         rec["path_digest"] = path_digest([])
         self.assertTrue(verify_receipt(rec, source=src))
+
+    def test_flicker_field_parses_starlink_v2_rails(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  flicker ~ every 2.8s jitter 1.2s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+""",
+        )
+        prog = parse(src, "flicker.vela")
+        res = check(prog)
+        self.assertTrue(res.ok, res.errors)
+        self.assertIn("house", res.path_bound)
+        self.assertIn("flicker=", res.path_bound)
+        self.assertIn("not hop", res.path_bound)
+        self.assertTrue(any("mid-epoch capacity" in w for w in res.warnings))
+        cfg = program_to_config(prog)
+        law = next(p for p in cfg.paths)
+        self.assertEqual(law["flicker_interval_s"], STARLINK_V2_FLICKER_INTERVAL_S)
+        self.assertEqual(law["flicker_jitter_s"], STARLINK_V2_FLICKER_JITTER_S)
+        # Handover overlay unchanged; flicker is law, not a sim retune here.
+        interval, jitter = path_overlay("leo_fast_ho", cfg)
+        self.assertEqual(interval, 12.0)
+        self.assertEqual(jitter, 4.0)
+
+    def test_starlink_flicker_example_checks(self):
+        src = (EX / "starlink_flicker.vela").read_text(encoding="utf-8")
+        res = check(parse(src, "starlink_flicker.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertIn("house", res.path_bound)
+        self.assertIn("flicker=", res.path_bound)
+        self.assertTrue(res.observe_only)
+        self.assertTrue(res.passthrough)
+        self.assertTrue(res.typed_reconfig)
+        self.assertTrue(any("SoftFlicker is review" in w for w in res.warnings))
+
+    def test_unparseable_flicker_is_type_error(self):
+        src = _prog(
+            "use std.path",
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  flicker ~ sometimes
+}
+""",
+        )
+        res = check(parse(src, "bad-flicker.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(path_parse_error("LeoFastHO", "flicker"), res.errors)
+
+    def test_flicker_not_hop_note_helper(self):
+        law = parse_path_model(
+            PathModel(
+                name="LeoFastHO",
+                fields={
+                    "handover": "every 12s jitter 4s",
+                    "flicker": "every 2.8s jitter 1.2s",
+                },
+            )
+        )
+        note = flicker_not_hop_note(law)
+        self.assertIsNotNone(note)
+        self.assertIn("not a hop", note)
+        self.assertIn("0.58", note)
 
     def test_oce_without_path_still_checks(self):
         src = (EX / "leoaware_oce.vela").read_text(encoding="utf-8")

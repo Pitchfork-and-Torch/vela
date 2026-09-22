@@ -114,7 +114,7 @@ contract DualGate vs BBRv3approx {
 
 ```
 vela/           compiler, type checker, composition kernel, Horizon CCA
-examples/       equinox.vela, reach.vela, fair.vela, ascent.vela, horizon.vela, luff.vela, leoaware_oce.vela
+examples/       equinox.vela, reach.vela, fair.vela, ascent.vela, ascent_erased.vela, starlink_flicker.vela, horizon.vela, luff.vela, leoaware_oce.vela
 docs/           LANGUAGE.md (complete design), EQUINOX.md, INGRESS.md
 tests/          parser, types, kernel, eval verdicts
 emit/           compiled Python (generated)

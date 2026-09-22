@@ -1,4 +1,9 @@
-"""Count endpoint REPROBEs vs real handovers. Isolated."""
+"""Count endpoint REPROBEs vs real handovers. Isolated.
+
+Extras (detect - HO) are flicker / capacity-wobble handling on
+Starlink-class paths, not bugs. SoftReprobe still cuts 0.58.
+Uses LEO_AWARE_TRANSPORT / leo_aware_root(); does not fork Detect.
+"""
 from __future__ import annotations
 
 import json
@@ -8,12 +13,16 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from vela.kernel import leo_aware_root
 
 
 WORKER = r'''
 import json, sys
 from pathlib import Path
-sys.path.insert(0, str(Path.home() / "Projects" / "leo-aware-transport"))
+leo = Path(sys.argv[3])
+sys.path.insert(0, str(leo))
 from leo_cc.ccas import LeoAwareCCA
 from leo_cc.network import LeoPathConfig
 from leo_cc.sim import run_sim
@@ -40,21 +49,27 @@ print(json.dumps({
     "handovers": len(res.handovers),
     "reconfigs_detected": int(getattr(c, "reconfigs_detected", 0) or 0),
     "handover_times": [round(t, 2) for t in res.handovers],
+    "note": "detect-HO extras are flicker-class, not hop bugs",
 }))
 '''
 
 
 def main() -> None:
+    leo = leo_aware_root()
+    if not (leo / "leo_cc").is_dir():
+        print(f"error: LeoAware sibling missing at {leo}", flush=True)
+        raise SystemExit(2)
     jobs = [(7, 45.0), (7, 90.0), (123, 90.0), (13, 90.0), (42, 90.0)]
     tmp = ROOT / "scripts" / "_diag_reprobe_worker.py"
     tmp.write_text(WORKER, encoding="utf-8", newline="\n")
     env = os.environ.copy()
     env["PYTHONDONTWRITEBYTECODE"] = "1"
+    print(f"LeoAware root={leo}", flush=True)
     try:
         for seed, dur in jobs:
             print(f"seed={seed} {dur:.0f}s ...", flush=True)
             proc = subprocess.run(
-                [sys.executable, str(tmp), str(seed), str(dur)],
+                [sys.executable, str(tmp), str(seed), str(dur), str(leo)],
                 cwd=str(ROOT),
                 env=env,
                 capture_output=True,
@@ -69,7 +84,7 @@ def main() -> None:
             print(
                 f"  gp={rec['goodput_mbps']:.2f} p95={rec['p95_rtt_ms']:.1f} "
                 f"HO={rec['handovers']} detect={rec['reconfigs_detected']} "
-                f"false~={extra}",
+                f"flicker~={extra}",
                 flush=True,
             )
     finally:
