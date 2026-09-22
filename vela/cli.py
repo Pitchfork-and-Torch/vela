@@ -9,7 +9,7 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
-from vela.types import POWER_OK_MIN_SEEDS
+from vela.types import POWER_OK_MIN_SEEDS, contract_assert_cli_line
 
 
 class InputError(Exception):
@@ -211,7 +211,14 @@ def _main(argv: list[str] | None = None) -> int:
         if res.views:
             print(f"    views={', '.join(res.views)}")
         if prog.contracts:
-            print(f"    contract={prog.contracts[0].name} vs {prog.contracts[0].baseline}")
+            con = prog.contracts[0]
+            modes = res.contract_assert or "empty"
+            print(
+                "    "
+                + contract_assert_cli_line(
+                    modes, name=con.name, baseline=con.baseline
+                )
+            )
         return 0
 
     if args.cmd == "compile":
@@ -276,6 +283,15 @@ def _main(argv: list[str] | None = None) -> int:
         run_scen = scenarios if scenarios is not None else list(cfg.scenarios)
         planned = eval_gate(run_seeds, run_dur, run_scen)
         print(f"eval  controller={cfg.name}  {gate_cli_line(planned)}", flush=True)
+        if prog.contracts:
+            con = prog.contracts[0]
+            modes = res.contract_assert or "empty"
+            print(
+                contract_assert_cli_line(
+                    modes, name=con.name, baseline=con.baseline
+                ),
+                flush=True,
+            )
         tag = args.tag or cfg.name.lower()
         summary = evaluate(
             cfg,

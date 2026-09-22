@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "contract-assert-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Check/eval stamp contract=assert|report when a contract block is present. CI/power required; refuse silent claim wins (no assert is a type error).",
+      "status": "done"
     }
   ]
 }

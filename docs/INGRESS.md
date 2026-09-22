@@ -17,7 +17,7 @@ remaining LANGUAGE.md gaps checkable and runnable.
    `assert mean(jain) >= 0.85` is a contract, not a README. The
    harness runs 3 flows and scores RFC 5166 Jain. A jain assert
    without `leo_multi` is a type error. Missing rows are
-   INCOMPLETE. Flagship Reach stays single-flow DualGate.
+   INCOMPLETE. Flagship Reach stays single-flow DualGate. `vela check` stamps `contract=assert|report` (ci+power required; refuse silent claim wins).
    `examples/fair.vela` is the optional holdout.
 3. **Soft-cut min at runtime.** Two soft cuts on the same event
    compose as `min` (more conservative remaining fraction).

@@ -24,6 +24,45 @@ def eval_power(n_seeds: int) -> str:
     return "low" if int(n_seeds) < POWER_OK_MIN_SEEDS else "ok"
 
 
+
+# Contract claim surface. assert|report with CI/power required; refuse silent wins.
+CONTRACT_ASSERT_STAMP = "contract=assert|report"
+CONTRACT_ASSERT_NOTE = "ci+power required; refuse silent claim wins"
+
+
+def contract_assert_modes(n_asserts: int, n_reports: int) -> str:
+    """Return assert|report / assert / report / empty for a contract block."""
+    parts: list[str] = []
+    if int(n_asserts) > 0:
+        parts.append("assert")
+    if int(n_reports) > 0:
+        parts.append("report")
+    return "|".join(parts) if parts else "empty"
+
+
+def contract_assert_cli_line(
+    modes: str,
+    *,
+    name: str = "",
+    baseline: str = "",
+) -> str:
+    """Human check/eval stamp for contract claim honesty."""
+    stamp = f"contract={modes}" if modes else CONTRACT_ASSERT_STAMP
+    who = ""
+    if name and baseline:
+        who = f"  {name} vs {baseline}"
+    elif name:
+        who = f"  {name}"
+    return f"{stamp}{who}  ({CONTRACT_ASSERT_NOTE})"
+
+
+def contract_silent_claim_error(name: str) -> str:
+    """Type-error text when a contract has no assert (silent claim win)."""
+    return (
+        f"contract {name}: no assert; refuse silent claim wins "
+        f"(add assert; report ci + power required for claims)"
+    )
+
 def assert_names_jain(left: str) -> bool:
     s = str(left).lower().replace(" ", "")
     return "jain" in s or "fairness" in s
@@ -213,6 +252,7 @@ class CheckResult:
     typed_loss: bool = False
     passthrough: bool = False
     power: str = ""
+    contract_assert: str = ""
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True

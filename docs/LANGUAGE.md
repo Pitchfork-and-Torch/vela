@@ -126,7 +126,7 @@ contract DualGate vs BBRv3approx {
 }
 ```
 
-`vela eval` runs the contract. The compiler will **not** emit a `// beats BBR` comment. The JSON verdict is ACCEPT / FAIL / INCOMPLETE (missing terrestrial, too few seeds, etc.). The harness now emits that top-level `INCOMPLETE` when terrestrial is missing or `n_seeds` is below the contract minimum; a measured miss on a present assert is `FAIL`, and `INCOMPLETE` is never `ACCEPT`.
+`vela eval` runs the contract. The compiler will **not** emit a `// beats BBR` comment. The JSON verdict is ACCEPT / FAIL / INCOMPLETE (missing terrestrial, too few seeds, etc.). The harness now emits that top-level `INCOMPLETE` when terrestrial is missing or `n_seeds` is below the contract minimum; a measured miss on a present assert is `FAIL`, and `INCOMPLETE` is never `ACCEPT`. `vela check` / `vela eval` stamp `contract=assert|report` when a contract block is present (ci+power required; refuse silent claim wins). A contract with no `assert` is a type error.
 
 Fairness is optional and first-class. A second `scenario leo_multi` plus `assert mean(jain) >= 0.85` is the RFC 5166 holdout. The sibling sim already had 3-flow `leo_multi`; VELA now scores Jain in `evaluate()` instead of leaving it in a README. A jain assert without `leo_multi` is a type error. Missing multi-flow rows are INCOMPLETE. Flagship Reach stays single-flow DualGate. See `examples/fair.vela`.
 
@@ -315,6 +315,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Eval receipt | a verdict detached from its source; a swapped row without `--eval` |
 | Views | eval of compose A claimed as compose B |
 | Power label | silent n<8 p-value; checker and harness share `power=low` |
+| Contract assert (`contract=assert|report`) | silent claim win without assert; CI/power required for claims |
 
 Existing `lang vela 0.1` programs still parse. WriteCap stays opt-in.
 A declared `WriteCap<cwnd> @ epoch` with no `split` / `borrow` is still an
