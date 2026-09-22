@@ -298,7 +298,7 @@ def _main(argv: list[str] | None = None) -> int:
             for e in errs:
                 print(f"error: {e}")
             return 1
-        dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
+        dump_keys = [k for k in ("verdict", "power", "gate", "dual_gate_claim", "asserts", "tables") if k in summary]
         print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
         print(f"wrote {out}")
         print(

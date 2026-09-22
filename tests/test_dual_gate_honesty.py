@@ -70,3 +70,15 @@ class TestDualGateHonesty(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCliDumpsClaim(unittest.TestCase):
+    def test_cli_lists_dual_gate_claim_key(self):
+        src = (Path(__file__).resolve().parents[1] / "vela" / "cli.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"dual_gate_claim"', src)
+
+
+if __name__ == "__main__":
+    unittest.main()
