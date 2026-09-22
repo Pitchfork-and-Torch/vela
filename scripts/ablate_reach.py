@@ -1,4 +1,10 @@
-"""Ablate Reach vs LeoAware on the seeds that killed Horizon and Luff."""
+"""Ablate Reach vs LeoAware on the seeds that killed Horizon and Luff.
+
+Starlink LEO: hop (handover / RttHop) vs flicker (mid-epoch capacity).
+The SoftFlicker variant is the closed class (0.85); house SoftReprobe
+stays 0.58 on both arms. Observe-only Reach should match LeoAware.
+Not a house DualGate claim unless rails are 5x90s leo_fast_ho+terr.
+"""
 from __future__ import annotations
 
 import sys

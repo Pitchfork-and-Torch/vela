@@ -64,6 +64,18 @@ class TestHintLaw(unittest.TestCase):
         self.assertFalse(cfg.quiet_reach)
         self.assertFalse(cfg.trim_hold)
 
+    def test_ascent_erased_fail_closed(self):
+        src = (EX / "ascent_erased.vela").read_text(encoding="utf-8")
+        prog = parse(src, "ascent_erased.vela")
+        self.assertEqual(prog.controllers[0].name, "AscentErased")
+        res = check(prog)
+        self.assertTrue(res.ok, res.errors)
+        self.assertTrue(res.hint_fail_closed)
+        self.assertTrue(res.observe_only)
+        self.assertTrue(res.passthrough)
+        self.assertTrue(res.typed_reconfig)
+        self.assertIn("house", res.path_bound)
+
     def test_reach_stays_defined_without_hints(self):
         src = (EX / "reach.vela").read_text(encoding="utf-8")
         res = check(parse(src, "reach.vela"))

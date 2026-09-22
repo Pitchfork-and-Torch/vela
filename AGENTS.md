@@ -14,6 +14,8 @@ Canonical language tree for **VELA** (Variance-aware Epoch Language for Adaptati
 
 ```
 py -3 -m vela check examples/equinox.vela
+py -3 -m vela check examples/starlink_flicker.vela
+py -3 -m vela check examples/ascent.vela
 py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
 py -3 -m vela compile examples/equinox.vela

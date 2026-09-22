@@ -362,14 +362,18 @@ That is the honest fast path, not a skip of the law.
 ## I. Path bind (VELA 0.4.1)
 
 A `path` block is the model object, not a comment. Check parses
-handover / rtt_jump / capacity / mobility_loss. Eval binds the
-handover rails the sibling sim actually takes. The receipt commits
-the declared law. `use std.path` is required to name a path.
+handover / flicker / rtt_jump / capacity / mobility_loss. Eval binds
+the handover rails the sibling sim actually takes. The receipt
+commits the declared law. `use std.path` is required to name a path.
 
 `path LeoFastHO` binds `scenario leo_fast_ho`. Flagship examples
-already write the house rails (12s handover, 4s jitter). Unbound
-names warn; a leo_fast_ho that is not those rails warns. Unknown
-or unparseable fields are type errors.
+already write the house rails (12s handover, 4s jitter). Optional
+`flicker ~ every 2.8s jitter 1.2s` names sibling starlink_v2
+mid-epoch capacity steps. Flicker is not RttHop. SoftReprobe cut
+stays 0.58 on both arms; SoftFlicker is review. Declaring flicker
+does not retune the house DualGate gate. Unbound names warn; a
+leo_fast_ho that is not the house handover rails warns. Unknown or
+unparseable fields are type errors.
 
 Calendar `p_ho` still comes from past gaps. CSV traces stay
 unwired. The kernel still refuses `next_capacity`.

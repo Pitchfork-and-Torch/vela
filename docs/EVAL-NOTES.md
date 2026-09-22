@@ -131,3 +131,36 @@ Isolated workers. `leo_fast_ho` seed 7, 45s. Observe-only Reach.
 | Reach | 88.65 | 108.4 |
 
 MATCH within 0.05 Mbps / 0.2 ms. Locked Leo rail held. Not a dual-gate house-gate claim. JSON: `results/eval_reach-passthrough.json`.
+
+### starlink path flicker bind (2026-09-22 cook)
+
+Path law now parses optional `flicker ~ every Xs jitter Ys` (sibling
+starlink_v2 mid-epoch capacity: 2.8s +/- 1.2s). Declaring flicker does
+not retune house DualGate rails. Stamp includes `flicker=... (v2; not hop)`.
+SoftReprobe cut stays 0.58 on RttHop and Flicker. SoftFlicker remains
+review / closed-write. Ascent fail-closed: erased hint is None, not a hop
+oracle (`examples/ascent.vela`, `examples/ascent_erased.vela`).
+
+`--fast` is still gate=fast, not the house gate. Do not mix OPE-fair
+v3.7 prompt numbers with coupled-RNG LeoAware 73.57 / 138.37.
+
+Ablate helper: `scripts/ablate_starlink_hop_flicker.py`. Diag helper
+`scripts/diag_reprobe.py` resolves LeoAware via `leo_aware_root()`.
+
+### reach-starlink-fast (2026-09-22 cook, gate=fast)
+
+Sibling on this box: `leo-aware-transport` 0.3.22 (product CCA v3.17
+FillGap / starlink_v1 era). Not the locked coupled-RNG v3.4-p95 table.
+`--fast` 45s / seeds 13,7 / leo_fast_ho+terrestrial.
+
+| seed | Reach gp/p95 | LeoAware gp/p95 |
+|-----:|-------------:|----------------:|
+| 13 | 61.10 / 142.9 | 61.10 / 142.9 |
+| 7 | 49.25 / 148.0 | 49.25 / 148.0 |
+| terr mean | 78.01 / 46.0 | 78.01 / 46.0 |
+
+Reach = LeoAware (passthrough). Verdict INCOMPLETE (seed_count 2/5;
+terrestrial p95 floor 40.5 vs 46.0 on this sibling). JSON
+`results/eval_reach-starlink-fast.json` stamps `gate=fast`. Not a
+house DualGate claim. Do not mix with OPE-fair or v3.4-p95 means.
+
