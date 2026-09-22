@@ -32,6 +32,7 @@ from vela.types import (
     parse_jain_floor,
     STDLIB_MECHANISMS,
     STDLIB_MODULES,
+    USE_NAMED_ONLY_STAMP,
     WRITE_TARGETS,
     CheckResult,
     is_observe_only,
@@ -51,10 +52,21 @@ def check(prog: Program) -> CheckResult:
         return res
     if len(prog.controllers) > 1:
         res.warnings.append("multiple controllers; eval uses the first")
+    star_or_wild = False
     for u in prog.uses:
-        if u not in STDLIB_MODULES:
+        if u == "*" or u.endswith(".*") or "*" in u:
+            res.ok = False
+            star_or_wild = True
+            res.errors.append(
+                f"wildcard use {u!r} refused (no import *; named stdlib only)"
+            )
+        elif u not in STDLIB_MODULES:
             res.ok = False
             res.errors.append(f"unknown module {u} (use only named stdlib surfaces)")
+    if not star_or_wild and all(
+        (u in STDLIB_MODULES) for u in prog.uses
+    ):
+        res.use_named_only = USE_NAMED_ONLY_STAMP
     for c in prog.controllers:
         _check_controller(c, prog, res)
     for v in prog.views:
@@ -993,6 +1005,15 @@ def house_cut_error(cname: str, n: float) -> str:
         "(house endpoint; SoftFlicker is review)"
     )
 
+
+
+def use_named_only_check_line(stamp: str = "") -> str:
+    """Visible check stamp for named-only use law. No dish Mbps."""
+    from vela.types import USE_NAMED_ONLY_CHECK_LINE, USE_NAMED_ONLY_STAMP
+
+    if stamp == USE_NAMED_ONLY_STAMP or stamp == "named-only":
+        return USE_NAMED_ONLY_CHECK_LINE
+    return ""
 
 def power_low_warning(name: str, n_seeds: int) -> str:
     return (
