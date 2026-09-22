@@ -7,3 +7,5 @@ Language: `Pitchfork-and-Torch/vela` (MIT, public). This tree.
 Sites: orbitstack.jonbailey.xyz (numbers) and vela.jonbailey.xyz (language).
 Public numbers go through the progress sanitizer (never a naive lab copy).
 Do not merge this compiler into the public engine repo.
+
+LeoAware `std.mech` gift cite: `docs/MECH-DECL.md` (`leoaware.vela_std_mech/v1`).
