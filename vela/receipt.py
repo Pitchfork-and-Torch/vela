@@ -121,6 +121,7 @@ def build_receipt(
         "rows_merkle": rows_merkle(rows),
         "verdict": summary.get("verdict"),
         "power": summary.get("power"),
+        "dual_gate_claim": summary.get("dual_gate_claim"),
         "honesty": summary.get("honesty"),
         "gate": summary.get("gate") or eval_gate(
             config.get("seeds"),

@@ -226,3 +226,8 @@ class CheckResult:
     def raise_if_error(self) -> None:
         if not self.ok:
             raise TypeError("VELA check failed:\n  " + "\n  ".join(self.errors))
+
+
+def dual_gate_claim(gate: str, verdict: str | None = None) -> bool:
+    """True only for ACCEPT on gate=house. Fast ACCEPT is never a dual-gate win."""
+    return str(gate) == "house" and str(verdict or "") == "ACCEPT"
