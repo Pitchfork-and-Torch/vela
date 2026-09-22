@@ -206,6 +206,11 @@ class HorizonCCA:
 
     # ---- VELA mechanisms ----
     def _pred_ho_t(self) -> Optional[float]:
+        """Predict next HO time from *past* inter-hop gaps only.
+
+        Calendar honesty: never from next_capacity / future PathState.
+        Check stamps calendar-p_ho=past-gaps when Calendar is composed.
+        """
         if len(self._ho_gaps) < 2 or self._last_ho_t < -1e8:
             return None
         med = _median(list(self._ho_gaps))
@@ -234,6 +239,7 @@ class HorizonCCA:
         return True
 
     def _update_p_ho(self, t: float, rtt_s: float) -> None:
+        """Set p_ho from past-gap calendar (not a next-sat oracle)."""
         pred = self._pred_ho_t()
         if pred is None:
             self.p_ho = 0.0

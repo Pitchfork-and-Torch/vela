@@ -9,6 +9,9 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+# Calendar / PredictiveFreeze honesty: p_ho is a past-gap estimate,
+# not a next-satellite oracle. Check stamps calendar-p_ho=past-gaps.
+CALENDAR_P_HO_STAMP = "past-gaps"
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
 # Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays
@@ -222,6 +225,7 @@ class CheckResult:
     cuts_compose: str = ""
     path_bound: str = ""
     path_digest: str = ""
+    calendar_p_ho: str = ""
 
     def raise_if_error(self) -> None:
         if not self.ok:

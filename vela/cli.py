@@ -179,6 +179,11 @@ def _main(argv: list[str] | None = None) -> int:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
+        if res.calendar_p_ho:
+            print(
+                f"    calendar-p_ho={res.calendar_p_ho}  "
+                "(past-gap estimate; not next-sat oracle)"
+            )
         if res.no_oracle:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:

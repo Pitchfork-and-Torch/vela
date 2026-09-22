@@ -4,7 +4,7 @@ from __future__ import annotations
 from vela.ast import Controller, Program, Stmt, View
 from vela.digest import compose_digest
 from vela.ir import parse_report_ci
-from vela.oracle import oracle_error, oracle_name_of
+from vela.oracle import oracle_error_for, oracle_name_of
 from vela.path import (
     house_mismatch_warning,
     parse_program_paths,
@@ -17,6 +17,7 @@ from vela.types import (
     HINT_ARMS,
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
+    CALENDAR_P_HO_STAMP,
     HOUSE_ENDPOINT_CUT,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
@@ -73,6 +74,8 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        if controller_stamps_calendar_p_ho(first):
+            res.calendar_p_ho = CALENDAR_P_HO_STAMP
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:
@@ -1053,45 +1056,57 @@ def _check_fairness_contract(con, res: CheckResult) -> None:
             )
 
 
-def _walk_oracle(cname: str, expr, res: CheckResult) -> None:
+def controller_stamps_calendar_p_ho(c: Controller) -> bool:
+    """Stamp when Calendar is composed (p_ho = past-gaps, not next-sat)."""
+    return "Calendar" in c.compose
+
+
+def _walk_oracle(
+    cname: str, expr, res: CheckResult, *, calendar: bool = False
+) -> None:
     if expr is None:
         return
     hit = oracle_name_of(expr)
     if hit:
         res.ok = False
-        res.errors.append(oracle_error(cname, hit))
+        res.errors.append(oracle_error_for(cname, hit, calendar=calendar))
         return
-    _walk_oracle(cname, getattr(expr, "left", None), res)
-    _walk_oracle(cname, getattr(expr, "right", None), res)
+    _walk_oracle(cname, getattr(expr, "left", None), res, calendar=calendar)
+    _walk_oracle(cname, getattr(expr, "right", None), res, calendar=calendar)
     for a in getattr(expr, "args", []) or []:
-        _walk_oracle(cname, a, res)
+        _walk_oracle(cname, a, res, calendar=calendar)
 
 
-def _check_oracle_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -> None:
+def _check_oracle_in_stmts(
+    cname: str, stmts: list[Stmt], res: CheckResult, *, calendar: bool = False
+) -> None:
     for st in _flatten_stmts(stmts):
         if st.expr is not None:
-            _walk_oracle(cname, st.expr, res)
+            _walk_oracle(cname, st.expr, res, calendar=calendar)
         for a in st.args:
             if hasattr(a, "kind"):
-                _walk_oracle(cname, a, res)
+                _walk_oracle(cname, a, res, calendar=calendar)
             elif isinstance(a, tuple) and len(a) == 2:
-                _walk_oracle(cname, a[1], res)
+                _walk_oracle(cname, a[1], res, calendar=calendar)
 
 
 def _check_oracle(c: Controller, res: CheckResult) -> None:
+    calendar = "Calendar" in c.compose
     for o in c.ons:
-        _check_oracle_in_stmts(c.name, o.body, res)
+        _check_oracle_in_stmts(c.name, o.body, res, calendar=calendar)
         for arm in o.match_arms:
-            _check_oracle_in_stmts(c.name, arm.body, res)
+            _check_oracle_in_stmts(c.name, arm.body, res, calendar=calendar)
     for w in c.whens:
-        _walk_oracle(c.name, w.pred, res)
-        _check_oracle_in_stmts(c.name, w.body, res)
+        _walk_oracle(c.name, w.pred, res, calendar=calendar)
+        _check_oracle_in_stmts(c.name, w.body, res, calendar=calendar)
     for e in c.everys:
-        _check_oracle_in_stmts(c.name, e.body, res)
+        _check_oracle_in_stmts(c.name, e.body, res, calendar=calendar)
     for s in c.signals:
         if s.name in ("next_capacity", "next_capacity_bps"):
             res.ok = False
-            res.errors.append(oracle_error(c.name, s.name))
+            res.errors.append(
+                oracle_error_for(c.name, s.name, calendar=calendar)
+            )
 
 
 def _controller_mentions_oracle(c: Controller) -> bool:

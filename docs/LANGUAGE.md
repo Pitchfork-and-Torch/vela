@@ -259,7 +259,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 ## F. Limitations (language and algorithm)
 
-**Physics.** VELA cannot see the next satellite before the path changes unless a real hint exists. `p_ho` is a calendar estimate from past gaps. Irregular hops (ISL reroute, weather, beam reshape) will fool the calendar. Predictive freeze then becomes a mild pace ease at the wrong time. The kernel caps that ease (default 6%) so a wrong calendar cannot stall the flow.
+**Physics.** VELA cannot see the next satellite before the path changes unless a real hint exists. `p_ho` is a calendar estimate from past gaps, not a next-sat oracle (aligns with no-oracle and the freeze-ease Physics rail). Irregular hops (ISL reroute, weather, beam reshape) will fool the calendar. Predictive freeze then becomes a mild pace ease at the wrong time. The kernel caps that ease (default 6%) so a wrong calendar cannot stall the flow. This is checkable: `vela check` stamps `calendar-p_ho=past-gaps` when `Calendar` is composed; naming `next_capacity` on a Calendar path is a type error with the Calendar honesty message.
 
 **Information.** IntervalBw needs samples. The first 1-2 RTT of an epoch are supposed to be uncertain. Forcing a tight interval early is the same bug as a stale min-RTT, with extra ceremony.
 
@@ -284,11 +284,11 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority; split/borrow) |
-| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
-| `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
+| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, calendar-p_ho=past-gaps, power=low n<8, no-oracle, leo_multi Jain |
+| `vela/oracle.py` `compose.py` | Future PathState refuse (Calendar path names past-gaps); runtime soft-cut min |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
-| `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
+| `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, past-gap p_ho, min of soft cuts) |
 | `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
 | `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
@@ -308,6 +308,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
+| Calendar p_ho | `next_capacity` on a Calendar path (p_ho is past-gaps, not next-sat) |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
 | Cut refinement | `cut(1.2)` |
@@ -350,9 +351,11 @@ See [INGRESS.md](INGRESS.md). Summary:
 | Fairness holdout | a Jain sentence with no `leo_multi` rows |
 | Soft-cut min | SoftFlicker 0.85 raising the window after 0.58 |
 
-`vela check examples/reach.vela` prints `no-oracle`. Kernel
-`on_path_hint` always passes `next_capacity_bps=None`. Calendar
-`p_ho` from past gaps stays legal.
+`vela check examples/reach.vela` prints `no-oracle` and
+`calendar-p_ho=past-gaps`. Kernel `on_path_hint` always passes
+`next_capacity_bps=None`. Calendar `p_ho` from past gaps stays
+legal and is stamped; naming `next_capacity` on a Calendar path
+is refused.
 
 `examples/fair.vela` is the optional holdout. It is observe-only
 Reach plus `scenario leo_multi` and `assert mean(jain) >= 0.85`.
