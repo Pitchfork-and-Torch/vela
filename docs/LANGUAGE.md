@@ -306,6 +306,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Level vs integrator | `when` / `every` `{ pace *= k }` without `integrate when` / `integrate every` |
 | Affine samples | second Sample read in one block; Sample @ e after `enter Reprobe` |
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
+| Authority stamp | `authority=absent` (no named budget) or `authority=budget` (named integer caps; zero is still a name). Visible on `vela check`. |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |

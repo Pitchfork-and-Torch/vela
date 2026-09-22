@@ -8,3 +8,5 @@ last_job: hybrid-automata
 next_job: none
 stop: no
 passthrough seed7 45s Leo 88.65/108.4 Reach 88.65/108.4
+
+- authority-stamp: done (authority=absent|budget on check; SoftReprobe 0.58).

@@ -64,6 +64,7 @@ def check(prog: Program) -> CheckResult:
         first = prog.controllers[0]
         res.compose_digest = compose_digest(first.compose)
         res.authority = dict(first.authority)
+        res.authority_stamp = "budget" if first.authority else "absent"
         res.posture = first.posture
         res.closed_writes = review_writes_in(first.compose)
         res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
