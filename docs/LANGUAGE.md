@@ -75,6 +75,8 @@ when <pred> { ... }         # guarded continuous action
 
 **Hybrid law.** `on` is a discrete jump. `when` and `every` are flows (`every ack` packet horizon, `every epoch` epoch horizon). `enter`, `invalidate`, and `cut` are jumps: they belong in `on`, not in a flow. `enter Reprobe` is the named location; `enter Cruise` is a type error. A nested `when` inside `on` is a guarded jump, not a flow. `vela check` stamps `hybrid`.
 
+**Level vs integrator.** A `when` / `every` body is a level. `pace *= k` (or any integrator assign) is a type error unless the author writes `integrate when` / `integrate every` under `posture review` (Horizon seed 7: 55/173). Nested `when` inside `on` cannot opt in. `vela check` stamps `integrator=refuse` when the refuse law holds (Reach, Equinox).
+
 `on Reconfig` under `posture observe` must match `RttHop | Flicker`. A bare Reconfig body is legal only under `posture review`.
 
 `on Loss` under `posture observe` must match `Mobility | Congestive | Unknown`. Mobility must hold. Unknown may cut only after `delay_ratio > 1.35`. A bare Loss body is legal only under `posture review`.
