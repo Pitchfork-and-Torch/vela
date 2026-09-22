@@ -28,6 +28,8 @@ from vela.types import (
     LOSS_KINDS,
     RECONFIG_KINDS,
     assert_names_jain,
+    contract_assert_modes,
+    contract_silent_claim_error,
     eval_power,
     parse_jain_floor,
     STDLIB_MECHANISMS,
@@ -78,6 +80,9 @@ def check(prog: Program) -> CheckResult:
         if not con.seeds:
             res.ok = False
             res.errors.append(f"contract {con.name}: empty seeds")
+        if not con.asserts:
+            res.ok = False
+            res.errors.append(contract_silent_claim_error(con.name))
         # duration 0s (or negative) is not an eval window  -  check used to
         # accept it and stamp cfg.duration_s=0, so eval ran an empty episode.
         if con.duration_s is not None and float(con.duration_s) <= 0:
@@ -117,6 +122,9 @@ def check(prog: Program) -> CheckResult:
             else "ok"
         )
         first_con = prog.contracts[0]
+        res.contract_assert = contract_assert_modes(
+            len(first_con.asserts), len(first_con.reports)
+        )
         if FAIRNESS_SCENARIO in first_con.scenarios:
             res.fairness = FAIRNESS_SCENARIO
         for a in first_con.asserts:

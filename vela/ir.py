@@ -4,7 +4,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from vela.ast import Program
-from vela.types import assert_names_jain, is_observe_only, parse_jain_floor
+from vela.types import (
+    assert_names_jain,
+    contract_assert_modes,
+    is_observe_only,
+    parse_jain_floor,
+)
 
 
 @dataclass
@@ -55,6 +60,7 @@ class VelaConfig:
     baseline: str = "BBRv3approx"
     contract_name: str = "DualGate"
     reports: list[str] = field(default_factory=list)
+    contract_assert: str = ""
     view: str = ""
     compose_digest: str = ""
     posture: str = "observe"
@@ -191,6 +197,7 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
         cfg.baseline = con.baseline
         cfg.contract_name = con.name
         cfg.reports = list(con.reports)
+        cfg.contract_assert = contract_assert_modes(len(con.asserts), len(con.reports))
         for a in con.asserts:
             if assert_names_jain(a.left):
                 cfg.jain_min = parse_jain_floor(a.right)
