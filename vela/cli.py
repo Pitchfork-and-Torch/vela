@@ -194,6 +194,11 @@ def _main(argv: list[str] | None = None) -> int:
         if res.fairness:
             extra = f" jain>={res.jain_min}" if res.jain_min is not None else ""
             print(f"    fairness={res.fairness}{extra}")
+        if res.fair_mode:
+            print(
+                f"    fair_mode={res.fair_mode}  "
+                "(AIMD around 1.0x BDP; holdout cite, not closed-write cruise)"
+            )
         if res.power == "low":
             print(
                 f"    power=low  (n<{POWER_OK_MIN_SEEDS}; means ACCEPT still legal)"

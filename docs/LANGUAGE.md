@@ -130,6 +130,8 @@ contract DualGate vs BBRv3approx {
 
 Fairness is optional and first-class. A second `scenario leo_multi` plus `assert mean(jain) >= 0.85` is the RFC 5166 holdout. The sibling sim already had 3-flow `leo_multi`; VELA now scores Jain in `evaluate()` instead of leaving it in a README. A jain assert without `leo_multi` is a type error. Missing multi-flow rows are INCOMPLETE. Flagship Reach stays single-flow DualGate. See `examples/fair.vela`.
 
+When that holdout is declared (or when `FairMode` is composed), `vela check` stamps `fair_mode=AIMD@1.0xBDP` (`HOUSE_FAIR_MODE_BDP_FRAC = 1.0`). That is a checkable compose/mech cite for LANGUAGE Fairness -- observe-only documentation of the AIMD-around-1.0x-BDP law. It does not enable closed-write cruise; HorizonChase remains a separate closed-write operator.
+
 When the contract says `report ci(0.95)` (or bare `report ci`), the JSON includes a `ci` object: sample mean +/- sample std per scenario/CCA, method `mean+/-std`. That is not a bootstrap or t-interval. The requested level is recorded; coverage is not claimed.
 
 A one-sided t-test or bootstrap CI on 5 seeds is weak. VELA reports that weakness instead of hiding it: `power=low` is a first-class field. Checker and harness share one floor: `n < 8` is `power=low`. House DualGate is 5 seeds, so `vela check` warns and `vela eval` labels `low`. Claiming `p < 0.05` with n<8 and no paired path is a contract warning, not a badge.
@@ -158,7 +160,7 @@ The same model object is used by the discrete-event simulator **and** by `Predic
 | `std.path` | handover calendar, flicker, RTT-jump priors, `p_ho` |
 | `std.hint` | ASCENT-D / Orb ingest, `fail_closed`, role checks |
 | `std.eval` | `contract`, dual-gate, CI, ablation, seed lists |
-| `std.mech` | `Detect`, `SoftReprobe`, `IntervalBw`, `PredictiveFreeze`, `HorizonChase`, `DualGateGuard`, `OCE` (legacy), `Calendar`, `WriteBudget`, `TrimHold`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker` |
+| `std.mech` | `Detect`, `SoftReprobe`, `IntervalBw`, `PredictiveFreeze`, `HorizonChase`, `DualGateGuard`, `OCE` (legacy), `Calendar`, `WriteBudget`, `TrimHold`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `FairMode` |
 
 **Detect** is the LeoAware multi-signal fusion (RTT MAD, ACK inter-arrival, rate drop, mobility burst) with a dual-signal gate. VELA does not "invent a better detector" in v0.1. It *names* the detector so it can be composed without being rewritten.
 
@@ -251,7 +253,7 @@ If Horizon (or a later VELA program) clears a dual-gate with a material margin, 
 - **Higher sustained goodput** on the same dish and the same orbit, because the sender stops under-running stable epochs and stops over-running the last 200 ms before a hop.
 - **Lower interactive latency variance** because predictive freeze and uncertainty-scaled yield cut the queue spike that currently sits in the p95.
 - **Fewer "dead" seconds after handover** because REPROBE + interval chase refill from a discounted prior instead of CUBIC collapse or a stale BBR min-RTT.
-- **Fairness / multi-flow:** `fair_mode` remains a declared mechanism (AIMD around 1.0 x BDP). VELA does not pretend one flow's Horizon chase is multi-flow optimal.
+- **Fairness / multi-flow:** `fair_mode` is a checkable declared mechanism (AIMD around 1.0 x BDP, `HOUSE_FAIR_MODE_BDP_FRAC`). `vela check` stamps `fair_mode=AIMD@1.0xBDP` when `FairMode` is composed or a `leo_multi` Jain holdout is declared. Observe-only: the stamp does not enable closed-write cruise. VELA does not pretend one flow's Horizon chase is multi-flow optimal.
 - **Energy / radio:** fewer useless retransmits during mobility bursts (typed Mobility => hold). The satellite still burns the same RF; the user device wastes fewer watts on recovery.
 - **Assist path:** when ASCENT-D hints are present they are `Option` and fail-closed. When they are absent, Horizon is still defined. That is the only deployment story that matches today's Starlink (no official path-hint API).
 
@@ -269,7 +271,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Composition is not magic.** If two mechanisms both want to raise `cwnd`, the checker asks you to pick `compose growth = min | max | sum`. Wrong picks still compile if they are explicit. VELA prevents *accidents*, not *bad taste*.
 
-**Fairness and AQMs.** Horizon is a single-sender policy. A fleet of Horizons plus Cubic plus BBR at a shared gateway is a different paper. The language can *state* a Jain bound on `leo_multi` and the harness will score it. It cannot enforce other people's stacks.
+**Fairness and AQMs.** Horizon is a single-sender policy. A fleet of Horizons plus Cubic plus BBR at a shared gateway is a different paper. The language can *state* a Jain bound on `leo_multi` and the harness will score it; `vela check` stamps the `FairMode` AIMD@1.0xBDP cite when that holdout (or an explicit `FairMode` compose) is declared. It cannot enforce other people's stacks, and the stamp does not turn observe-only Reach into a closed-write cruise.
 
 **Hints can lie.** Fail-closed integrity (ASCENT-D) stops bit flips. It does not stop a malicious or stale honest hint with a valid MAC. Role + age checks are the remaining rail; they are not a PKI.
 
@@ -284,7 +286,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority; split/borrow) |
-| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
+| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain, fair_mode AIMD@1.0xBDP |
 | `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |

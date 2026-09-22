@@ -14,6 +14,7 @@ from vela.path import (
 )
 from vela.types import (
     FAIRNESS_SCENARIO,
+    FAIR_MODE_STAMP,
     HINT_ARMS,
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
@@ -57,6 +58,7 @@ def check(prog: Program) -> CheckResult:
             res.errors.append(f"unknown module {u} (use only named stdlib surfaces)")
     for c in prog.controllers:
         _check_controller(c, prog, res)
+        _check_fair_mode_compose(c, prog, res)
     for v in prog.views:
         _check_view(v, prog, res)
     res.views = [v.name for v in prog.views]
@@ -123,6 +125,8 @@ def check(prog: Program) -> CheckResult:
             if assert_names_jain(a.left):
                 res.jain_min = parse_jain_floor(a.right)
                 break
+    if program_stamps_fair_mode(prog):
+        res.fair_mode = FAIR_MODE_STAMP
     return res
 
 
@@ -999,6 +1003,52 @@ def power_low_warning(name: str, n_seeds: int) -> str:
         f"contract {name}: {n_seeds} seeds "
         f"(power=low for p-values; n<{POWER_OK_MIN_SEEDS})"
     )
+
+
+
+
+def program_stamps_fair_mode(prog: Program) -> bool:
+    """Stamp FairMode AIMD@1.0xBDP when composed or leo_multi holdout declared."""
+    for ctrl in prog.controllers:
+        if "FairMode" in ctrl.compose:
+            return True
+    for con in prog.contracts:
+        has_multi = FAIRNESS_SCENARIO in con.scenarios
+        has_jain = any(assert_names_jain(a.left) for a in con.asserts)
+        if has_multi and has_jain:
+            return True
+    return False
+
+
+def fair_mode_without_holdout_warning(cname: str) -> str:
+    return (
+        f"controller {cname}: FairMode composed without {FAIRNESS_SCENARIO} Jain holdout "
+        f"(mech cite {FAIR_MODE_STAMP}; holdout not scored)"
+    )
+
+
+def fair_mode_chase_warning(cname: str) -> str:
+    return (
+        f"controller {cname}: FairMode ({FAIR_MODE_STAMP}) with HorizonChase "
+        "(single-flow chase is not multi-flow fair; not a closed-write enable)"
+    )
+
+
+
+def _check_fair_mode_compose(c: Controller, prog: Program, res: CheckResult) -> None:
+    """Observe-only FairMode cite: warn on missing holdout or HorizonChase pairing."""
+    if "FairMode" not in c.compose:
+        return
+    # FairMode is a mech cite (AIMD @ 1.0x BDP), not a closed-write cruise enable.
+    has_holdout = any(
+        FAIRNESS_SCENARIO in con.scenarios
+        and any(assert_names_jain(a.left) for a in con.asserts)
+        for con in prog.contracts
+    )
+    if not has_holdout:
+        res.warnings.append(fair_mode_without_holdout_warning(c.name))
+    if "HorizonChase" in c.compose:
+        res.warnings.append(fair_mode_chase_warning(c.name))
 
 
 def fairness_needs_multi_error(name: str) -> str:
