@@ -587,10 +587,12 @@ def _summarize(
         verdicts.append({"assert": "terrestrial_floor", "ok": False, "note": "INCOMPLETE"})
 
     jain_min = getattr(cfg, "jain_min", None)
+    fairness_holdout: str | None = None
     if jain_min is not None:
         multi = cell(FAIRNESS_SCENARIO, cfg.name)
         if multi and multi.get("jain_mean") is not None:
             jain_ok = float(multi["jain_mean"]) >= float(jain_min)
+            fairness_holdout = "scored"
             verdicts.append(
                 {
                     "assert": "fairness_jain",
@@ -601,11 +603,15 @@ def _summarize(
                 }
             )
         else:
+            # Missing leo_multi rows: stamp so Jain cannot silently pass.
+            # Typical path: --fast skips leo_multi. Not ACCEPT.
+            fairness_holdout = "INCOMPLETE"
             verdicts.append(
                 {
                     "assert": "fairness_jain",
                     "ok": False,
                     "note": "INCOMPLETE",
+                    "reason": "leo_multi_rows_missing",
                     "jain_min": float(jain_min),
                     "scenario": FAIRNESS_SCENARIO,
                 }
@@ -637,6 +643,8 @@ def _summarize(
         "asserts": verdicts,
         "honesty": honesty_text(gate),
     }
+    if fairness_holdout is not None:
+        out["fairness_holdout"] = fairness_holdout
     ci_level, _ci_errs = parse_report_ci(list(getattr(cfg, "reports", []) or []))
     if ci_level is not None:
         out["ci"] = _ci_block(tables, ci_level)

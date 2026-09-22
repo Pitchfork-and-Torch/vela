@@ -10,7 +10,8 @@ use std.eval
 // Fairness holdout (VELA 0.4 Ingress). Same observe-only Reach wrap.
 // leo_multi is 3 flows on the sibling sim. Jain is a contract assert,
 // not a README sentence. Flagship Reach stays single-flow DualGate.
-// `vela eval --fast` skips this scenario and the harness is INCOMPLETE.
+// `vela eval --fast` skips leo_multi: fairness_holdout=INCOMPLETE
+// (receipt + CLI stamp; not ACCEPT). SoftReprobe cut stays 0.58.
 
 controller Reach {
   posture observe

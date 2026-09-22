@@ -276,6 +276,18 @@ def _main(argv: list[str] | None = None) -> int:
         run_scen = scenarios if scenarios is not None else list(cfg.scenarios)
         planned = eval_gate(run_seeds, run_dur, run_scen)
         print(f"eval  controller={cfg.name}  {gate_cli_line(planned)}", flush=True)
+        # --fast locks scenarios to leo_fast_ho+terrestrial. If the contract
+        # declares a leo_multi Jain holdout, say so up front: INCOMPLETE, not ACCEPT.
+        if (
+            args.fast
+            and getattr(cfg, "jain_min", None) is not None
+            and "leo_multi" not in run_scen
+        ):
+            print(
+                "note: --fast skips leo_multi; Jain holdout will be "
+                "INCOMPLETE (not ACCEPT)",
+                flush=True,
+            )
         tag = args.tag or cfg.name.lower()
         summary = evaluate(
             cfg,
@@ -298,12 +310,24 @@ def _main(argv: list[str] | None = None) -> int:
             for e in errs:
                 print(f"error: {e}")
             return 1
-        dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
+        dump_keys = [
+            k
+            for k in (
+                "verdict",
+                "power",
+                "gate",
+                "fairness_holdout",
+                "asserts",
+                "tables",
+            )
+            if k in summary
+        ]
         print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
         print(f"wrote {out}")
+        holdout = summary.get("fairness_holdout")
         print(
             f"receipt {rp}  {receipt['receipt_digest'][:16]}  "
-            f"{gate_cli_line(str(summary.get('gate') or planned), summary.get('verdict'))}  "
+            f"{gate_cli_line(str(summary.get('gate') or planned), summary.get('verdict'), fairness_holdout=holdout if isinstance(holdout, str) else None)}  "
             f"verified"
         )
         return 0 if summary["verdict"] == "ACCEPT" else 3

@@ -122,6 +122,14 @@ class TestEvalGate(unittest.TestCase):
         self.assertIn("not a dual-gate win", gate_cli_line("fast", "ACCEPT"))
         self.assertNotIn("dual-gate win", gate_cli_line("house", "ACCEPT"))
 
+    def test_cli_line_labels_jain_incomplete_not_accept(self):
+        line = gate_cli_line("fast", "INCOMPLETE", fairness_holdout="INCOMPLETE")
+        self.assertIn("verdict=INCOMPLETE", line)
+        self.assertIn("--fast skips leo_multi", line)
+        self.assertNotIn("dual-gate win", line)
+        generic = gate_cli_line("named", "INCOMPLETE")
+        self.assertIn("verdict=INCOMPLETE (not ACCEPT)", generic)
+
 
 class TestReceiptVerify(unittest.TestCase):
     def test_roundtrip_with_eval_bound(self):

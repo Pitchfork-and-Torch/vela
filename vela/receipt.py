@@ -80,16 +80,33 @@ def resolve_eval_rails(
     return seeds, duration_s, None, []
 
 
-def gate_cli_line(gate: str, verdict: str | None = None) -> str:
-    """One honest CLI line. ACCEPT on gate=fast is not a house win."""
+def gate_cli_line(
+    gate: str,
+    verdict: str | None = None,
+    *,
+    fairness_holdout: str | None = None,
+) -> str:
+    """One honest CLI line. ACCEPT on gate=fast is not a house win.
+
+    When a leo_multi Jain holdout was declared but rows are missing
+    (typical --fast skip), label INCOMPLETE explicitly so it cannot
+    be read as ACCEPT.
+    """
     if gate == "house":
         line = "gate=house  (5 seeds, 90s, leo_fast_ho+terrestrial)"
     elif gate == "fast":
         line = "gate=fast  (not the house gate)"
     else:
         line = f"gate={gate}  (not the house gate)"
-    if verdict == "ACCEPT" and gate != "house":
+    if fairness_holdout == "INCOMPLETE":
+        line += (
+            ". verdict=INCOMPLETE "
+            "(leo_multi Jain holdout not scored; --fast skips leo_multi)"
+        )
+    elif verdict == "ACCEPT" and gate != "house":
         line += ". ACCEPT here is not a dual-gate win"
+    elif verdict == "INCOMPLETE":
+        line += ". verdict=INCOMPLETE (not ACCEPT)"
     return line
 
 
@@ -128,6 +145,8 @@ def build_receipt(
             config.get("scenarios"),
         ),
     }
+    if summary.get("fairness_holdout") is not None:
+        body["fairness_holdout"] = summary.get("fairness_holdout")
     body["receipt_digest"] = tagged("receipt", _canon(body))
     return body
 
@@ -176,7 +195,7 @@ def verify_receipt(
             config = summary.get("config")
         if rows is None and "rows" in summary:
             rows = list(summary.get("rows") or [])
-        for key in ("verdict", "power", "honesty", "gate"):
+        for key in ("verdict", "power", "honesty", "gate", "fairness_holdout"):
             if key in receipt and key in summary and receipt.get(key) != summary.get(key):
                 errs.append(f"{key} does not match eval")
     if config is not None:
