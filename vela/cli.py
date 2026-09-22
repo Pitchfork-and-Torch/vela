@@ -191,6 +191,11 @@ def _main(argv: list[str] | None = None) -> int:
             print("    writecap=budget  (integer authority)")
         if res.path_bound:
             print(f"    path={res.path_bound}")
+        if any("sim!=orbit" in w for w in res.warnings):
+            print(
+                "    sim!=orbit  (LeoPath Starlink-class; "
+                "not a cell replay; lab != orbit)"
+            )
         if res.fairness:
             extra = f" jain>={res.jain_min}" if res.jain_min is not None else ""
             print(f"    fairness={res.fairness}{extra}")
