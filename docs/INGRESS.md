@@ -33,8 +33,8 @@ py -3 -m vela check examples/equinox.vela
 py -3 -m unittest discover -s tests -v
 ```
 
-`vela check examples/reach.vela` must print `observe-only`,
-`passthrough`, and `no-oracle`.
+`vela check examples/reach.vela` must print `posture=observe`,
+`observe-only`, `passthrough`, and `no-oracle`.
 
 `vela eval examples/fair.vela --fast` is INCOMPLETE for Jain
 (fast skips `leo_multi`). That is honest.

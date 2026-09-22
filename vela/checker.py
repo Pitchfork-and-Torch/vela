@@ -155,15 +155,9 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
         res.ok = False
         res.errors.append(closed_write_error(c.name, writes))
     elif c.posture == "review" and writes:
-        res.warnings.append(
-            f"{c.name}: posture review; closed-write {writes} stay off the "
-            "packet path (ablation only)"
-        )
+        res.warnings.append(review_closed_write_warning(c.name, writes))
     elif c.posture == "review" and not writes:
-        res.warnings.append(
-            f"{c.name}: posture review with no closed-write operator "
-            "(flagship Reach is observe)"
-        )
+        res.warnings.append(review_no_closed_write_warning(c.name))
 
     hard = [m for m in c.compose if STDLIB_MECHANISMS.get(m, {}).get("cuts") == "hard"]
     # SoftReprobe + TypedLoss both hard-cut but on different events (epoch vs loss).
@@ -950,6 +944,22 @@ def _check_write_cap(c: Controller, res: CheckResult) -> None:
 
 
 INTERVAL_COUNT_ATTRS = frozenset({"n", "e"})
+
+
+
+def review_closed_write_warning(cname: str, writes: list[str]) -> str:
+    return (
+        f"{cname}: posture review; closed-write {writes} stay off the "
+        "packet path (ablation only)"
+    )
+
+
+def review_no_closed_write_warning(cname: str) -> str:
+    """Warn: review with no closed-write is not the flagship observe rail."""
+    return (
+        f"{cname}: posture review with no closed-write operator "
+        "(flagship Reach is observe)"
+    )
 
 
 def closed_write_error(cname: str, writes: list[str]) -> str:
