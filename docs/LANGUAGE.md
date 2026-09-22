@@ -130,9 +130,9 @@ contract DualGate vs BBRv3approx {
 
 Fairness is optional and first-class. A second `scenario leo_multi` plus `assert mean(jain) >= 0.85` is the RFC 5166 holdout. The sibling sim already had 3-flow `leo_multi`; VELA now scores Jain in `evaluate()` instead of leaving it in a README. A jain assert without `leo_multi` is a type error. Missing multi-flow rows are INCOMPLETE. Flagship Reach stays single-flow DualGate. See `examples/fair.vela`.
 
-When the contract says `report ci(0.95)` (or bare `report ci`), the JSON includes a `ci` object: sample mean +/- sample std per scenario/CCA, method `mean+/-std`. That is not a bootstrap or t-interval. The requested level is recorded; coverage is not claimed.
+When the contract says `report ci(0.95)` (or bare `report ci`), the JSON includes a `ci` object: sample mean +/- sample std per scenario/CCA, method `mean+/-std`. That is not a bootstrap or t-interval. The requested level is recorded; coverage is not claimed. `vela check` stamps `stats=mean+/-std`.
 
-A one-sided t-test or bootstrap CI on 5 seeds is weak. VELA reports that weakness instead of hiding it: `power=low` is a first-class field. Checker and harness share one floor: `n < 8` is `power=low`. House DualGate is 5 seeds, so `vela check` warns and `vela eval` labels `low`. Claiming `p < 0.05` with n<8 and no paired path is a contract warning, not a badge.
+A one-sided t-test or bootstrap CI on 5 seeds is weak. VELA reports that weakness instead of hiding it: `power=low` is a first-class field. Checker and harness share one floor: `n < 8` is `power=low`. House DualGate is 5 seeds, so `vela check` warns and `vela eval` labels `low`. `assert p < 0.05`, `report p(0.05)`, and `report bootstrap` are check errors. `n>=8` does not unlock a p-value. SoftReprobe cut stays 0.58.
 
 ### Path models (sim and constraint)
 
@@ -263,7 +263,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Information.** IntervalBw needs samples. The first 1-2 RTT of an epoch are supposed to be uncertain. Forcing a tight interval early is the same bug as a stale min-RTT, with extra ceremony.
 
-**Statistics.** Five seeds do not make a journal result. VELA marks `power=low` when n<8 (check warning + eval JSON) and still allows ACCEPT on the dual-gate *means* (the OrbitStack house rule). It refuses a `p < 0.05` badge unless the contract asks for n>=8 or a paired bootstrap and gets them.
+**Statistics.** Five seeds do not make a journal result. VELA marks `power=low` when n<8 (check warning + eval JSON) and still allows ACCEPT on the dual-gate *means* (the OrbitStack house rule). It refuses a `p < 0.05` or bootstrap badge. `power=ok` is not a p-value. The CI object stays mean+/-std.
 
 **Deployment.** The working backend is Python on the LeoAware discrete-event sim, which is a research path, not quiche. Rust emit is a typed IR sketch (`vela emit-rust`), not a congestion controller you can ship in production QUIC tomorrow. Porting still requires a real ACK clock, pacing, and loss signal.
 

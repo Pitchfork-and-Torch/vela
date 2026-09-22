@@ -4,6 +4,7 @@ from __future__ import annotations
 from vela.ast import Controller, Program, Stmt, View
 from vela.digest import compose_digest
 from vela.ir import parse_report_ci
+from vela.stats_honesty import badge_errors, stats_stamp
 from vela.oracle import oracle_error, oracle_name_of
 from vela.path import (
     house_mismatch_warning,
@@ -103,6 +104,12 @@ def check(prog: Program) -> CheckResult:
         for err in ci_errs:
             res.ok = False
             res.errors.append(f"contract {con.name}: {err}")
+        badges = badge_errors(con)
+        for err in badges:
+            res.ok = False
+            res.errors.append(err)
+        if not badges and not res.stats:
+            res.stats = stats_stamp(con)
         _check_fairness_contract(con, res)
         for scen in con.scenarios:
             if scen not in KNOWN_SCENARIOS:
