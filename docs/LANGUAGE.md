@@ -240,6 +240,8 @@ The *design target* is a statistically honest dual-gate: mean goodput clearly ab
 
 On this machine the locked sibling sim is LeoAware **v3.4-p95** (coupled-RNG era: 73.57 Mbps / 138.37 ms vs BBR 70.88 / 138.8). OPE-fair v3.7 numbers in the invention prompt (58.78 / 152.09) are a different eval law and must not be mixed into one table.
 
+Eval JSON and receipts stamp `eval_law` (default `coupled-rng-v3.4-p95`). The harness refuses a mixed table/receipt that carries both OPE-fair and coupled-RNG house landmarks. See `docs/EVAL-NOTES.md` (dead-seconds + eval_law).
+
 `vela eval` writes `results/eval_*.json`. That file is the only allowed source for "Horizon beats X" sentences. If an eval misses the stretch 5-10% goodput target, the language is still the product; the controller is a program you can change without rewriting the kernel.
 
 Lab note (first `--fast` eval, 45s, seeds 13+7): a literal `pace *= 0.94` on every ACK while `p_ho > 0.35` destroyed seed 7 (65 / 181 vs LeoAware 89 / 108). That is exactly the class of accident VELA is meant to make visible: a `when` body is a *level*, not a per-ACK multiply, unless the author writes an integrator. Kernel 0.1.1 sets pace from `bw.mid` and requires `p_ho > 0.55` plus three real HO-scale gaps before the calendar is trusted.
@@ -250,7 +252,7 @@ If Horizon (or a later VELA program) clears a dual-gate with a material margin, 
 
 - **Higher sustained goodput** on the same dish and the same orbit, because the sender stops under-running stable epochs and stops over-running the last 200 ms before a hop.
 - **Lower interactive latency variance** because predictive freeze and uncertainty-scaled yield cut the queue spike that currently sits in the p95.
-- **Fewer "dead" seconds after handover** because REPROBE + interval chase refill from a discounted prior instead of CUBIC collapse or a stale BBR min-RTT.
+- **Fewer "dead" seconds after handover** because REPROBE + interval chase refill from a discounted prior instead of CUBIC collapse or a stale BBR min-RTT. Measurable in eval JSON as `dead_seconds`: time after a detected RttHop until goodput recovers to 80% of the pre-hop epoch median (`recover_frac=0.80`; SoftReprobe cut 0.58 held).
 - **Fairness / multi-flow:** `fair_mode` remains a declared mechanism (AIMD around 1.0 x BDP). VELA does not pretend one flow's Horizon chase is multi-flow optimal.
 - **Energy / radio:** fewer useless retransmits during mobility bursts (typed Mobility => hold). The satellite still burns the same RF; the user device wastes fewer watts on recovery.
 - **Assist path:** when ASCENT-D hints are present they are `Option` and fail-closed. When they are absent, Horizon is still defined. That is the only deployment story that matches today's Starlink (no official path-hint API).
@@ -289,7 +291,8 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
-| `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
+| `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out`; stamps `eval_law` + `dead_seconds` |
+| `vela/dead_sec.py` | Dead-seconds-after-handover metric (recover_frac=0.80 of pre-hop epoch median) |
 | `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
@@ -398,3 +401,14 @@ contract seed list. A 2-seed incomplete house contract is
 A later stdout JSON line cannot replace it. The default `--tag`
 is the controller name, not `horizon`. ACCEPT on `gate=fast`
 prints that it is not a dual-gate win. No packet-path change.
+
+## L. Dead-seconds + eval_law (VELA cook 2026-09-22)
+
+Starlink efficacy is measurable: eval JSON stamps `dead_seconds` with
+`recover_frac=0.80` (goodput back to 80% of the pre-hop epoch median after
+a detected RttHop). SoftReprobe stays 0.58. Observe-only flagship. No
+closed-write. No dish Mbps.
+
+`eval_law` on harness results and receipts labels the era
+(`coupled-rng-v3.4-p95` on this machine). Mixing OPE-fair v3.7 prompt
+means with that house table is refused. Pointers: `docs/EVAL-NOTES.md`.
