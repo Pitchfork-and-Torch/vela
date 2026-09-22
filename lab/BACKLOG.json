@@ -179,7 +179,8 @@
       "safe": true,
       "public": true,
       "note": "Hint ingress: stale or role-mismatched ASCENT-D/Orb stays None (fail-closed). Bare hint.ascent arithmetic remains illegal. Flagship Reach stays defined without hints.",
-      "status": "pending"
+      "status": "done",
+      "pr": 28
     },
     {
       "id": "dual-gate-honesty-label",
