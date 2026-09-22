@@ -59,3 +59,10 @@ WriteCap, and hybrid automata. See `docs/LANGUAGE.md` Equinox
 laws and section K. `--fast` cannot become house. Workers write
 the result row to `--out`. ACCEPT on `gate=fast` is not a
 dual-gate win.
+
+## Hint role + age
+
+ASCENT `hint.ascent` Option path: role mismatch and stale age fail closed.
+Trusted roles `pilot` | `gateway`. House max age 2s. Stamp `hint-role+age`.
+Reach `vela check` does not need leo-aware-transport. SoftReprobe cut 0.58.
+

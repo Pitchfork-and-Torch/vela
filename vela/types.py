@@ -53,6 +53,11 @@ def parse_jain_floor(right: str) -> float | None:
 HINT_ARMS = ("Some", "None")
 HINT_TYPE_NAMES = frozenset({"Hint", "Option"})
 HINT_CHANNELS = frozenset({"ascent", "orb", "orbital"})
+# ASCENT path-hint ROLE: line. Matches leo_cc.ascent_path_hint trusted_roles.
+HINT_TRUSTED_ROLES = frozenset({"pilot", "gateway"})
+# House max age for a usable hint.ascent payload (runtime fail-closed).
+# Author programs may tighten further; age > this is stale.
+HOUSE_HINT_MAX_AGE_S = 2.0
 STDLIB_MODULES = frozenset(
     {
         "std.epoch",
@@ -209,6 +214,7 @@ class CheckResult:
     observe_only: bool = False
     closed_writes: list[str] = field(default_factory=list)
     hint_fail_closed: bool = False
+    hint_role_age: bool = False
     typed_reconfig: bool = False
     typed_loss: bool = False
     passthrough: bool = False

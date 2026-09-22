@@ -17,6 +17,8 @@ use std.eval
 // Observe-only. No closed-write. LeoAware remains the engine.
 // When the hint is Some, freeze samples. When it is None, hold.
 // The packet path is still Detect + SoftReprobe + Calendar.
+// Role + age: trusted pilot|gateway; stale age selects None.
+// Hints can lie; role+age is the remaining rail, not a PKI.
 
 controller Ascent {
   posture observe

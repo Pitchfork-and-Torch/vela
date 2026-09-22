@@ -16,8 +16,10 @@ from vela.types import (
     FAIRNESS_SCENARIO,
     HINT_ARMS,
     HINT_CHANNELS,
+    HINT_TRUSTED_ROLES,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    HOUSE_HINT_MAX_AGE_S,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -68,6 +70,7 @@ def check(prog: Program) -> CheckResult:
         res.closed_writes = review_writes_in(first.compose)
         res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
         res.hint_fail_closed = _has_hint_surface(first)
+        res.hint_role_age = bool(res.hint_fail_closed)
         res.typed_reconfig = _has_typed_reconfig(first)
         res.typed_loss = _has_typed_loss(first)
         res.passthrough = controller_is_passthrough(first)
@@ -280,6 +283,7 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
 
     _check_passthrough_cruise(c, res)
     _check_hint_surface(c, prog, res)
+    _check_hint_role_age(c, res)
     _check_oracle(c, res)
     hints = _hint_names(c)
 
@@ -1269,6 +1273,149 @@ def _check_house_cut_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -
             if cn is not None and abs(cn - HOUSE_ENDPOINT_CUT) > 1e-9:
                 res.ok = False
                 res.errors.append(house_cut_error(cname, cn))
+
+
+
+def hint_role_mismatch_error(cname: str, role: str) -> str:
+    trusted = "|".join(sorted(HINT_TRUSTED_ROLES))
+    return (
+        f"{cname}: Hint role {role!r} is not trusted "
+        f"(fail-closed; trusted roles are {trusted}; hints can lie)"
+    )
+
+
+def hint_stale_age_error(cname: str) -> str:
+    return (
+        f"{cname}: Hint age bound selects a stale hint "
+        f"(fail-closed; write age < duration, not age > duration; "
+        f"house max {HOUSE_HINT_MAX_AGE_S:g}s)"
+    )
+
+
+def _role_literal(expr) -> str | None:
+    if expr is None or getattr(expr, "kind", None) != "str":
+        return None
+    return str(expr.value).strip().lower()
+
+
+def _is_hint_role_attr(expr, hints: set[str]) -> bool:
+    if expr is None or getattr(expr, "kind", None) != "attr" or expr.name != "role":
+        return False
+    return _hint_subject_of(expr, hints) is not None
+
+
+def _is_hint_age_attr(expr, hints: set[str]) -> bool:
+    if expr is None or getattr(expr, "kind", None) != "attr" or expr.name != "age":
+        return False
+    return _hint_subject_of(expr, hints) is not None
+
+
+def _split_role_cmp(expr, hints: set[str]) -> tuple[str, str] | None:
+    """(kind, role_lit) where kind is match|mismatch. None if not a role compare."""
+    if expr is None or getattr(expr, "kind", None) != "binop":
+        return None
+    op = expr.name
+    if op not in ("==", "!="):
+        return None
+    left_role = _is_hint_role_attr(expr.left, hints)
+    right_role = _is_hint_role_attr(expr.right, hints)
+    if left_role == right_role:
+        return None
+    lit = _role_literal(expr.right if left_role else expr.left)
+    if lit is None:
+        return None
+    trusted = lit in HINT_TRUSTED_ROLES
+    # == trusted => match; == untrusted => mismatch
+    # != trusted => mismatch selector (rejects the good role)
+    # != untrusted => match-ish (rejects bad); allow
+    if op == "==":
+        return ("match" if trusted else "mismatch", lit)
+    # !=
+    return ("mismatch" if trusted else "match", lit)
+
+
+def _split_age_cmp_rail(expr, hints: set[str]) -> str | None:
+    """Return 'fresh', 'stale', or None if not an age compare."""
+    if expr is None or getattr(expr, "kind", None) != "binop":
+        return None
+    op = expr.name
+    left_age = _is_hint_age_attr(expr.left, hints)
+    right_age = _is_hint_age_attr(expr.right, hints)
+    if left_age == right_age:
+        return None
+    side = "left" if left_age else "right"
+    fresh_op = (side == "left" and op in ("<", "<=")) or (
+        side == "right" and op in (">", ">=")
+    )
+    stale_op = (side == "left" and op in (">", ">=")) or (
+        side == "right" and op in ("<", "<=")
+    )
+    if fresh_op:
+        return "fresh"
+    if stale_op:
+        return "stale"
+    return None
+
+
+def _walk_hint_role_age(cname: str, expr, hints: set[str], res: CheckResult) -> None:
+    if expr is None or not hasattr(expr, "kind") or not hints:
+        return
+    role = _split_role_cmp(expr, hints)
+    if role is not None:
+        kind, lit = role
+        if kind == "mismatch":
+            res.ok = False
+            res.errors.append(hint_role_mismatch_error(cname, lit))
+            return
+    age = _split_age_cmp_rail(expr, hints)
+    if age == "stale":
+        res.ok = False
+        res.errors.append(hint_stale_age_error(cname))
+        return
+    _walk_hint_role_age(cname, getattr(expr, "left", None), hints, res)
+    _walk_hint_role_age(cname, getattr(expr, "right", None), hints, res)
+    for a in getattr(expr, "args", []) or []:
+        _walk_hint_role_age(cname, a, hints, res)
+
+
+def _check_hint_role_age_stmts(
+    cname: str, stmts: list[Stmt], hints: set[str], res: CheckResult
+) -> None:
+    if not hints:
+        return
+    for st in stmts:
+        if st.expr is not None:
+            _walk_hint_role_age(cname, st.expr, hints, res)
+        if st.kind == "chase":
+            for a in st.args:
+                _walk_hint_role_age(cname, a, hints, res)
+        if st.kind == "enter":
+            for a in st.args:
+                if isinstance(a, tuple) and len(a) == 2:
+                    _walk_hint_role_age(cname, a[1], hints, res)
+                else:
+                    _walk_hint_role_age(cname, a, hints, res)
+        if st.body:
+            _check_hint_role_age_stmts(cname, st.body, hints, res)
+        eb = _stmt_else_body(st)
+        if eb:
+            _check_hint_role_age_stmts(cname, eb, hints, res)
+
+
+def _check_hint_role_age(c: Controller, res: CheckResult) -> None:
+    """Role mismatch + stale age fail-closed on hint.ascent Option path."""
+    hints = _hint_names(c)
+    if not hints:
+        return
+    for o in c.ons:
+        _check_hint_role_age_stmts(c.name, o.body, hints, res)
+        for arm in o.match_arms:
+            _check_hint_role_age_stmts(c.name, arm.body, hints, res)
+    for w in c.whens:
+        _walk_hint_role_age(c.name, w.pred, hints, res)
+        _check_hint_role_age_stmts(c.name, w.body, hints, res)
+    for e in c.everys:
+        _check_hint_role_age_stmts(c.name, e.body, hints, res)
 
 
 def hint_law_error(cname: str, name: str) -> str:
