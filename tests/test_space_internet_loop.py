@@ -362,7 +362,12 @@ class TestBacklogStarlinkItems(unittest.TestCase):
     def test_repo_backlog_has_safe_pending_starlink_items(self) -> None:
         data = json.loads((ROOT / "lab" / "BACKLOG.json").read_text(encoding="utf-8"))
         by_id = {it["id"]: it for it in data["items"]}
-        for done in ("path-realism-rails", "hint-ingress-fail-closed"):
+        for done in (
+            "path-realism-rails",
+            "hint-ingress-fail-closed",
+            "dual-gate-honesty-label",
+            "power-label-surface",
+        ):
             self.assertEqual(by_id[done]["status"], "done", done)
             self.assertEqual(by_id[done].get("pr"), 28, done)
         pending = [
@@ -370,12 +375,7 @@ class TestBacklogStarlinkItems(unittest.TestCase):
             for it in data["items"]
             if it.get("status") == "pending" and it.get("safe") is True
         ]
-        ids = {it["id"] for it in pending}
-        for need in (
-            "dual-gate-honesty-label",
-            "power-label-surface",
-        ):
-            self.assertIn(need, ids)
+        self.assertEqual(pending, [])
         for it in pending:
             self.assertIn(it["kind"], ("language", "eval"))
             self.assertNotIn("enable closed-write", (it.get("note") or "").lower())

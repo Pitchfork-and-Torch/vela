@@ -24,6 +24,18 @@ def eval_power(n_seeds: int) -> str:
     return "low" if int(n_seeds) < POWER_OK_MIN_SEEDS else "ok"
 
 
+def p_value_claimed(n_seeds: int) -> bool:
+    """No silent p<0.05 badge. power=low refuses a p-value claim."""
+    return eval_power(n_seeds) == "ok"
+
+
+def power_label(n_seeds: int) -> str:
+    """Surface stamp shared by checker warning and eval JSON."""
+    if eval_power(n_seeds) == "low":
+        return f"power=low (n<{POWER_OK_MIN_SEEDS}; means ACCEPT still legal)"
+    return "power=ok"
+
+
 def assert_names_jain(left: str) -> bool:
     s = str(left).lower().replace(" ", "")
     return "jain" in s or "fairness" in s

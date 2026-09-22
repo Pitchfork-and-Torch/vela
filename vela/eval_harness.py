@@ -19,7 +19,7 @@ from vela.path import (
     path_overlay,
 )
 from vela.receipt import eval_gate
-from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power
+from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power, p_value_claimed, power_label
 
 # Seed 7 45s locked LeoAware rails (WORKDAY / EVAL-NOTES). Not house-gate.
 LEO_S7_45_GP = 88.65
@@ -387,14 +387,25 @@ def parse_worker_stdout(text: str) -> dict | None:
     return None
 
 
-def honesty_text(gate: str) -> str:
-    return (
-        "Means only. p-values are not claimed. "
-        f"power=low when n<{POWER_OK_MIN_SEEDS}. "
-        f"gate={gate} (--fast is not the house gate). "
-        "Coupled-RNG house LeoAware is 73.57/138.37 vs BBR 70.88/138.83. "
-        "Do not mix these numbers with OPE-fair v3.7 prompt figures."
-    )
+def honesty_text(gate: str, verdict: str | None = None) -> str:
+    """Public claim label. ACCEPT on gate=fast is not a house dual-gate win."""
+    parts = [
+        "Means only. p-values are not claimed.",
+        f"power=low when n<{POWER_OK_MIN_SEEDS}.",
+        f"gate={gate} (--fast is not the house gate).",
+        "Coupled-RNG house LeoAware is 73.57/138.37 vs BBR 70.88/138.83.",
+        "Do not mix these numbers with OPE-fair v3.7 prompt figures.",
+    ]
+    if gate != "house":
+        parts.append("ACCEPT here is not a dual-gate win.")
+    elif verdict == "ACCEPT":
+        parts.append("House dual-gate ACCEPT on means only.")
+    return " ".join(parts)
+
+
+def dual_gate_win(verdict: str, gate: str) -> bool:
+    """True only for ACCEPT on the house gate. Fast ACCEPT is not a win."""
+    return verdict == "ACCEPT" and gate == "house"
 
 
 def _mean(xs: list[float]) -> float:
@@ -627,15 +638,19 @@ def _summarize(
     obs_seeds = sorted({int(r["seed"]) for r in rows}) if rows else list(cfg.seeds)
     obs_scens = sorted({str(r["scenario"]) for r in rows}) if rows else list(cfg.scenarios)
     gate = eval_gate(obs_seeds, duration_s, obs_scens)
+    verdict = _decide_verdict(
+        verdicts, n_seeds, contract_min, _required_asserts(cfg)
+    )
     out = {
-        "verdict": _decide_verdict(
-            verdicts, n_seeds, contract_min, _required_asserts(cfg)
-        ),
+        "verdict": verdict,
         "power": eval_power(n_seeds),
+        "power_label": power_label(n_seeds),
+        "p_value_claimed": p_value_claimed(n_seeds),
         "gate": gate,
+        "dual_gate_win": dual_gate_win(verdict, gate),
         "tables": tables,
         "asserts": verdicts,
-        "honesty": honesty_text(gate),
+        "honesty": honesty_text(gate, verdict),
     }
     ci_level, _ci_errs = parse_report_ci(list(getattr(cfg, "reports", []) or []))
     if ci_level is not None:

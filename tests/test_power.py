@@ -8,7 +8,7 @@ from vela.checker import check, power_low_warning
 from vela.eval_harness import _summarize
 from vela.ir import VelaConfig
 from vela.parser import parse
-from vela.types import POWER_OK_MIN_SEEDS, eval_power
+from vela.types import POWER_OK_MIN_SEEDS, eval_power, p_value_claimed, power_label
 
 ROOT = Path(__file__).resolve().parents[1]
 EX = ROOT / "examples"
@@ -124,3 +124,27 @@ class TestPowerLowAlign(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPowerLabelSurface(unittest.TestCase):
+    def test_five_seed_accept_stays_legal_without_pvalue(self):
+        self.assertEqual(eval_power(5), "low")
+        self.assertFalse(p_value_claimed(5))
+        self.assertIn("power=low", power_label(5))
+        self.assertIn("ACCEPT still legal", power_label(5))
+
+    def test_eight_seeds_may_claim_power_ok(self):
+        self.assertEqual(eval_power(8), "ok")
+        self.assertTrue(p_value_claimed(8))
+        self.assertEqual(power_label(8), "power=ok")
+
+    def test_eval_json_stamps_power_label(self):
+        rows = _passing_leo_fast_ho(HOUSE) + _rows(
+            "terrestrial", CCA, 80.0, 40.0, HOUSE
+        ) + _rows("terrestrial", "BBRv3approx", 70.0, 40.0, HOUSE)
+        summary = _summarize(rows, _cfg(HOUSE), duration_s=90.0)
+        self.assertEqual(summary["power"], "low")
+        self.assertFalse(summary["p_value_claimed"])
+        self.assertIn("power=low", summary["power_label"])
+        self.assertEqual(summary["verdict"], "ACCEPT")
+
