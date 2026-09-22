@@ -196,6 +196,17 @@ STDLIB_MECHANISMS = {
 FRESH_TYPES = {"Sample", "Interval", "min_rtt", "bw"}
 
 
+# Visible authority honesty (WriteCap companion; not silent ambient).
+AUTHORITY_ABSENT_STAMP = "authority=absent"
+AUTHORITY_BUDGET_STAMP = "authority=budget"
+AUTHORITY_ABSENT_CHECK_LINE = (
+    "authority=absent  (no named budget; ambient write still illegal)"
+)
+AUTHORITY_BUDGET_CHECK_LINE = (
+    "authority=budget  (named integer caps; zero is still a name)"
+)
+
+
 @dataclass
 class CheckResult:
     ok: bool
@@ -204,6 +215,7 @@ class CheckResult:
     mechanisms: list[str] = field(default_factory=list)
     compose_digest: str = ""
     authority: dict = field(default_factory=dict)
+    authority_stamp: str = ""  # absent | budget
     views: list[str] = field(default_factory=list)
     posture: str = "observe"
     observe_only: bool = False

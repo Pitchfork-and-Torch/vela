@@ -19,7 +19,7 @@ binaries.
    writes `integrate when` under `posture review` and accepts the warning.
    `every ack { pace *= k }` is the same death class: write `integrate every`.
    A nested `when` inside `on` cannot opt in.
-2. **No ambient authority.** A `WriteCap<cwnd> @ epoch` plus
+2. **No ambient authority.** A `WriteCap / authority=budget<cwnd> @ epoch` plus
    `authority { cwnd: 0 }` refuses cruise writes. Reconfig still
    invalidates samples. Observe is the default power.
    WriteCap is linear when the author writes `split` / `borrow`:
@@ -74,3 +74,5 @@ It does not replace LeoAware. The engine remains v3.4-p95 at
 73.57 / 138.37 vs BBR 70.88 / 138.83. Equinox makes the next illegal
 write a compile error instead of a 90s seed dump, so gifts to that
 engine can be composed without stacking unnamed flags.
+
+`vela check` stamps `authority=budget` when caps are named (zero is still a name) or `authority=absent` when none. SoftReprobe cut stays 0.58.

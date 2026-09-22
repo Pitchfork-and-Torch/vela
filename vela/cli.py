@@ -9,7 +9,7 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
-from vela.types import POWER_OK_MIN_SEEDS
+from vela.types import POWER_OK_MIN_SEEDS, AUTHORITY_ABSENT_CHECK_LINE, AUTHORITY_BUDGET_CHECK_LINE
 
 
 class InputError(Exception):
@@ -206,6 +206,10 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"    growth_compose={c.growth_compose}")
         if res.compose_digest:
             print(f"    digest={res.compose_digest[:16]}")
+        if res.authority_stamp == "budget":
+            print(f"    {AUTHORITY_BUDGET_CHECK_LINE}")
+        else:
+            print(f"    {AUTHORITY_ABSENT_CHECK_LINE}")
         if res.authority:
             print(f"    authority={res.authority}")
         if res.views:
