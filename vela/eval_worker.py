@@ -52,6 +52,11 @@ def run_job(
         "handovers": rec.handovers,
         "jain_fairness": rec.jain_fairness,
         "n_flows": rec.n_flows,
+        "dead_s_mean": rec.dead_s_mean,
+        "dead_s_median": rec.dead_s_median,
+        "dead_s_n_hops": rec.dead_s_n_hops,
+        "dead_s_n_censored": rec.dead_s_n_censored,
+        "dead_s_recover_frac": rec.dead_s_recover_frac,
     }
 
 

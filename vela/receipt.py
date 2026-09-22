@@ -23,6 +23,122 @@ HOUSE_GATE_SCENARIOS = frozenset({"leo_fast_ho", "terrestrial"})
 FAST_GATE_SEEDS = frozenset({13, 7})
 FAST_GATE_DURATION_S = 45.0
 
+# Eval-law stamp: refuse mixing OPE-fair era with coupled-RNG house means.
+EVAL_LAW_COUPLED_RNG_V34_P95 = "coupled-rng-v3.4-p95"
+EVAL_LAW_OPE_FAIR_V37 = "ope-fair-v3.7"
+DEFAULT_EVAL_LAW = EVAL_LAW_COUPLED_RNG_V34_P95
+EVAL_LAW_LANDMARKS = {
+    EVAL_LAW_COUPLED_RNG_V34_P95: (73.57, 138.37),
+    EVAL_LAW_OPE_FAIR_V37: (58.78, 152.09),
+}
+_LANDMARK_TOL = 0.05
+
+
+def eval_law_note(law: str | None = None) -> str:
+    law = law or DEFAULT_EVAL_LAW
+    if law == EVAL_LAW_OPE_FAIR_V37:
+        return (
+            "OPE-fair v3.7 prompt means (58.78/152.09). "
+            "Do not mix with coupled-RNG LeoAware v3.4-p95 (73.57/138.37)."
+        )
+    return (
+        "Coupled-RNG LeoAware v3.4-p95 house means (73.57/138.37). "
+        "Do not mix with OPE-fair v3.7 prompt figures (58.78/152.09)."
+    )
+
+
+def stamp_eval_law(law: str | None = None) -> dict:
+    """Harness/receipt stamp. Default is this machine's coupled-RNG house law."""
+    law = law or DEFAULT_EVAL_LAW
+    return {"eval_law": law, "eval_law_note": eval_law_note(law)}
+
+
+def _near(a: float, b: float, tol: float = _LANDMARK_TOL) -> bool:
+    return abs(float(a) - float(b)) <= tol
+
+
+def _collect_gp_p95_pairs(obj, out: list) -> None:
+    """Walk JSON-like structures for (goodput, p95) landmark pairs."""
+    if isinstance(obj, dict):
+        gp = None
+        p95 = None
+        for k, v in obj.items():
+            lk = str(k).lower()
+            if isinstance(v, (int, float)):
+                if lk in (
+                    "goodput_mbps",
+                    "goodput_mean",
+                    "goodput",
+                    "gp",
+                    "bbr_goodput",
+                ) or lk.endswith("_goodput_mbps"):
+                    gp = float(v)
+                if lk in (
+                    "p95_rtt_ms",
+                    "p95_mean",
+                    "p95_ms",
+                    "p95",
+                    "bbr_p95",
+                ) or lk.endswith("_p95_ms"):
+                    p95 = float(v)
+            else:
+                _collect_gp_p95_pairs(v, out)
+        if gp is not None and p95 is not None:
+            out.append((gp, p95))
+        # Also accept nested engine era blocks with goodput_mbps + p95_ms.
+    elif isinstance(obj, list):
+        for item in obj:
+            _collect_gp_p95_pairs(item, out)
+
+
+def landmark_laws_present(payload: dict) -> set[str]:
+    """Which eval-law landmarks appear as gp/p95 pairs in this object.
+
+    Honesty / eval_law_note may mention both eras as a warning; that is not
+    a mix. Only numeric (goodput, p95) landmark pairs count.
+    """
+    pairs: list[tuple[float, float]] = []
+    _collect_gp_p95_pairs(payload, pairs)
+    found: set[str] = set()
+    for law, (gp0, p950) in EVAL_LAW_LANDMARKS.items():
+        for gp, p95 in pairs:
+            if _near(gp, gp0) and _near(p95, p950):
+                found.add(law)
+                break
+    return found
+
+
+def eval_law_mix_errors(payload: dict | None) -> list[str]:
+    """Refuse mixing OPE-fair era numbers with coupled-RNG v3.4-p95 in one table/receipt.
+
+    Warning text that names both eras is allowed. Carrying both landmark
+    (goodput, p95) pairs as data, or listing both laws in eval_law, is not.
+    """
+    if not isinstance(payload, dict):
+        return []
+    errs: list[str] = []
+    law = payload.get("eval_law")
+    if isinstance(law, list):
+        laws = {str(x) for x in law}
+        if EVAL_LAW_COUPLED_RNG_V34_P95 in laws and EVAL_LAW_OPE_FAIR_V37 in laws:
+            errs.append(
+                "eval_law mixes OPE-fair v3.7 with coupled-RNG v3.4-p95 "
+                "(refuse: separate tables/receipts)"
+            )
+            return errs
+    found = landmark_laws_present(payload)
+    if (
+        EVAL_LAW_COUPLED_RNG_V34_P95 in found
+        and EVAL_LAW_OPE_FAIR_V37 in found
+    ):
+        errs.append(
+            "eval_law mix: OPE-fair v3.7 landmarks (58.78/152.09) and "
+            "coupled-RNG v3.4-p95 landmarks (73.57/138.37) in the same "
+            "table/receipt (refuse)"
+        )
+    return errs
+
+
 
 def eval_gate(
     seeds: list | None,
@@ -128,6 +244,9 @@ def build_receipt(
             config.get("scenarios"),
         ),
     }
+    law = summary.get("eval_law") or DEFAULT_EVAL_LAW
+    body["eval_law"] = law
+    body["eval_law_note"] = summary.get("eval_law_note") or eval_law_note(law)
     body["receipt_digest"] = tagged("receipt", _canon(body))
     return body
 
@@ -176,9 +295,11 @@ def verify_receipt(
             config = summary.get("config")
         if rows is None and "rows" in summary:
             rows = list(summary.get("rows") or [])
-        for key in ("verdict", "power", "honesty", "gate"):
+        for key in ("verdict", "power", "honesty", "gate", "eval_law"):
             if key in receipt and key in summary and receipt.get(key) != summary.get(key):
                 errs.append(f"{key} does not match eval")
+        errs.extend(eval_law_mix_errors(receipt))
+        errs.extend(eval_law_mix_errors(summary))
     if config is not None:
         cd = config_digest(config)
         if cd != receipt.get("config_digest"):
@@ -197,6 +318,8 @@ def verify_receipt(
             errs.append("rows_merkle does not match provided rows")
         if int(receipt.get("n_rows") or 0) != len(rows):
             errs.append("n_rows does not match provided rows")
+    if summary is None:
+        errs.extend(eval_law_mix_errors(receipt))
     return errs
 
 

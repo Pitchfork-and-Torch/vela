@@ -18,7 +18,13 @@ from vela.path import (
     HOUSE_HANDOVER_JITTER_S,
     path_overlay,
 )
-from vela.receipt import eval_gate
+from vela.dead_sec import (
+    DEAD_SEC_RECOVER_FRAC,
+    dead_seconds_from_sim,
+    dead_seconds_summary,
+    row_dead_sec_fields,
+)
+from vela.receipt import DEFAULT_EVAL_LAW, eval_gate, eval_law_note, stamp_eval_law
 from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power
 
 # Seed 7 45s locked LeoAware rails (WORKDAY / EVAL-NOTES). Not house-gate.
@@ -63,6 +69,17 @@ def write_passthrough_result(
             "gate=fast. Not a house-gate dual-gate claim."
         ),
         "gate": "fast",
+        **stamp_eval_law(DEFAULT_EVAL_LAW),
+        "dead_seconds": {
+            "metric": "dead_seconds_after_handover",
+            "recover_frac": DEAD_SEC_RECOVER_FRAC,
+            "recover_pct": int(round(DEAD_SEC_RECOVER_FRAC * 100)),
+            "definition": (
+                f"seconds after detected RttHop until goodput recovers to "
+                f"{DEAD_SEC_RECOVER_FRAC:.0%} of pre-hop epoch median goodput"
+            ),
+            "note": "passthrough stamp only; run full eval rows for measured dead_s",
+        },
         "scenario": "leo_fast_ho",
         "seed": 7,
         "duration_s": 45.0,
@@ -173,6 +190,11 @@ class Row:
     handovers: int
     jain_fairness: float = 1.0
     n_flows: int = 1
+    dead_s_mean: float | None = None
+    dead_s_median: float | None = None
+    dead_s_n_hops: int = 0
+    dead_s_n_censored: int = 0
+    dead_s_recover_frac: float = DEAD_SEC_RECOVER_FRAC
 
 
 def run_one(mod, factory: Callable, cfg, n_flows: int) -> Row:
@@ -198,6 +220,8 @@ def run_one(mod, factory: Callable, cfg, n_flows: int) -> Row:
         p95 = m.p95_rtt_s * 1000
         avg = m.avg_rtt_s * 1000
         loss = m.loss_rate
+    dead = dead_seconds_from_sim(res)
+    dead_fields = row_dead_sec_fields(dead)
     return Row(
         scenario="",
         seed=0,
@@ -209,6 +233,11 @@ def run_one(mod, factory: Callable, cfg, n_flows: int) -> Row:
         handovers=len(res.handovers),
         jain_fairness=jain,
         n_flows=n_flows,
+        dead_s_mean=dead_fields["dead_s_mean"],
+        dead_s_median=dead_fields["dead_s_median"],
+        dead_s_n_hops=dead_fields["dead_s_n_hops"],
+        dead_s_n_censored=dead_fields["dead_s_n_censored"],
+        dead_s_recover_frac=dead_fields["dead_s_recover_frac"],
     )
 
 
@@ -387,13 +416,18 @@ def parse_worker_stdout(text: str) -> dict | None:
     return None
 
 
-def honesty_text(gate: str) -> str:
+def honesty_text(gate: str, *, eval_law: str | None = None) -> str:
+    law = eval_law or DEFAULT_EVAL_LAW
     return (
         "Means only. p-values are not claimed. "
         f"power=low when n<{POWER_OK_MIN_SEEDS}. "
         f"gate={gate} (--fast is not the house gate). "
-        "Coupled-RNG house LeoAware is 73.57/138.37 vs BBR 70.88/138.83. "
-        "Do not mix these numbers with OPE-fair v3.7 prompt figures."
+        f"eval_law={law}. "
+        + eval_law_note(law)
+        + " "
+        f"Dead-seconds: recover_frac={DEAD_SEC_RECOVER_FRAC:.0%} of "
+        "pre-hop epoch median after detected RttHop. "
+        "SoftReprobe cut 0.58 held. No dish Mbps claim."
     )
 
 
@@ -627,15 +661,19 @@ def _summarize(
     obs_seeds = sorted({int(r["seed"]) for r in rows}) if rows else list(cfg.seeds)
     obs_scens = sorted({str(r["scenario"]) for r in rows}) if rows else list(cfg.scenarios)
     gate = eval_gate(obs_seeds, duration_s, obs_scens)
+    law = DEFAULT_EVAL_LAW
     out = {
         "verdict": _decide_verdict(
             verdicts, n_seeds, contract_min, _required_asserts(cfg)
         ),
         "power": eval_power(n_seeds),
         "gate": gate,
+        "eval_law": law,
+        "eval_law_note": eval_law_note(law),
+        "dead_seconds": dead_seconds_summary(rows),
         "tables": tables,
         "asserts": verdicts,
-        "honesty": honesty_text(gate),
+        "honesty": honesty_text(gate, eval_law=law),
     }
     ci_level, _ci_errs = parse_report_ci(list(getattr(cfg, "reports", []) or []))
     if ci_level is not None:

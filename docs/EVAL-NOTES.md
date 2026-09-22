@@ -5,6 +5,7 @@ Only JSON under `results/` is a claim. This file is the lab log.
 ## Laws
 
 - Do not mix OPE-fair v3.7 prompt numbers (58.78 / 152.09) with this machine's coupled-RNG LeoAware v3.4-p95 (73.57 / 138.37).
+- Eval JSON/receipt stamp `eval_law` (default `coupled-rng-v3.4-p95`). Harness/receipt refuse mixing OPE-fair v3.7 landmarks (58.78/152.09) with coupled-RNG v3.4-p95 (73.57/138.37) in the same table/receipt.
 - `--fast` is 45s / 2 seeds. Not the house gate. Do not mix `--seeds` or `--duration` with it.
 - House gate: seeds 13,7,42,99,123 · 90s · `leo_fast_ho` + terrestrial.
 - `power=low` when n<8 (checker warning + eval JSON). Five-seed ACCEPT on means is still legal. Not a p-value.
@@ -131,3 +132,22 @@ Isolated workers. `leo_fast_ho` seed 7, 45s. Observe-only Reach.
 | Reach | 88.65 | 108.4 |
 
 MATCH within 0.05 Mbps / 0.2 ms. Locked Leo rail held. Not a dual-gate house-gate claim. JSON: `results/eval_reach-passthrough.json`.
+
+### dead-seconds + eval_law (2026-09-22)
+
+First-class Starlink efficacy metric in eval JSON: `dead_seconds`.
+
+- **Definition:** seconds after a detected RttHop (sim handover) until
+  goodput recovers to **80%** (`recover_frac=0.80`) of the pre-hop epoch
+  median goodput. Pre-hop epoch is `[prev_hop, this_hop)`.
+- Stamped on each eval row (`dead_s_mean`, `dead_s_n_hops`, ...) and on the
+  summary block `dead_seconds` (definition + aggregates).
+- SoftReprobe cut **0.58** held. No Detect/SoftReprobe fork. Observe-only.
+  No dish Mbps claim.
+
+`eval_law` is stamped on harness summaries and receipts (default
+`coupled-rng-v3.4-p95`). Mixing OPE-fair era numbers with coupled-RNG
+house means in one table/receipt is refused (`eval_law_mix_errors` /
+`vela receipt --eval`). LANGUAGE already warns; the harness enforces.
+
+Fixture: `tests/test_dead_sec.py` (synthetic hop). Module: `vela/dead_sec.py`.
