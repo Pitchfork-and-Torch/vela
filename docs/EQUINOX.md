@@ -31,6 +31,9 @@ binaries.
    (`RttHop | Flicker`), same shape as `Loss`. On the observe rail
    a bare Reconfig is a type error, and `enter Reprobe(cut: x)` must
    stay 0.58. SoftFlicker 0.85 dumped seed 7 and stays review.
+   Two cwnd raisers among OCE|HorizonChase|TrimFill|QuietReach|TrimReclaim
+   need `compose growth = min|max|sum`; `vela check` stamps `growth=` when
+   the clause is explicit. Missing clause fails closed.
 4. **Typed loss.** `on Loss match` is a closed taxonomy
    (`Mobility | Congestive | Unknown`). On the observe rail a bare
    Loss is a type error, Mobility must hold, and Unknown may cut

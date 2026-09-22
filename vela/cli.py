@@ -202,8 +202,11 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"    power=ok  (n>={POWER_OK_MIN_SEEDS})")
         if c.cuts_compose:
             print(f"    cuts_compose={c.cuts_compose}")
-        if c.growth_compose:
-            print(f"    growth_compose={c.growth_compose}")
+        if res.growth_compose:
+            print(
+                f"    growth={res.growth_compose}  "
+                f"(compose growth honesty; two cwnd raisers need min|max|sum)"
+            )
         if res.compose_digest:
             print(f"    digest={res.compose_digest[:16]}")
         if res.authority:

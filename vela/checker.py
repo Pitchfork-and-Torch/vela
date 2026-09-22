@@ -73,6 +73,9 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        # Two cwnd raisers (OCE|HorizonChase|TrimFill|QuietReach|TrimReclaim)
+        # need an explicit compose growth = min|max|sum; stamp the pick.
+        res.growth_compose = first.growth_compose or ""
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:
