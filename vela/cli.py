@@ -172,7 +172,9 @@ def _main(argv: list[str] | None = None) -> int:
         else:
             print(f"    posture={c.posture}")
         if res.hint_fail_closed:
-            print("    hint=fail-closed  (missing is None, not a hop oracle)")
+            from vela.types import HINT_OPTION_CHECK_LINE
+
+            print(f"    {HINT_OPTION_CHECK_LINE}")
         if res.typed_reconfig:
             print("    reconfig=RttHop|Flicker  (house cut 0.58)")
         if res.typed_loss:

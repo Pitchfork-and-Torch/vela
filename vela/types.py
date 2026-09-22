@@ -53,6 +53,11 @@ def parse_jain_floor(right: str) -> float | None:
 HINT_ARMS = ("Some", "None")
 HINT_TYPE_NAMES = frozenset({"Hint", "Option"})
 HINT_CHANNELS = frozenset({"ascent", "orb", "orbital"})
+# Visible Option-match stamp on `vela check` when Hint surface present.
+HINT_OPTION_STAMP = "hint=Some|None"
+HINT_OPTION_CHECK_LINE = (
+    "hint=Some|None  (fail-closed; missing is None, not a hop oracle)"
+)
 STDLIB_MODULES = frozenset(
     {
         "std.epoch",
