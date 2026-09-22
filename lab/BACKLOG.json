@@ -179,6 +179,14 @@
       "public": true,
       "note": "Observe on-handlers cannot invent capacity (pace/cwnd/chase). SoftReprobe cut/enter stay legal. Nested when sneak closed.",
       "status": "done"
+    },
+    {
+      "id": "freshness-nested-invalidate",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Invalidate sticks into nested when/if/require. Stale bw/min_rtt after invalidate is a type error.",
+      "status": "done"
     }
   ]
 }
