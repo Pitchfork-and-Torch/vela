@@ -14,7 +14,7 @@ binaries.
 
 ## Laws added in 0.3
 
-1. **Level vs integrator.** `when { pace *= k }` is a type error.
+1. **Level vs integrator.** `when { pace *= k }` is a type error. `vela check` stamps `integrator=level`.
    Horizon seed 7 (55 / 173) is now unrepresentable unless the author
    writes `integrate when` under `posture review` and accepts the warning.
    `every ack { pace *= k }` is the same death class: write `integrate every`.

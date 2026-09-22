@@ -18,6 +18,7 @@ from vela.types import (
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    INTEGRATOR_LEVEL_STAMP,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -73,6 +74,8 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        if controller_stamps_integrator_level(first, res):
+            res.integrator = INTEGRATOR_LEVEL_STAMP
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:
@@ -395,6 +398,7 @@ def _check_integrator(
             continue
         if not integrate:
             res.ok = False
+            res.integrator = ""
             res.errors.append(
                 f"{cname}: {surface}-body is a level; `{st.name} {op}` is an integrator "
                 f"(Horizon seed 7: 55/173). Write `{opt}` to opt in."
@@ -951,6 +955,25 @@ def _check_write_cap(c: Controller, res: CheckResult) -> None:
 
 INTERVAL_COUNT_ATTRS = frozenset({"n", "e"})
 
+
+
+def controller_stamps_integrator_level(c: Controller, res: CheckResult) -> bool:
+    """Stamp when integrator law holds (when/every are levels; no bare pace*=)."""
+    if not res.ok:
+        return False
+    if res.integrator == "" and any(
+        "is an integrator" in e for e in res.errors
+    ):
+        return False
+    # Flagship and house programs always live under the level law.
+    return True
+
+
+def integrator_level_line() -> str:
+    return (
+        f"integrator={INTEGRATOR_LEVEL_STAMP}  "
+        "(when/every pace*= needs integrate)"
+    )
 
 def closed_write_error(cname: str, writes: list[str]) -> str:
     return (

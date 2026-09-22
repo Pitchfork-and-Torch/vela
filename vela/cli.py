@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from vela import __version__
-from vela.checker import check
+from vela.checker import check, integrator_level_line
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
 from vela.types import POWER_OK_MIN_SEEDS
@@ -179,6 +179,8 @@ def _main(argv: list[str] | None = None) -> int:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
+        if res.integrator:
+            print(f"    {integrator_level_line()}")
         if res.no_oracle:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:
