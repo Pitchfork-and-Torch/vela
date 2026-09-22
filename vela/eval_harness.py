@@ -18,6 +18,12 @@ from vela.path import (
     HOUSE_HANDOVER_JITTER_S,
     path_overlay,
 )
+from vela.flicker_dead import (
+    FLICKER_DEAD_RECOVER_FRAC,
+    flicker_dead_from_sim,
+    flicker_dead_summary,
+    row_flicker_dead_fields,
+)
 from vela.receipt import eval_gate
 from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power
 
@@ -63,6 +69,19 @@ def write_passthrough_result(
             "gate=fast. Not a house-gate dual-gate claim."
         ),
         "gate": "fast",
+        "flicker_dead_ms": {
+            "metric": "flicker_dead_ms",
+            "recover_frac": FLICKER_DEAD_RECOVER_FRAC,
+            "recover_pct": int(round(FLICKER_DEAD_RECOVER_FRAC * 100)),
+            "event_kind": "Flicker",
+            "not_rtt_hop": True,
+            "label": "Flicker; not RttHop",
+            "soft_reprobe_cut": 0.58,
+            "note": (
+                "passthrough stamp only; run full eval rows for measured "
+                "flicker_dead_ms"
+            ),
+        },
         "scenario": "leo_fast_ho",
         "seed": 7,
         "duration_s": 45.0,
@@ -173,6 +192,14 @@ class Row:
     handovers: int
     jain_fairness: float = 1.0
     n_flows: int = 1
+    flicker_dead_ms_mean: float | None = None
+    flicker_dead_ms_p95: float | None = None
+    flicker_dead_ms_n: int = 0
+    flicker_dead_ms_n_censored: int = 0
+    flicker_dead_ms_recover_frac: float = FLICKER_DEAD_RECOVER_FRAC
+    flicker_event_kind: str = "Flicker"
+    flicker_not_rtt_hop: bool = True
+    flicker_label: str = "Flicker; not RttHop"
 
 
 def run_one(mod, factory: Callable, cfg, n_flows: int) -> Row:
@@ -198,6 +225,8 @@ def run_one(mod, factory: Callable, cfg, n_flows: int) -> Row:
         p95 = m.p95_rtt_s * 1000
         avg = m.avg_rtt_s * 1000
         loss = m.loss_rate
+    flick = flicker_dead_from_sim(res)
+    flick_fields = row_flicker_dead_fields(flick)
     return Row(
         scenario="",
         seed=0,
@@ -209,6 +238,14 @@ def run_one(mod, factory: Callable, cfg, n_flows: int) -> Row:
         handovers=len(res.handovers),
         jain_fairness=jain,
         n_flows=n_flows,
+        flicker_dead_ms_mean=flick_fields["flicker_dead_ms_mean"],
+        flicker_dead_ms_p95=flick_fields["flicker_dead_ms_p95"],
+        flicker_dead_ms_n=flick_fields["flicker_dead_ms_n"],
+        flicker_dead_ms_n_censored=flick_fields["flicker_dead_ms_n_censored"],
+        flicker_dead_ms_recover_frac=flick_fields["flicker_dead_ms_recover_frac"],
+        flicker_event_kind=flick_fields["flicker_event_kind"],
+        flicker_not_rtt_hop=flick_fields["flicker_not_rtt_hop"],
+        flicker_label=flick_fields["flicker_label"],
     )
 
 
@@ -392,6 +429,10 @@ def honesty_text(gate: str) -> str:
         "Means only. p-values are not claimed. "
         f"power=low when n<{POWER_OK_MIN_SEEDS}. "
         f"gate={gate} (--fast is not the house gate). "
+        "Hop (RttHop / handover) is not mid-epoch Flicker; "
+        "SoftReprobe cut stays 0.58 on both; SoftFlicker is review. "
+        f"flicker_dead_ms uses recover_frac={FLICKER_DEAD_RECOVER_FRAC:.0%} "
+        "(Flicker; not RttHop; separate from hop dead_seconds). "
         "Coupled-RNG house LeoAware is 73.57/138.37 vs BBR 70.88/138.83. "
         "Do not mix these numbers with OPE-fair v3.7 prompt figures."
     )
@@ -633,6 +674,7 @@ def _summarize(
         ),
         "power": eval_power(n_seeds),
         "gate": gate,
+        "flicker_dead_ms": flicker_dead_summary(rows),
         "tables": tables,
         "asserts": verdicts,
         "honesty": honesty_text(gate),

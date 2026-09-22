@@ -250,7 +250,7 @@ If Horizon (or a later VELA program) clears a dual-gate with a material margin, 
 
 - **Higher sustained goodput** on the same dish and the same orbit, because the sender stops under-running stable epochs and stops over-running the last 200 ms before a hop.
 - **Lower interactive latency variance** because predictive freeze and uncertainty-scaled yield cut the queue spike that currently sits in the p95.
-- **Fewer "dead" seconds after handover** because REPROBE + interval chase refill from a discounted prior instead of CUBIC collapse or a stale BBR min-RTT.
+- **Fewer "dead" seconds after handover** because REPROBE + interval chase refill from a discounted prior instead of CUBIC collapse or a stale BBR min-RTT. Mid-epoch **Flicker** is a separate arm: eval JSON stamps `flicker_dead_ms` (recover_frac=0.80; SoftReprobe 0.58; Flicker != RttHop).
 - **Fairness / multi-flow:** `fair_mode` remains a declared mechanism (AIMD around 1.0 x BDP). VELA does not pretend one flow's Horizon chase is multi-flow optimal.
 - **Energy / radio:** fewer useless retransmits during mobility bursts (typed Mobility => hold). The satellite still burns the same RF; the user device wastes fewer watts on recovery.
 - **Assist path:** when ASCENT-D hints are present they are `Option` and fail-closed. When they are absent, Horizon is still defined. That is the only deployment story that matches today's Starlink (no official path-hint API).
@@ -289,7 +289,8 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
-| `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
+| `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out`; stamps `flicker_dead_ms` |
+| `vela/flicker_dead.py` | Flicker dead-ms (recover_frac=0.80; Flicker != RttHop; SoftReprobe 0.58) |
 | `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
@@ -398,3 +399,16 @@ contract seed list. A 2-seed incomplete house contract is
 A later stdout JSON line cannot replace it. The default `--tag`
 is the controller name, not `horizon`. ACCEPT on `gate=fast`
 prints that it is not a dual-gate win. No packet-path change.
+
+## L. Flicker dead-ms (VELA cook 2026-09-22)
+
+Starlink efficacy has two observe-only arms:
+
+- Hop / RttHop dead-seconds (PR #46 `dead_seconds`) after handover.
+- Mid-epoch **Flicker** `flicker_dead_ms` (this cook): recover_frac=0.80 of
+  pre-event median, reported in ms, labeled Flicker != RttHop.
+
+SoftReprobe stays 0.58 on both. No Detect/SoftReprobe fork. No closed-write.
+No dish Mbps. `vela eval` CLI prints mean/p95 for `flicker_dead_ms`.
+Pointers: `docs/EVAL-NOTES.md`.
+

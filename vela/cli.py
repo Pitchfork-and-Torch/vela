@@ -298,8 +298,36 @@ def _main(argv: list[str] | None = None) -> int:
             for e in errs:
                 print(f"error: {e}")
             return 1
-        dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
+        dump_keys = [
+            k
+            for k in (
+                "verdict",
+                "power",
+                "gate",
+                "asserts",
+                "tables",
+                "flicker_dead_ms",
+                "dead_seconds",
+            )
+            if k in summary
+        ]
         print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
+        # Efficacy surface: flicker_dead_ms is Flicker (!= RttHop).
+        # dead_seconds (hop) prints when present (e.g. after PR #46 lands).
+        from vela.flicker_dead import format_flicker_dead_cli
+
+        print(format_flicker_dead_cli(summary.get("flicker_dead_ms")))
+        hop = summary.get("dead_seconds")
+        if isinstance(hop, dict):
+            hm = hop.get("dead_s_mean")
+            # Prefer p95 when stamped; else median for forward-compat with #46.
+            hp = hop.get("dead_s_p95", hop.get("dead_s_median"))
+            hm_s = f"{hm:.6f}" if isinstance(hm, (int, float)) else "n/a"
+            hp_s = f"{hp:.6f}" if isinstance(hp, (int, float)) else "n/a"
+            print(
+                f"dead_seconds  mean={hm_s}  p95={hp_s}  "
+                f"(RttHop; SoftReprobe 0.58; not Flicker)"
+            )
         print(f"wrote {out}")
         print(
             f"receipt {rp}  {receipt['receipt_digest'][:16]}  "
