@@ -15,6 +15,7 @@ from vela.digest import (
     tagged,
 )
 from vela.path import path_digest
+from vela.stats_honesty import P_VALUE_REFUSED, STATS_METHOD, receipt_stats_errors
 
 # House DualGate rails (EVAL-NOTES). --fast is not this gate.
 HOUSE_GATE_SEEDS = frozenset({13, 7, 42, 99, 123})
@@ -122,6 +123,8 @@ def build_receipt(
         "verdict": summary.get("verdict"),
         "power": summary.get("power"),
         "honesty": summary.get("honesty"),
+        "stats_method": STATS_METHOD,
+        "p_value": P_VALUE_REFUSED,
         "gate": summary.get("gate") or eval_gate(
             config.get("seeds"),
             config.get("duration_s"),
@@ -197,6 +200,7 @@ def verify_receipt(
             errs.append("rows_merkle does not match provided rows")
         if int(receipt.get("n_rows") or 0) != len(rows):
             errs.append("n_rows does not match provided rows")
+    errs.extend(receipt_stats_errors(receipt, summary if isinstance(summary, dict) else None))
     return errs
 
 

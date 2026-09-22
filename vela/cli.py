@@ -200,6 +200,8 @@ def _main(argv: list[str] | None = None) -> int:
             )
         elif res.power == "ok":
             print(f"    power=ok  (n>={POWER_OK_MIN_SEEDS})")
+        if res.stats:
+            print(f"    stats={res.stats}  (no p-value, no bootstrap)")
         if c.cuts_compose:
             print(f"    cuts_compose={c.cuts_compose}")
         if c.growth_compose:

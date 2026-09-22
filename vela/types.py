@@ -222,6 +222,7 @@ class CheckResult:
     cuts_compose: str = ""
     path_bound: str = ""
     path_digest: str = ""
+    stats: str = ""
 
     def raise_if_error(self) -> None:
         if not self.ok:
