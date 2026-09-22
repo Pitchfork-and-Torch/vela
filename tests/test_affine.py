@@ -285,5 +285,47 @@ class TestIntegratorEvery(unittest.TestCase):
         self.assertTrue(any("integrator" in e for e in res.errors))
 
 
+    def test_both_branches_enter_then_prior_ok(self):
+        src = _src(
+            """
+  on Reconfig(e) match e {
+    RttHop => {
+      require delay_ratio > 1.35 then {
+        enter Reprobe(cut: 0.58)
+      } else {
+        enter Reprobe(cut: 0.58)
+      }
+      let x = prior.rtt
+    }
+    Flicker => hold
+  }
+"""
+        )
+        res = check(parse(src, "both-prior.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertTrue(res.affine)
+
+    def test_either_branch_enter_blocks_current_rtt(self):
+        src = _src(
+            """
+  on Reconfig(e) match e {
+    RttHop => {
+      require delay_ratio > 1.35 then {
+        enter Reprobe(cut: 0.58)
+      } else {
+        hold
+      }
+      let x = rtt
+    }
+    Flicker => hold
+  }
+"""
+        )
+        res = check(parse(src, "either-enter.vela"))
+        self.assertFalse(res.ok)
+        self.assertFalse(res.affine)
+        self.assertIn(affine_epoch_error("Probe", "rtt"), res.errors)
+
+
 if __name__ == "__main__":
     unittest.main()

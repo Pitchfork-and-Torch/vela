@@ -104,6 +104,12 @@ class PathLaw:
             "scenario": self.scenario,
             "handover_interval_s": self.handover_interval_s,
             "handover_jitter_s": self.handover_jitter_s,
+            "rtt_jump_lo_s": self.rtt_jump_lo_s,
+            "rtt_jump_hi_s": self.rtt_jump_hi_s,
+            "capacity_lo_bps": self.capacity_lo_bps,
+            "capacity_hi_bps": self.capacity_hi_bps,
+            "mobility_p": self.mobility_p,
+            "mobility_window_s": self.mobility_window_s,
             "fields": dict(self.fields),
         }
 
@@ -114,7 +120,12 @@ class PathLaw:
         jtxt = f"+/-{jitter:g}s" if jitter is not None else ""
         rail = "house" if self.house else "named"
         scen = self.scenario or "unbound"
-        return f"{self.name}:{scen} {self.handover_interval_s:g}s{jtxt} ({rail})"
+        cap = ""
+        if self.capacity_lo_bps is not None and self.capacity_hi_bps is not None:
+            lo = self.capacity_lo_bps / 1e6
+            hi = self.capacity_hi_bps / 1e6
+            cap = f" {lo:g}-{hi:g}Mbps"
+        return f"{self.name}:{scen} {self.handover_interval_s:g}s{jtxt}{cap} ({rail})"
 
 
 def path_needs_std_error() -> str:
@@ -128,6 +139,41 @@ def path_unknown_field_error(name: str, field: str) -> str:
 
 def path_parse_error(name: str, field: str) -> str:
     return f"path {name}: cannot parse {field} (path law)"
+
+
+def path_inverted_bounds_error(name: str, field: str) -> str:
+    return (
+        f"path {name}: {field} lower bound exceeds upper bound "
+        "(path law; inverted range is not a Starlink rail)"
+    )
+
+
+def path_zero_capacity_error(name: str) -> str:
+    return (
+        f"path {name}: capacity upper bound must be positive "
+        "(a zero-capacity rail is not a path)"
+    )
+
+
+def path_zero_handover_error(name: str) -> str:
+    return (
+        f"path {name}: handover interval must be positive "
+        "(path law; zero interval is not a LEO calendar)"
+    )
+
+
+def path_jitter_exceeds_error(name: str) -> str:
+    return (
+        f"path {name}: handover jitter exceeds interval "
+        "(path law; gap would go non-positive)"
+    )
+
+
+def path_zero_mobility_window_error(name: str) -> str:
+    return (
+        f"path {name}: mobility_loss window must be positive "
+        "(path law; a zero burst is not mobility)"
+    )
 
 
 def path_empty_error(name: str) -> str:
@@ -153,30 +199,56 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.errors.append(path_parse_error(model.name, key))
                 continue
             try:
-                law.handover_interval_s = _to_seconds(m.group(1), m.group(2))
-                law.handover_jitter_s = _to_seconds(m.group(3), m.group(4))
+                interval = _to_seconds(m.group(1), m.group(2))
+                jitter = _to_seconds(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if interval <= 0:
+                law.errors.append(path_zero_handover_error(model.name))
+                continue
+            if jitter > interval:
+                law.errors.append(path_jitter_exceeds_error(model.name))
+                continue
+            law.handover_interval_s = interval
+            law.handover_jitter_s = jitter
         elif key == "rtt_jump":
             m = _UNIFORM.match(text)
             if not m:
                 law.errors.append(path_parse_error(model.name, key))
                 continue
             try:
-                law.rtt_jump_lo_s = _to_seconds(m.group(1), m.group(2))
-                law.rtt_jump_hi_s = _to_seconds(m.group(3), m.group(4))
+                lo = _to_seconds(m.group(1), m.group(2))
+                hi = _to_seconds(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if lo > hi:
+                law.errors.append(path_inverted_bounds_error(model.name, key))
+                continue
+            law.rtt_jump_lo_s = lo
+            law.rtt_jump_hi_s = hi
         elif key == "capacity":
             m = _UNIFORM.match(text)
             if not m:
                 law.errors.append(path_parse_error(model.name, key))
                 continue
             try:
-                law.capacity_lo_bps = _to_bps(m.group(1), m.group(2))
-                law.capacity_hi_bps = _to_bps(m.group(3), m.group(4))
+                lo = _to_bps(m.group(1), m.group(2))
+                hi = _to_bps(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            # Distinct from inverted lo/hi: equal bounds are fine when
+            # capacity is fixed. Only non-positive hi is a dead rail.
+            if hi <= 0:
+                law.errors.append(path_zero_capacity_error(model.name))
+                continue
+            if lo > hi:
+                law.errors.append(path_inverted_bounds_error(model.name, key))
+                continue
+            law.capacity_lo_bps = lo
+            law.capacity_hi_bps = hi
         elif key == "mobility_loss":
             m = _BURST.match(text)
             if not m:
@@ -187,10 +259,15 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.errors.append(path_parse_error(model.name, key))
                 continue
             try:
-                law.mobility_p = p
-                law.mobility_window_s = _to_seconds(m.group(2), m.group(3))
+                window = _to_seconds(m.group(2), m.group(3))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if window <= 0:
+                law.errors.append(path_zero_mobility_window_error(model.name))
+                continue
+            law.mobility_p = p
+            law.mobility_window_s = window
     return law
 
 

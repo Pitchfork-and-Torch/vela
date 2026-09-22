@@ -361,8 +361,7 @@ That is the honest fast path, not a skip of the law.
 
 ## I. Path bind (VELA 0.4.1)
 
-A `path` block is the model object, not a comment. Check parses
-handover / rtt_jump / capacity / mobility_loss. Eval binds the
+A `path` block is the model object, not a comment. Check parses handover / rtt_jump / capacity / mobility_loss. Inverted ranges, non-positive capacity, zero handover interval, jitter that exceeds the interval, and a zero mobility window are type errors. Eval binds the
 handover rails the sibling sim actually takes. The receipt commits
 the declared law. `use std.path` is required to name a path.
 

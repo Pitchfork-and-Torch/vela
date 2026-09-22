@@ -1108,6 +1108,7 @@ def cruise_write_error(cname: str, what: str) -> str:
 
 
 def _cruise_write_label(st: Stmt) -> str | None:
+    """Writes illegal on observe when/every (cruise path)."""
     if st.kind == "assign" and st.name in WRITE_TARGETS:
         op = str(st.args[0]) if st.args else "="
         return f"{st.name} {op}"
@@ -1117,6 +1118,16 @@ def _cruise_write_label(st: Stmt) -> str | None:
         return "cut"
     if st.kind == "enter":
         return f"enter {st.name}" if st.name else "enter"
+    return None
+
+
+def _on_capacity_write_label(st: Stmt) -> str | None:
+    """pace/cwnd/chase invent capacity. Legal SoftReprobe cut/enter stay on-jump."""
+    if st.kind == "assign" and st.name in WRITE_TARGETS:
+        op = str(st.args[0]) if st.args else "="
+        return f"{st.name} {op}"
+    if st.kind == "chase":
+        return "chase"
     return None
 
 
@@ -1131,6 +1142,19 @@ def controller_cruise_writes(c: Controller) -> list[str]:
     return found
 
 
+def controller_on_capacity_writes(c: Controller) -> list[str]:
+    """Observe on-handlers must not invent capacity (LeoAware wrap)."""
+    found: list[str] = []
+    for o in c.ons:
+        bodies = [o.body] + [arm.body for arm in o.match_arms]
+        for body in bodies:
+            for st in _flatten_stmts(body):
+                label = _on_capacity_write_label(st)
+                if label:
+                    found.append(label)
+    return found
+
+
 def controller_is_passthrough(c: Controller) -> bool:
     return (
         c.posture == "observe"
@@ -1138,6 +1162,7 @@ def controller_is_passthrough(c: Controller) -> bool:
         and _has_typed_reconfig(c)
         and _has_typed_loss(c)
         and not controller_cruise_writes(c)
+        and not controller_on_capacity_writes(c)
     )
 
 
@@ -1145,7 +1170,7 @@ def _check_passthrough_cruise(c: Controller, res: CheckResult) -> None:
     if c.posture != "observe":
         return
     seen: set[str] = set()
-    for label in controller_cruise_writes(c):
+    for label in controller_cruise_writes(c) + controller_on_capacity_writes(c):
         if label in seen:
             continue
         seen.add(label)
@@ -1274,7 +1299,7 @@ def _check_house_cut_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -
 def hint_law_error(cname: str, name: str) -> str:
     return (
         f"{cname}: Hint {name} used without a Some-proof "
-        "(hint law; fail-closed)"
+        "(hint law; fail-closed; ASCENT-D/Orb missing is None, not a hop oracle)"
     )
 
 

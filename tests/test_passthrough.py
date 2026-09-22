@@ -74,5 +74,96 @@ class TestPassthroughRails(unittest.TestCase):
         self.assertTrue(passthrough_ok(data["leo"], data["reach"]))
 
 
+    def test_observe_on_pace_is_not_passthrough(self):
+        """pace inside on Reconfig invents capacity; SoftReprobe cut/enter stay legal."""
+        src = """
+lang vela 0.1
+controller Probe {
+  posture observe
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+    bw: Interval<bps> @ epoch
+  on Reconfig(e) match e {
+    RttHop => {
+      when bw.n >= 2 {
+        pace = bw.mid
+      }
+    }
+    Flicker => hold
+  }
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => hold
+  }
+}
+"""
+        from vela.checker import cruise_write_error
+        res = check(parse(src, "on-pace.vela"))
+        self.assertFalse(res.ok)
+        self.assertFalse(res.passthrough)
+        self.assertIn(cruise_write_error("Probe", "pace ="), res.errors)
+
+    def test_observe_on_chase_is_not_passthrough(self):
+        src = """
+lang vela 0.1
+controller Probe {
+  posture observe
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {
+    RttHop => {
+      chase delivery toward 1
+    }
+    Flicker => hold
+  }
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => hold
+  }
+}
+"""
+        from vela.checker import cruise_write_error
+        res = check(parse(src, "on-chase.vela"))
+        self.assertFalse(res.ok)
+        self.assertFalse(res.passthrough)
+        self.assertIn(cruise_write_error("Probe", "chase"), res.errors)
+
+    def test_observe_on_reprobe_cut_still_passthrough(self):
+        src = """
+lang vela 0.1
+controller Probe {
+  posture observe
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+    Flicker => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+  }
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => hold
+  }
+}
+"""
+        res = check(parse(src, "on-reprobe.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertTrue(res.passthrough)
+
+
 if __name__ == "__main__":
     unittest.main()
