@@ -374,6 +374,33 @@ or unparseable fields are type errors.
 Calendar `p_ho` still comes from past gaps. CSV traces stay
 unwired. The kernel still refuses `next_capacity`.
 
+## Path flicker vs hop
+
+A `path` block may declare mid-epoch capacity steps separately from handover:
+
+```
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  flicker ~ every 2.8s jitter 1.2s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 20Mbps 120Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+```
+
+`flicker` is **not** `RttHop`. Sibling starlink_v2 mid-epoch capacity is
+about 2.8s+/-1.2s. Endpoint Detect still kinds the event; SoftReprobe cut
+stays 0.58 on hop **and** flicker. SoftFlicker (0.85) is review.
+
+Cadence law: period must be positive; jitter must be <= period (otherwise
+the next event can fall into the past). Reconfig kind names (`hop`,
+`RttHop`, `Flicker`) are not path field names.
+
+See `examples/starlink_flicker.vela`. House DualGate rails stay
+handover 12s+/-4s; declaring flicker does not retune the house gate.
+`--fast` is not the house gate.
+
+
 ## J. Receipt bind (VELA 0.4.2)
 
 A receipt without the eval JSON is a self-check, not a number
