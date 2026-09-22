@@ -141,6 +141,13 @@ def path_parse_error(name: str, field: str) -> str:
     return f"path {name}: cannot parse {field} (path law)"
 
 
+def path_unit_error(name: str, field: str, need: str) -> str:
+    return (
+        f"path {name}: {field} needs {need} "
+        "(path law; Starlink rails are typed)"
+    )
+
+
 def path_inverted_bounds_error(name: str, field: str) -> str:
     return (
         f"path {name}: {field} lower bound exceeds upper bound "
@@ -221,7 +228,7 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 lo = _to_seconds(m.group(1), m.group(2))
                 hi = _to_seconds(m.group(3), m.group(4))
             except ValueError:
-                law.errors.append(path_parse_error(model.name, key))
+                law.errors.append(path_unit_error(model.name, key, "time units (ms|s)"))
                 continue
             if lo > hi:
                 law.errors.append(path_inverted_bounds_error(model.name, key))
@@ -237,7 +244,9 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 lo = _to_bps(m.group(1), m.group(2))
                 hi = _to_bps(m.group(3), m.group(4))
             except ValueError:
-                law.errors.append(path_parse_error(model.name, key))
+                law.errors.append(
+                    path_unit_error(model.name, key, "rate units (Mbps|kbps|bps)")
+                )
                 continue
             # Distinct from inverted lo/hi: equal bounds are fine when
             # capacity is fixed. Only non-positive hi is a dead rail.

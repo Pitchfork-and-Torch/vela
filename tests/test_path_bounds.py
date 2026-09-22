@@ -10,6 +10,7 @@ from vela.path import (
     path_jitter_exceeds_error,
     path_zero_capacity_error,
     path_zero_handover_error,
+    path_unit_error,
     path_zero_mobility_window_error,
 )
 
@@ -146,6 +147,59 @@ path LeoFastHO {
         self.assertTrue(res.ok, res.errors)
         self.assertIn("20-120Mbps", res.path_bound)
         self.assertIn("house", res.path_bound)
+
+
+    def test_capacity_time_unit_is_typed_error(self):
+        src = _prog(
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  capacity ~ uniform 20ms 90ms
+}
+"""
+        )
+        res = check(parse(src, "cap-unit.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(
+            path_unit_error("LeoFastHO", "capacity", "rate units (Mbps|kbps|bps)"),
+            res.errors,
+        )
+
+    def test_rtt_jump_rate_unit_is_typed_error(self):
+        src = _prog(
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20Mbps 90Mbps
+}
+"""
+        )
+        res = check(parse(src, "rtt-unit.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(
+            path_unit_error("LeoFastHO", "rtt_jump", "time units (ms|s)"),
+            res.errors,
+        )
+
+    def test_config_binds_capacity_rails(self):
+        from pathlib import Path as P
+        from vela.compile import compile_source
+        from vela.ir import program_to_config
+
+        src = (P(__file__).resolve().parents[1] / "examples" / "reach.vela").read_text(
+            encoding="utf-8"
+        )
+        cfg = program_to_config(parse(src, "reach.vela"))
+        self.assertEqual(cfg.capacity_lo_bps, 20e6)
+        self.assertEqual(cfg.capacity_hi_bps, 120e6)
+        self.assertEqual(cfg.rtt_jump_lo_s, 0.02)
+        self.assertEqual(cfg.rtt_jump_hi_s, 0.09)
+        self.assertEqual(cfg.mobility_p, 0.08)
+        self.assertEqual(cfg.mobility_window_s, 0.4)
+        text, cfg2 = compile_source(src, "reach.vela")
+        self.assertIn("capacity_lo_bps=20000000.0", text)
+        self.assertIn("capacity_hi_bps=120000000.0", text)
+        self.assertEqual(cfg2.capacity_hi_bps, 120e6)
 
 
 if __name__ == "__main__":

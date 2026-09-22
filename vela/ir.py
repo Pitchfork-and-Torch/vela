@@ -68,6 +68,12 @@ class VelaConfig:
     path_scenario: str = ""
     handover_interval_s: float | None = None
     handover_jitter_s: float | None = None
+    rtt_jump_lo_s: float | None = None
+    rtt_jump_hi_s: float | None = None
+    capacity_lo_bps: float | None = None
+    capacity_hi_bps: float | None = None
+    mobility_p: float | None = None
+    mobility_window_s: float | None = None
     paths: list = field(default_factory=list)
     path_digest: str = ""
 
@@ -179,6 +185,12 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
         cfg.path_scenario = first_bound.scenario
         cfg.handover_interval_s = first_bound.handover_interval_s
         cfg.handover_jitter_s = first_bound.handover_jitter_s
+        cfg.rtt_jump_lo_s = first_bound.rtt_jump_lo_s
+        cfg.rtt_jump_hi_s = first_bound.rtt_jump_hi_s
+        cfg.capacity_lo_bps = first_bound.capacity_lo_bps
+        cfg.capacity_hi_bps = first_bound.capacity_hi_bps
+        cfg.mobility_p = first_bound.mobility_p
+        cfg.mobility_window_s = first_bound.mobility_window_s
     elif laws:
         cfg.path_name = laws[0].name
     if prog.contracts:
