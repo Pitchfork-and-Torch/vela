@@ -172,7 +172,10 @@ def _main(argv: list[str] | None = None) -> int:
         else:
             print(f"    posture={c.posture}")
         if res.hint_fail_closed:
-            print("    hint=fail-closed  (missing is None, not a hop oracle)")
+            print(
+                "    hint=fail-closed  "
+                "(missing is None, not a hop oracle; payload needs age)"
+            )
         if res.typed_reconfig:
             print("    reconfig=RttHop|Flicker  (house cut 0.58)")
         if res.typed_loss:

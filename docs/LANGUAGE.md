@@ -58,7 +58,7 @@ use std.eval
 
 **Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth. The checker now enforces this as a type error unless the same block proves `n >= 2`.
 
-**Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level. The checker now enforces it: `on Hint(h)` must match `Some | None`; `when hint.ascent` / `require hint.ascent then` prove Some; a bare `hint.ascent` in arithmetic is illegal. `use std.hint` is required to mention Hint. Today's Starlink has no official path-hint API, so absence is None, not a hop oracle. Flagship Reach stays defined without hints.
+**Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level. The checker now enforces it: `on Hint(h)` must match `Some | None`; `when hint.ascent` / `require hint.ascent then` prove Some; a bare `hint.ascent` in arithmetic is illegal. A payload field needs `age < duration` in that same guard (`age > duration` selects a stale hint). `eta` / `next_capacity` stay no-oracle even when the age bound holds. `use std.hint` is required to mention Hint. Today's Starlink has no official path-hint API, so absence is None, not a hop oracle. Flagship Reach stays defined without hints.
 
 ### Events
 
@@ -331,7 +331,8 @@ cannot write pace/cwnd (passthrough). `power=low` is n<8 at check and
 eval; five-seed ACCEPT on means stays legal. Flagship sources:
 `examples/equinox.vela` (language) and `examples/reach.vela` (house policy).
 
-Version: VELA 0.4.3 (affine samples, linear WriteCap, hybrid automata; --fast cannot be house; worker --out).
+Version: VELA 0.4.4 (path geometry bind, hint age, observe on-write).
+Prior: VELA 0.4.3 (affine samples, linear WriteCap, hybrid automata; --fast cannot be house; worker --out).
 Prior: VELA 0.4.2 (receipt bind: eval JSON is the number the hash sees).
 Prior: VELA 0.4.1 (path bind: declared path is the sim rails).
 Prior: VELA 0.4.0 (Ingress: no-oracle, leo_multi Jain, runtime min).
@@ -362,9 +363,13 @@ That is the honest fast path, not a skip of the law.
 ## I. Path bind (VELA 0.4.1)
 
 A `path` block is the model object, not a comment. Check parses
-handover / rtt_jump / capacity / mobility_loss. Eval binds the
-handover rails the sibling sim actually takes. The receipt commits
-the declared law. `use std.path` is required to name a path.
+handover / rtt_jump / capacity / mobility_loss. Eval binds those
+rails onto the sibling sim (handover cadence, RTT jump, capacity
+band, mobility burst). The receipt commits the declared law.
+`use std.path` is required to name a path. An inverted band, a
+non-positive capacity, a non-positive mobility window, or a
+handover jitter that is not narrower than the interval is a type
+error: that cadence can schedule the next hop at or before now.
 
 `path LeoFastHO` binds `scenario leo_fast_ho`. Flagship examples
 already write the house rails (12s handover, 4s jitter). Unbound
@@ -398,3 +403,28 @@ contract seed list. A 2-seed incomplete house contract is
 A later stdout JSON line cannot replace it. The default `--tag`
 is the controller name, not `horizon`. ACCEPT on `gate=fast`
 prints that it is not a dual-gate win. No packet-path change.
+
+## L. Path geometry and hint age (VELA 0.4.4)
+
+0.4.1 parsed capacity and RTT and then ran the sim on its own
+defaults. 0.4.4 binds the declared band. House LeoFastHO is
+12s+/-4s, RTT jump 20-90ms, capacity 20-120Mbps, mobility
+p=0.08 over 0.4s. Those numbers match the sibling `LeoPathConfig`
+defaults, so flagship Reach still runs the same path the house
+gate already used. A different capacity is a warning and is what
+eval runs. It is not a dish measurement.
+
+Hint law grows an age rail. `when hint.ascent` still proves Some
+and may freeze samples. Reading a payload (`role`, `capacity_bps`)
+needs `age < duration` in that guard. `age > duration` selects a
+stale hint and is a type error. `eta` and `next_capacity` stay
+no-oracle even when the MAC is fresh. A None arm has no age.
+Missing ASCENT-D/Orb is still None, not the next hop.
+
+Observe `on` may `cut` or `enter Reprobe` (house cut 0.58). It
+may not assign `pace` or `cwnd` or `chase`. That was a cruise
+write hiding in a jump. `every epoch` is still a flow: `enter`
+there is a type error.
+
+Version: VELA 0.4.4 (path geometry bind, hint age, observe on-write).
+Prior: VELA 0.4.3 (affine samples, linear WriteCap, hybrid automata; --fast cannot be house; worker --out).

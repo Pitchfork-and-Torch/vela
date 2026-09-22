@@ -4,7 +4,15 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from vela.checker import check, hint_law_error
+from vela.checker import (
+    check,
+    hint_age_bound_error,
+    hint_age_on_none_error,
+    hint_future_error,
+    hint_law_error,
+    hint_payload_age_error,
+    hint_stale_age_error,
+)
 from vela.compile import compile_source
 from vela.parser import parse
 
@@ -112,18 +120,133 @@ class TestHintLaw(unittest.TestCase):
         res = check(parse(src, "require-hint.vela"))
         self.assertTrue(res.ok, res.errors)
 
-    def test_hint_age_without_proof_is_error(self):
+    def test_age_bound_proves_some_and_fresh(self):
         src = _src(
             "use std.hint",
             """
   when hint.ascent.age < 2s {
     freeze min_rtt, bw
+    let role = hint.ascent.role
   }
 """,
         )
         res = check(parse(src, "age.vela"))
+        self.assertTrue(res.ok, res.errors)
+
+    def test_bare_age_read_still_needs_some(self):
+        src = _src(
+            "use std.hint",
+            """
+  every ack {
+    let x = hint.ascent.age
+  }
+""",
+        )
+        res = check(parse(src, "bare-age.vela"))
         self.assertFalse(res.ok)
-        self.assertTrue(any("hint law" in e for e in res.errors))
+        self.assertIn(hint_law_error("Probe", "hint"), res.errors)
+
+    def test_stale_age_selector_is_error(self):
+        src = _src(
+            "use std.hint",
+            """
+  when hint.ascent.age > 2s {
+    freeze min_rtt, bw
+  }
+""",
+        )
+        res = check(parse(src, "stale-age.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(hint_stale_age_error("Probe"), res.errors)
+
+    def test_age_bound_must_be_a_positive_duration(self):
+        src = _src(
+            "use std.hint",
+            """
+  when hint.ascent.age < 0s {
+    freeze min_rtt, bw
+  }
+""",
+        )
+        res = check(parse(src, "zero-age.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(hint_age_bound_error("Probe"), res.errors)
+
+    def test_payload_without_age_is_error(self):
+        src = _src(
+            "use std.hint",
+            """
+  on Hint(h) match h {
+    Some => {
+      let role = hint.ascent.role
+    }
+    None => hold
+  }
+""",
+        )
+        res = check(parse(src, "payload.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(hint_payload_age_error("Probe", "role"), res.errors)
+
+    def test_payload_with_age_bound_is_ok(self):
+        src = _src(
+            "use std.hint",
+            """
+  on Hint(h) match h {
+    Some => {
+      require hint.ascent.age < 2s then {
+        let role = hint.ascent.role
+      }
+    }
+    None => hold
+  }
+""",
+        )
+        res = check(parse(src, "payload-fresh.vela"))
+        self.assertTrue(res.ok, res.errors)
+
+    def test_eta_is_not_a_calendar_even_when_fresh(self):
+        src = _src(
+            "use std.hint",
+            """
+  when hint.ascent.age < 2s {
+    let t = hint.ascent.eta
+  }
+""",
+        )
+        res = check(parse(src, "eta.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(hint_future_error("Probe", "eta"), res.errors)
+        self.assertFalse(res.no_oracle)
+
+    def test_none_arm_has_no_age(self):
+        src = _src(
+            "use std.hint",
+            """
+  on Hint(h) match h {
+    Some => hold
+    None => {
+      require h.age < 2s then hold
+    }
+  }
+""",
+        )
+        res = check(parse(src, "none-age.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(hint_age_on_none_error("Probe"), res.errors)
+
+    def test_presence_does_not_prove_payload_fresh(self):
+        src = _src(
+            "use std.hint",
+            """
+  when hint.ascent {
+    let role = hint.ascent.role
+  }
+""",
+        )
+        res = check(parse(src, "presence-payload.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(hint_payload_age_error("Probe", "role"), res.errors)
 
     def test_on_hint_must_match_some_none(self):
         src = _src(

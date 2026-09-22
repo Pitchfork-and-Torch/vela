@@ -183,6 +183,22 @@ class TestHybridAutomata(unittest.TestCase):
         self.assertTrue(res.hybrid)
         self.assertTrue(res.passthrough)
 
+    def test_enter_in_every_epoch_is_jump_in_flow(self):
+        src = _src(
+            """
+  every epoch {
+    enter Reprobe(cut: 0.58)
+  }
+"""
+        )
+        res = check(parse(src, "enter-epoch.vela"))
+        self.assertFalse(res.ok)
+        self.assertFalse(res.hybrid)
+        self.assertIn(
+            hybrid_jump_in_flow_error("Probe", "enter Reprobe", "every"),
+            res.errors,
+        )
+
     def test_chase_in_every_ack_is_a_flow(self):
         src = _src(
             """
