@@ -23,6 +23,10 @@ remaining LANGUAGE.md gaps checkable and runnable.
    compose as `min` (more conservative remaining fraction).
    SoftFlicker 0.85 cannot undo SoftReprobe 0.58. That dump
    (seed 7 45s: 55.2 / 123.8) is now a combinator, not a hope.
+4. **Compose growth honesty.** Two cwnd raisers
+   (OCE|HorizonChase|TrimFill|QuietReach|TrimReclaim) need an
+   explicit `compose growth = min|max|sum`. `vela check` stamps
+   `growth=...`. Missing clause fails closed when raisers pair.
 
 ## Commands
 

@@ -90,7 +90,7 @@ compose growth = max
 Mechanism names are an operator sum. After the list, optional combinators may sit on their own lines inside the controller, or as trailing clauses after the compose list (`compose Detect + SoftReprobe compose cuts = min`).
 
 - `compose cuts = min` -- required when two `hard` epoch cuts share an event. Soft cuts compose as `min` without a clause (check-time and kernel). SoftFlicker 0.85 cannot undo SoftReprobe 0.58.
-- `compose growth = min | max | sum` -- required when two cwnd raisers share a compose (any pair among `OCE`, `HorizonChase`, `TrimFill`, `QuietReach`, `TrimReclaim`). Wrong picks still check if they are explicit.
+- `compose growth = min | max | sum` -- required when two cwnd raisers share a compose (any pair among `OCE`, `HorizonChase`, `TrimFill`, `QuietReach`, `TrimReclaim`). Wrong picks still check if they are explicit. When the clause is present, `vela check` stamps `growth=min|max|sum` (compose growth honesty). Missing clause fails closed when raisers pair.
 
 Existing programs need neither clause. Shipped flagship examples stay observe-only.
 
@@ -267,7 +267,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Deployment.** The working backend is Python on the LeoAware discrete-event sim, which is a research path, not quiche. Rust emit is a typed IR sketch (`vela emit-rust`), not a congestion controller you can ship in production QUIC tomorrow. Porting still requires a real ACK clock, pacing, and loss signal.
 
-**Composition is not magic.** If two mechanisms both want to raise `cwnd`, the checker asks you to pick `compose growth = min | max | sum`. Wrong picks still compile if they are explicit. VELA prevents *accidents*, not *bad taste*.
+**Composition is not magic.** If two mechanisms both want to raise `cwnd`, the checker asks you to pick `compose growth = min | max | sum`. Wrong picks still compile if they are explicit. VELA prevents *accidents*, not *bad taste*. `vela check` prints `growth=max  (compose growth honesty; two cwnd raisers need min|max|sum)` when the clause is set; two raisers without a clause fail closed.
 
 **Fairness and AQMs.** Horizon is a single-sender policy. A fleet of Horizons plus Cubic plus BBR at a shared gateway is a different paper. The language can *state* a Jain bound on `leo_multi` and the harness will score it. It cannot enforce other people's stacks.
 
@@ -349,6 +349,7 @@ See [INGRESS.md](INGRESS.md). Summary:
 | No-oracle | `next_capacity` / future PathState (sim freeze-lead peek) |
 | Fairness holdout | a Jain sentence with no `leo_multi` rows |
 | Soft-cut min | SoftFlicker 0.85 raising the window after 0.58 |
+| Compose growth | two cwnd raisers without `compose growth = min|max|sum` (`growth=` stamp when explicit) |
 
 `vela check examples/reach.vela` prints `no-oracle`. Kernel
 `on_path_hint` always passes `next_capacity_bps=None`. Calendar

@@ -220,6 +220,8 @@ class CheckResult:
     fairness: str = ""
     jain_min: float | None = None
     cuts_compose: str = ""
+    # Explicit compose growth = min|max|sum when two cwnd raisers share compose.
+    growth_compose: str = ""
     path_bound: str = ""
     path_digest: str = ""
 
