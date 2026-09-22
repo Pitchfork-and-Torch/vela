@@ -398,13 +398,3 @@ contract seed list. A 2-seed incomplete house contract is
 A later stdout JSON line cannot replace it. The default `--tag`
 is the controller name, not `horizon`. ACCEPT on `gate=fast`
 prints that it is not a dual-gate win. No packet-path change.
-
-## L. Efficacy print (joined arms)
-
-`vela eval` prints one ASCII line and an `efficacy` object with
-three names together: `eval_law`, `dead_seconds` (RttHop), and
-`flicker_dead_ms` (Flicker, not RttHop). A missing stamp prints
-`not-stamped`. The line does not compute those metrics, does not
-invent a mean, and does not claim dish throughput. SoftReprobe
-cut stays 0.58. An `eval_law` field that names both OPE-fair v3.7
-and coupled-rng v3.4-p95 prints `mixed`.

@@ -132,7 +132,3 @@ Isolated workers. `leo_fast_ho` seed 7, 45s. Observe-only Reach.
 | Reach | 88.65 | 108.4 |
 
 MATCH within 0.05 Mbps / 0.2 ms. Locked Leo rail held. Not a dual-gate house-gate claim. JSON: `results/eval_reach-passthrough.json`.
-
-### efficacy print (2026-09-22)
-
-`vela eval` prints `eval_law`, hop `dead_seconds`, and `flicker_dead_ms` on one line. Missing stamps say `not-stamped`. The printer does not compute the arms and does not turn goodput tables into those fields. SoftReprobe cut stays 0.58. Flicker is not RttHop. Do not mix OPE-fair v3.7 with coupled-rng v3.4-p95.
