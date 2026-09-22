@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "integrator-level-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "vela check stamps integrator=level; when/every *= needs integrate when|every.",
+      "status": "done"
     }
   ]
 }
