@@ -8,6 +8,10 @@ from typing import TYPE_CHECKING, Optional
 from vela.compose import apply_composed_cut
 from vela.ir import VelaConfig
 from vela.oracle import refuse_oracle_hint
+from vela.types import (
+    HOUSE_PRIOR_DISCOUNT_WINDOW_S,
+    HOUSE_PRIOR_SCALE_DISCOUNT,
+)
 
 if TYPE_CHECKING:
     pass
@@ -21,6 +25,36 @@ def _median(xs: list[float]) -> float:
     s = sorted(xs)
     return s[len(s) // 2]
 
+
+
+
+def prior_scale_ok(scale: float, age_s: float) -> bool:
+    """True when prior.bw/prior.bdp scale is legal for epoch age.
+
+    In the first HOUSE_PRIOR_DISCOUNT_WINDOW_S of a new epoch the scale
+    must be <= HOUSE_PRIOR_SCALE_DISCOUNT (0.75). After the window any
+    finite non-negative scale is ok at this helper (checker still owns
+    source refuse).
+    """
+    s = float(scale)
+    if s < 0.0:
+        return False
+    if float(age_s) < float(HOUSE_PRIOR_DISCOUNT_WINDOW_S):
+        return s <= float(HOUSE_PRIOR_SCALE_DISCOUNT) + 1e-12
+    return True
+
+
+def discounted_prior_scale(raw: float, age_s: float, scale: float = 1.0) -> float:
+    """Apply the mandatory prior.bw/prior.bdp discount in the early window.
+
+    Caps scale at HOUSE_PRIOR_SCALE_DISCOUNT when age_s is inside the
+    first HOUSE_PRIOR_DISCOUNT_WINDOW_S of the new epoch. Never invents
+    dish Mbps; pure scale multiply.
+    """
+    s = float(scale)
+    if float(age_s) < float(HOUSE_PRIOR_DISCOUNT_WINDOW_S):
+        s = min(s, float(HOUSE_PRIOR_SCALE_DISCOUNT))
+    return float(raw) * s
 
 def make_cca(cfg: Optional[VelaConfig] = None):
     """Return a BaseCCA factory bound to this VELA config."""
