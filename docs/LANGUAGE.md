@@ -96,7 +96,7 @@ Existing programs need neither clause. Shipped flagship examples stay observe-on
 
 **Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only`, `reconfig=RttHop|Flicker`, `loss=Mobility|Congestive|Unknown`, and `passthrough`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
 
-**Passthrough law.** Observe-only is not yet a LeoAware wrap if a `when` or `every` body writes the packet path. `pace =`, `cwnd =`, `chase`, `cut`, and `enter Reprobe` on the cruise path are type errors under `posture observe`. Sample `freeze` and typed Reconfig/Loss policy stay legal: those are LeoAware. Horizon's leftover `pace = bw.mid` dumped seed 7 (65/181) and is now unrepresentable on observe. Review may keep a cruise write so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `passthrough` (LeoAware wrap; no cruise write).
+**Passthrough law.** Observe-only is not yet a LeoAware wrap if a `when` or `every` body writes the packet path. `pace =`, `cwnd =`, `chase`, `cut`, and `enter Reprobe` on the cruise path are type errors under `posture observe`. Observe `on` handlers also cannot invent capacity (`pace`/`cwnd`/`chase`); SoftReprobe `cut`/`enter` stay legal. Sample `freeze` and typed Reconfig/Loss policy stay legal: those are LeoAware. Horizon's leftover `pace = bw.mid` dumped seed 7 (65/181) and is now unrepresentable on observe. Review may keep a cruise write so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `passthrough` (LeoAware wrap; no cruise write).
 
 **Typed reconfig (observe rail).** `on Reconfig` under `posture observe` must match the closed taxonomy `RttHop | Flicker`. A bare `on Reconfig(e) { ... }` is a type error: hop and flicker are not the same event. SoftFlicker (cut 0.85 on flicker) dumped seed 7; the house endpoint cut stays 0.58 on both arms. `enter Reprobe(cut: x)` or `cut(x)` inside an observe Reconfig body must be 0.58. Review may keep a bare Reconfig or a different cut so ablation stays named.
 
@@ -290,7 +290,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
 | `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
-| `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
+| `vela/path.py` | Path law: parse, bounds, bind, digest, capacity overlay. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
 ## G. Equinox (VELA 0.3)
@@ -305,9 +305,10 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 |-----|-----------------|
 | Level vs integrator | `when` / `every` `{ pace *= k }` without `integrate when` / `integrate every` |
 | Affine samples | second Sample read in one block; Sample @ e after `enter Reprobe` |
+| Freshness | read after invalidate; nested when/if inherit the set |
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
-| Passthrough | observe `when`/`every` writing pace/cwnd/chase |
+| Passthrough | observe `when`/`every` writing pace/cwnd/chase; observe `on` inventing capacity |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
 | Cut refinement | `cut(1.2)` |
