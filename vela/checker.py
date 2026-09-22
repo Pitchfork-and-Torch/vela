@@ -6,6 +6,8 @@ from vela.digest import compose_digest
 from vela.ir import parse_report_ci
 from vela.oracle import oracle_error, oracle_name_of
 from vela.path import (
+    calendar_p_ho_note,
+    flicker_not_hop_note,
     house_mismatch_warning,
     parse_program_paths,
     path_digest,
@@ -1025,6 +1027,12 @@ def _check_paths(prog: Program, res: CheckResult) -> None:
         unbound = unbound_path_warning(law)
         if unbound:
             res.warnings.append(unbound)
+        flicker = flicker_not_hop_note(law)
+        if flicker:
+            res.warnings.append(flicker)
+        cal = calendar_p_ho_note(law)
+        if cal:
+            res.warnings.append(cal)
     bound = [law for law in laws if law.bound]
     if bound:
         res.path_bound = bound[0].stamp()

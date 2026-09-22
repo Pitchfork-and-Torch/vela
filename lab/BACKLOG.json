@@ -163,6 +163,38 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "path-realism-rails",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Path realism: reject dead LeoPath rails (non-positive capacity upper, zero handover period, zero mobility_loss window, inverted rtt/capacity). Handover/flicker jitter bounds. Capacity Mbps honesty on stamp. Calendar p_ho = past gaps (no next_capacity). House LeoFastHO stays 12s+/-4s. SoftReprobe cut stays 0.58.",
+      "status": "done"
+    },
+    {
+      "id": "hint-ingress-fail-closed",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Hint ingress: stale or role-mismatched ASCENT-D/Orb stays None (fail-closed). Bare hint.ascent arithmetic remains illegal. Flagship Reach stays defined without hints.",
+      "status": "pending"
+    },
+    {
+      "id": "dual-gate-honesty-label",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Dual-gate honesty: ACCEPT on gate=fast must not read as a house dual-gate win. Gate stamped from rows that ran; --fast cannot mix --seeds/--duration.",
+      "status": "pending"
+    },
+    {
+      "id": "power-label-surface",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Power labeling: checker warning and eval JSON both stamp power=low for n<8. Five-seed house ACCEPT on means stays legal; no silent p<0.05 badge.",
+      "status": "pending"
     }
   ]
 }

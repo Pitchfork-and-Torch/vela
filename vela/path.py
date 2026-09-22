@@ -3,7 +3,9 @@
 A `path` block is not a comment. Check parses it, eval binds the
 handover rails the sibling sim actually takes, and the receipt
 commits the declared law. Calendar `p_ho` still comes from past
-gaps. CSV traces stay unwired.
+gaps (never future RNG / next_capacity). CSV traces stay unwired.
+Optional `flicker` names mid-epoch capacity (sibling starlink_v2);
+it is not RttHop. SoftReprobe cut stays 0.58.
 """
 from __future__ import annotations
 
@@ -14,7 +16,9 @@ from vela.ast import PathModel
 from vela.digest import tagged
 from vela.types import KNOWN_SCENARIOS
 
-PATH_FIELDS = frozenset({"handover", "rtt_jump", "capacity", "mobility_loss"})
+PATH_FIELDS = frozenset(
+    {"handover", "flicker", "rtt_jump", "capacity", "mobility_loss"}
+)
 
 # Program name -> contract scenario. Unmapped names stay unbound.
 PATH_SCENARIO = {
@@ -31,6 +35,14 @@ PATH_SCENARIO = {
 # House leo_fast_ho rails. Flagship examples already write these.
 HOUSE_HANDOVER_INTERVAL_S = 12.0
 HOUSE_HANDOVER_JITTER_S = 4.0
+
+# Sibling starlink_v2 mid-epoch capacity steps. Not a hop.
+# SoftReprobe cut stays 0.58; SoftFlicker stays review.
+STARLINK_V2_FLICKER_INTERVAL_S = 2.8
+STARLINK_V2_FLICKER_JITTER_S = 1.2
+
+# House SoftReprobe cut. Path law does not retune it.
+HOUSE_SOFT_REPROBE_CUT = 0.58
 
 _NUM = r"([0-9]+(?:\.[0-9]+)?)"
 _HANDOVER = re.compile(
@@ -76,6 +88,8 @@ class PathLaw:
     fields: dict[str, str] = field(default_factory=dict)
     handover_interval_s: float | None = None
     handover_jitter_s: float | None = None
+    flicker_interval_s: float | None = None
+    flicker_jitter_s: float | None = None
     rtt_jump_lo_s: float | None = None
     rtt_jump_hi_s: float | None = None
     capacity_lo_bps: float | None = None
@@ -98,13 +112,32 @@ class PathLaw:
             and abs(self.handover_jitter_s - HOUSE_HANDOVER_JITTER_S) < 1e-9
         )
 
+    @property
+    def starlink_v2_flicker(self) -> bool:
+        """Mid-epoch capacity rails from sibling starlink_v2. Not a hop."""
+        return (
+            self.flicker_interval_s is not None
+            and self.flicker_jitter_s is not None
+            and abs(self.flicker_interval_s - STARLINK_V2_FLICKER_INTERVAL_S) < 1e-9
+            and abs(self.flicker_jitter_s - STARLINK_V2_FLICKER_JITTER_S) < 1e-9
+        )
+
     def as_dict(self) -> dict:
         return {
             "name": self.name,
             "scenario": self.scenario,
             "handover_interval_s": self.handover_interval_s,
             "handover_jitter_s": self.handover_jitter_s,
+            "flicker_interval_s": self.flicker_interval_s,
+            "flicker_jitter_s": self.flicker_jitter_s,
+            "rtt_jump_lo_s": self.rtt_jump_lo_s,
+            "rtt_jump_hi_s": self.rtt_jump_hi_s,
+            "capacity_lo_bps": self.capacity_lo_bps,
+            "capacity_hi_bps": self.capacity_hi_bps,
+            "mobility_p": self.mobility_p,
+            "mobility_window_s": self.mobility_window_s,
             "fields": dict(self.fields),
+            "calendar_p_ho": "past_gaps",
         }
 
     def stamp(self) -> str:
@@ -114,7 +147,25 @@ class PathLaw:
         jtxt = f"+/-{jitter:g}s" if jitter is not None else ""
         rail = "house" if self.house else "named"
         scen = self.scenario or "unbound"
-        return f"{self.name}:{scen} {self.handover_interval_s:g}s{jtxt} ({rail})"
+        cap = ""
+        if self.capacity_lo_bps is not None and self.capacity_hi_bps is not None:
+            lo = self.capacity_lo_bps / 1e6
+            hi = self.capacity_hi_bps / 1e6
+            # Declared rail honesty (Mbps). Not a dish measurement claim.
+            cap = f" {lo:g}-{hi:g}Mbps"
+        base = (
+            f"{self.name}:{scen} {self.handover_interval_s:g}s{jtxt}{cap} "
+            f"({rail}; calendar=past-gaps)"
+        )
+        if self.flicker_interval_s is None:
+            return base
+        fj = self.flicker_jitter_s
+        ftxt = f"+/-{fj:g}s" if fj is not None else ""
+        tag = "v2" if self.starlink_v2_flicker else "named"
+        return (
+            f"{base} flicker={self.flicker_interval_s:g}s{ftxt} "
+            f"({tag}; not hop)"
+        )
 
 
 def path_needs_std_error() -> str:
@@ -130,8 +181,110 @@ def path_parse_error(name: str, field: str) -> str:
     return f"path {name}: cannot parse {field} (path law)"
 
 
+def path_inverted_range_error(name: str, field: str) -> str:
+    return (
+        f"path {name}: {field} lower bound exceeds upper bound "
+        "(path law; inverted range is not a Starlink rail)"
+    )
+
+
+# Alias used by capacity-bounds cooks.
+path_inverted_bounds_error = path_inverted_range_error
+
+
+def path_zero_capacity_error(name: str) -> str:
+    return (
+        f"path {name}: capacity upper bound must be positive "
+        "(a zero-capacity rail is not a path)"
+    )
+
+
+def path_zero_handover_error(name: str) -> str:
+    return (
+        f"path {name}: handover interval must be positive "
+        "(path law; zero interval is not a LEO calendar)"
+    )
+
+
+def path_jitter_exceeds_error(name: str, field: str = "handover") -> str:
+    return (
+        f"path {name}: {field} jitter exceeds interval "
+        "(path law; gap would go non-positive)"
+    )
+
+
+def path_cadence_error(name: str, field: str) -> str:
+    return (
+        f"path {name}: {field} period must be positive and jitter must be "
+        f"<= period (jitter larger than the period can push the next event "
+        f"into the past)"
+    )
+
+
+def path_zero_mobility_window_error(name: str) -> str:
+    return (
+        f"path {name}: mobility_loss window must be positive "
+        "(path law; a zero burst is not mobility)"
+    )
+
+
+def path_oracle_field_error(name: str, field: str) -> str:
+    return (
+        f"path {name}: field {field} is future PathState "
+        "(no-oracle law; calendar p_ho is past gaps only; "
+        "kernel refuses next_capacity)"
+    )
+
+
+def path_reconfig_alias_error(name: str, field: str, kind: str) -> str:
+    tip = {
+        "RttHop": "declare handover + rtt_jump",
+        "Flicker": "declare flicker ~ every Xs jitter Ys (mid-epoch capacity)",
+    }.get(kind, "use a known path field")
+    return (
+        f"path {name}: field {field} is not a path rail "
+        f"({kind} is a Reconfig kind; {tip})"
+    )
+
+
 def path_empty_error(name: str) -> str:
     return f"path {name}: empty model (path law; a claim needs rails)"
+
+
+def _alias_error(model_name: str, key: str) -> str | None:
+    """Reconfig / oracle names are not path rails."""
+    low = key.lower()
+    if low in {"hop", "rtthop", "handoff"} or key in {"RttHop", "Hop"}:
+        return path_reconfig_alias_error(model_name, key, "RttHop")
+    if key == "Flicker" or low == "flickerhop":
+        return path_reconfig_alias_error(model_name, key, "Flicker")
+    if low in {
+        "next_capacity",
+        "next_capacity_bps",
+        "next_rtt",
+        "next_handover",
+        "future_capacity",
+        "p_ho",
+        "pho",
+    }:
+        return path_oracle_field_error(model_name, key)
+    return None
+
+
+def _check_cadence(
+    law: PathLaw, model_name: str, field: str, interval: float, jitter: float
+) -> bool:
+    """Return True if cadence is legal; else append error and clear."""
+    if interval <= 0 or jitter > interval:
+        # Prefer specific messages for handover; shared cadence for flicker.
+        if field == "handover" and interval <= 0:
+            law.errors.append(path_zero_handover_error(model_name))
+        elif field == "handover" and jitter > interval:
+            law.errors.append(path_jitter_exceeds_error(model_name, field))
+        else:
+            law.errors.append(path_cadence_error(model_name, field))
+        return False
+    return True
 
 
 def parse_path_model(model: PathModel) -> PathLaw:
@@ -142,7 +295,11 @@ def parse_path_model(model: PathModel) -> PathLaw:
         return law
     for key, raw in model.fields.items():
         if key not in PATH_FIELDS:
-            law.errors.append(path_unknown_field_error(model.name, key))
+            alias = _alias_error(model.name, key)
+            if alias:
+                law.errors.append(alias)
+            else:
+                law.errors.append(path_unknown_field_error(model.name, key))
             continue
         text = " ".join(
             str(raw).replace("(", " ").replace(")", " ").replace(",", " ").split()
@@ -153,30 +310,69 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.errors.append(path_parse_error(model.name, key))
                 continue
             try:
-                law.handover_interval_s = _to_seconds(m.group(1), m.group(2))
-                law.handover_jitter_s = _to_seconds(m.group(3), m.group(4))
+                interval = _to_seconds(m.group(1), m.group(2))
+                jitter = _to_seconds(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if not _check_cadence(law, model.name, key, interval, jitter):
+                continue
+            law.handover_interval_s = interval
+            law.handover_jitter_s = jitter
+        elif key == "flicker":
+            # Same shape as handover: every Xs jitter Ys. Mid-epoch capacity,
+            # not RttHop. Endpoint Detect still owns the event kind.
+            m = _HANDOVER.match(text)
+            if not m:
+                law.errors.append(path_parse_error(model.name, key))
+                continue
+            try:
+                interval = _to_seconds(m.group(1), m.group(2))
+                jitter = _to_seconds(m.group(3), m.group(4))
+            except ValueError:
+                law.errors.append(path_parse_error(model.name, key))
+                continue
+            if not _check_cadence(law, model.name, key, interval, jitter):
+                continue
+            law.flicker_interval_s = interval
+            law.flicker_jitter_s = jitter
         elif key == "rtt_jump":
             m = _UNIFORM.match(text)
             if not m:
                 law.errors.append(path_parse_error(model.name, key))
                 continue
             try:
-                law.rtt_jump_lo_s = _to_seconds(m.group(1), m.group(2))
-                law.rtt_jump_hi_s = _to_seconds(m.group(3), m.group(4))
+                lo = _to_seconds(m.group(1), m.group(2))
+                hi = _to_seconds(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if lo > hi:
+                law.errors.append(path_inverted_range_error(model.name, key))
+                continue
+            law.rtt_jump_lo_s = lo
+            law.rtt_jump_hi_s = hi
         elif key == "capacity":
             m = _UNIFORM.match(text)
             if not m:
                 law.errors.append(path_parse_error(model.name, key))
                 continue
             try:
-                law.capacity_lo_bps = _to_bps(m.group(1), m.group(2))
-                law.capacity_hi_bps = _to_bps(m.group(3), m.group(4))
+                lo = _to_bps(m.group(1), m.group(2))
+                hi = _to_bps(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            # Equal positive bounds stay valid (fixed capacity).
+            # Non-positive hi is a dead rail. Inverted lo>hi is inverted.
+            if hi <= 0:
+                law.errors.append(path_zero_capacity_error(model.name))
+                continue
+            if lo > hi:
+                law.errors.append(path_inverted_range_error(model.name, key))
+                continue
+            law.capacity_lo_bps = lo
+            law.capacity_hi_bps = hi
         elif key == "mobility_loss":
             m = _BURST.match(text)
             if not m:
@@ -187,10 +383,15 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.errors.append(path_parse_error(model.name, key))
                 continue
             try:
-                law.mobility_p = p
-                law.mobility_window_s = _to_seconds(m.group(2), m.group(3))
+                window = _to_seconds(m.group(2), m.group(3))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if window <= 0:
+                law.errors.append(path_zero_mobility_window_error(model.name))
+                continue
+            law.mobility_p = p
+            law.mobility_window_s = window
     return law
 
 
@@ -210,6 +411,8 @@ def path_digest(laws: list[PathLaw] | list[dict]) -> str:
                     "scenario": item.get("scenario", ""),
                     "handover_interval_s": item.get("handover_interval_s"),
                     "handover_jitter_s": item.get("handover_jitter_s"),
+                    "flicker_interval_s": item.get("flicker_interval_s"),
+                    "flicker_jitter_s": item.get("flicker_jitter_s"),
                     "fields": dict(item.get("fields") or {}),
                 }
             )
@@ -217,6 +420,7 @@ def path_digest(laws: list[PathLaw] | list[dict]) -> str:
         [
             f"{r.get('name','')}:{r.get('scenario','')}:"
             f"{r.get('handover_interval_s')}:{r.get('handover_jitter_s')}:"
+            f"{r.get('flicker_interval_s')}:{r.get('flicker_jitter_s')}:"
             + ",".join(f"{k}={v}" for k, v in sorted((r.get("fields") or {}).items()))
             for r in rows
         ]
@@ -249,6 +453,29 @@ def house_mismatch_warning(law: PathLaw) -> str | None:
         f"{law.handover_interval_s:g}s+/-{law.handover_jitter_s:g}s "
         f"is not the house {HOUSE_HANDOVER_INTERVAL_S:g}s+/-"
         f"{HOUSE_HANDOVER_JITTER_S:g}s rail"
+    )
+
+
+def flicker_not_hop_note(law: PathLaw) -> str | None:
+    """Honesty: declared flicker is capacity wobble, not RttHop."""
+    if law.flicker_interval_s is None:
+        return None
+    tag = "starlink_v2 rails" if law.starlink_v2_flicker else "named rails"
+    return (
+        f"path {law.name}: flicker {law.flicker_interval_s:g}s"
+        f"+/-{(law.flicker_jitter_s or 0):g}s is mid-epoch capacity "
+        f"({tag}); not a hop; SoftReprobe cut stays "
+        f"{HOUSE_SOFT_REPROBE_CUT:g}; SoftFlicker is review"
+    )
+
+
+def calendar_p_ho_note(law: PathLaw) -> str | None:
+    """Honesty: calendar p_ho is past gaps, never next_capacity."""
+    if not law.bound:
+        return None
+    return (
+        f"path {law.name}: calendar p_ho from past inter-hop gaps only "
+        f"(no next_capacity / future PathState; PredictiveFreeze is not an oracle)"
     )
 
 

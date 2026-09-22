@@ -139,11 +139,16 @@ A one-sided t-test or bootstrap CI on 5 seeds is weak. VELA reports that weaknes
 ```vela
 path LeoFastHO {
   handover ~ every 12s jitter 4s
+  # optional: flicker ~ every 2.8s jitter 1.2s  (mid-epoch capacity; not a hop)
   rtt_jump ~ uniform(20ms, 90ms)
   capacity ~ uniform(20Mbps, 120Mbps)
   mobility_loss ~ burst(p=0.08, window=400ms) on reconfig
 }
 ```
+
+Dead rails (inverted capacity/rtt_jump, non-positive capacity upper, zero
+handover/flicker period, jitter > period, zero mobility window) are type
+errors. The check stamp shows declared Mbps and `calendar=past-gaps`.
 
 The same model object is used by the discrete-event simulator **and** by `PredictiveFreeze` (`p_ho` is the model's predictive CDF, not a magic oracle of the next hop time). The kernel refuses `next_capacity` / future PathState even if the sim offers a freeze-lead peek. Calendar `p_ho` is estimated from detected gaps, never from future RNG.
 
@@ -362,14 +367,23 @@ That is the honest fast path, not a skip of the law.
 ## I. Path bind (VELA 0.4.1)
 
 A `path` block is the model object, not a comment. Check parses
-handover / rtt_jump / capacity / mobility_loss. Eval binds the
+handover / flicker / rtt_jump / capacity / mobility_loss. Inverted
+ranges, non-positive capacity upper, zero handover/flicker period,
+jitter that exceeds the period, and a zero mobility window are type
+errors. Optional `flicker ~ every Xs jitter Ys` names mid-epoch
+capacity (sibling starlink_v2 ~2.8s+/-1.2s). Flicker is not RttHop;
+SoftReprobe cut stays 0.58; SoftFlicker stays review. Eval binds the
 handover rails the sibling sim actually takes. The receipt commits
 the declared law. `use std.path` is required to name a path.
 
 `path LeoFastHO` binds `scenario leo_fast_ho`. Flagship examples
-already write the house rails (12s handover, 4s jitter). Unbound
-names warn; a leo_fast_ho that is not those rails warns. Unknown
-or unparseable fields are type errors.
+already write the house rails (12s handover, 4s jitter). The check
+stamp shows declared capacity Mbps (lab rail honesty, not a dish
+measurement) and `calendar=past-gaps`. Unbound names warn; a
+leo_fast_ho that is not those rails warns. Unknown or unparseable
+fields are type errors. Reconfig kind aliases (`hop`, `RttHop`,
+`Flicker`) and oracle names (`next_capacity`, `p_ho` as a path field)
+are type errors with a pointer to the right rail.
 
 Calendar `p_ho` still comes from past gaps. CSV traces stay
 unwired. The kernel still refuses `next_capacity`.
