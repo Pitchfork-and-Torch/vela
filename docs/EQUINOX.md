@@ -26,7 +26,10 @@ binaries.
    `split cap into fill, hold` partitions the budget; `borrow fill { cwnd = ... }`
    spends that piece. A second borrow, a write outside borrow after split,
    or a `pace` write under `WriteCap<cwnd>` is a type error. Without
-   split/borrow the integer budget still holds.
+   split/borrow the integer budget still holds. Starlink hop/flicker does
+   not mint ambient authority: Reach stamps `writecap=absent` (no
+   WriteCap); Equinox stamps `writecap=budget` with `authority` zero.
+   SoftReprobe cut stays 0.58. Absent is honesty, not a cruise write.
 3. **Kinded reconfig.** `on Reconfig match` is a closed taxonomy
    (`RttHop | Flicker`), same shape as `Loss`. On the observe rail
    a bare Reconfig is a type error, and `enter Reprobe(cut: x)` must
