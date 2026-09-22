@@ -164,6 +164,14 @@ The same model object is used by the discrete-event simulator **and** by `Predic
 
 **SoftReprobe** is two-phase explore/fill with a declared cut (default 0.58 endpoint) and automatic sample invalidation.
 
+**LeoAware declaration wire.** Shared `std.mech` names cite sibling
+`leoaware.vela_std_mech/v1` (`python3 -m leo_cc.mech_decl`). Optional
+`python3 -m vela mech --against-leoaware` / `python3 -m vela check --against-leoaware` validate
+fail-closed when the sibling is present-or-requested; default flagship
+`vela check` does **not** require leo-aware-transport. See `docs/MECH-DECL.md`.
+Do not fork Detect/SoftReprobe. SoftReprobe cut stays 0.58. No closed-write.
+
+
 **IntervalBw** replaces a point `bw_est` with `{lo, mid, hi}` and an `uncertainty = (hi-lo)/mid`.
 
 **PredictiveFreeze** consumes `std.path`'s calendar. It does not receive the simulator's next hop time in endpoint-only mode.

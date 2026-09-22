@@ -23,3 +23,7 @@ A VELA program that matches LeoAware bit-for-bit is a **no-regress rail**, not a
 - Keep the 0.58 endpoint cut until a named ablation is green.
 - Dual-gate vs BBR + terrestrial floor remains the user-facing test.
 - Observe-only wrap must match LeoAware on the same seed.
+
+## LeoAware std.mech gift
+
+Cite `leoaware.vela_std_mech/v1` from sibling leo-aware-transport. Compose Detect + SoftReprobe; do not fork them; SoftReprobe cut 0.58. Details: `docs/MECH-DECL.md`.

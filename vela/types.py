@@ -9,6 +9,9 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+# Cited LeoAware gift schema (optional validate via vela.mech_decl).
+# SoftReprobe cut stays 0.58; do not fork Detect/SoftReprobe; no closed-write.
+LEOAWARE_MECH_SCHEMA = "leoaware.vela_std_mech/v1"
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
 # Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays

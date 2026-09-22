@@ -93,3 +93,33 @@ class TestReceiptInputs(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestMechDeclCli(unittest.TestCase):
+    def test_mech_against_leoaware_fail_closed_missing_root(self):
+        import os
+
+        # Point LEO_AWARE_TRANSPORT at a path that cannot resolve to any sibling.
+        env = os.environ.copy()
+        # leo_aware_root falls through candidates; force via explicit missing by
+        # temporarily shadowing the helper would be heavier — call validate path.
+        from vela.mech_decl import validate_against_leoaware
+        from pathlib import Path
+
+        report = validate_against_leoaware(
+            root=Path("/tmp/vela-cli-no-leo-sibling"), require_sibling=True
+        )
+        self.assertFalse(report.ok)
+        self.assertFalse(report.sibling_present)
+
+    def test_check_reach_without_against_flag_ok(self):
+        rc, out = _run(["check", str(EX / "reach.vela")])
+        self.assertEqual(rc, 0, out)
+        self.assertIn("observe-only", out)
+        self.assertNotIn("error:", out)
+
+    def test_mech_cite_runs(self):
+        rc, out = _run(["mech", "--cite-leoaware"])
+        self.assertEqual(rc, 0, out)
+        self.assertIn("leoaware.vela_std_mech/v1", out)
+        self.assertIn("0.58", out)

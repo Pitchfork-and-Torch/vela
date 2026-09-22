@@ -35,6 +35,8 @@ py -3 -m vela check examples/equinox.vela
 py -3 -m vela check examples/fair.vela
 py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
+py -3 -m vela mech --cite-leoaware
+py -3 -m vela mech --against-leoaware   # optional; fail-closed if sibling missing
 py -3 -m vela compile examples/equinox.vela -o emit/equinox_cca.py
 py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela --eval results/eval_reach.json
 py -3 -m unittest discover -s tests -v

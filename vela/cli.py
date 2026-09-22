@@ -48,6 +48,17 @@ def _main(argv: list[str] | None = None) -> int:
 
     p_chk = sub.add_parser("check", help="parse + type-check")
     p_chk.add_argument("file")
+    p_chk.add_argument(
+        "--against-leoaware",
+        action="store_true",
+        help="optional: fail-closed validate std.mech vs sibling leo_cc.mech_decl "
+        "(not required for flagship check)",
+    )
+    p_chk.add_argument(
+        "--cite-leoaware",
+        action="store_true",
+        help="print LeoAware std.mech cite when sibling present; never fails if absent",
+    )
 
     p_cmp = sub.add_parser("compile", help="lower to Python kernel config")
     p_cmp.add_argument("file")
@@ -92,17 +103,68 @@ def _main(argv: list[str] | None = None) -> int:
         help="eval JSON whose rows the receipt commits",
     )
 
-    sub.add_parser("mech", help="list stdlib mechanisms with digests")
+    p_mech = sub.add_parser("mech", help="list stdlib mechanisms with digests")
+    p_mech.add_argument(
+        "--against-leoaware",
+        action="store_true",
+        help="fail-closed validate VELA std.mech against sibling leo_cc.mech_decl",
+    )
+    p_mech.add_argument(
+        "--cite-leoaware",
+        action="store_true",
+        help="print LeoAware gift cite (loads sibling when present)",
+    )
+    p_mech.add_argument(
+        "--json",
+        action="store_true",
+        help="emit cite JSON (with --cite-leoaware / --against-leoaware)",
+    )
 
     args = ap.parse_args(argv)
 
     if args.cmd == "mech":
         from vela.digest import stdlib_catalog
+        from vela.mech_decl import (
+            cite_leoaware_surface,
+            dump_cite_json,
+            load_leoaware_decl,
+            sibling_present,
+            validate_against_leoaware,
+        )
+
+        if args.against_leoaware:
+            report = validate_against_leoaware(require_sibling=True)
+            if args.json:
+                print(dump_cite_json())
+            else:
+                print(report.cite)
+                for err in report.errors:
+                    print(f"error: {err}")
+                for warn in report.warnings:
+                    print(f"warning: {warn}")
+                if report.ok:
+                    print(
+                        f"ok  leoaware std.mech aligned "
+                        f"({len(report.shared)} shared; SoftReprobe cut "
+                        f"{report.endpoint_cut})"
+                    )
+            return 0 if report.ok else 1
+
+        if args.cite_leoaware:
+            decl = load_leoaware_decl(require=False) if sibling_present() else None
+            if args.json:
+                print(dump_cite_json(decl or None))
+            else:
+                print(cite_leoaware_surface(decl or None))
+                if decl is None:
+                    print("note: sibling absent; cite is local-only")
+            return 0
 
         cat = stdlib_catalog()
         for name, digest in cat.items():
             print(f"{digest[:16]}  {name}")
         print(f"{len(cat)} mechanisms")
+        print(cite_leoaware_surface(None))
         return 0
 
     if args.cmd == "digest" and args.stdlib:
@@ -212,6 +274,29 @@ def _main(argv: list[str] | None = None) -> int:
             print(f"    views={', '.join(res.views)}")
         if prog.contracts:
             print(f"    contract={prog.contracts[0].name} vs {prog.contracts[0].baseline}")
+        if getattr(args, "cite_leoaware", False) or getattr(args, "against_leoaware", False):
+            from vela.mech_decl import (
+                cite_leoaware_surface,
+                load_leoaware_decl,
+                sibling_present,
+                validate_against_leoaware,
+            )
+            if args.against_leoaware:
+                report = validate_against_leoaware(require_sibling=True)
+                print(f"    {report.cite}")
+                for err in report.errors:
+                    print(f"error: {err}")
+                if not report.ok:
+                    return 1
+                print(
+                    f"    leoaware=aligned  shared={len(report.shared)}  "
+                    f"SoftReprobe_cut={report.endpoint_cut}"
+                )
+            else:
+                decl = load_leoaware_decl(require=False) if sibling_present() else None
+                print(f"    {cite_leoaware_surface(decl or None)}")
+                if decl is None:
+                    print("    leoaware=cite-local  (sibling absent; check still ok)")
         return 0
 
     if args.cmd == "compile":
