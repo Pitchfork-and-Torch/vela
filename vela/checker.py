@@ -1,6 +1,11 @@
 """VELA static checker: freshness, loss coverage, compose cuts, contracts."""
 from __future__ import annotations
 
+FRESHNESS_CHECK_LINE = (
+    "freshness  (invalidate sticks into nested when/if/require; "
+    "enter Reprobe -> prior.x)"
+)
+
 from vela.ast import Controller, Program, Stmt, View
 from vela.digest import compose_digest
 from vela.ir import parse_report_ci
@@ -324,19 +329,47 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
     _check_hybrid(c, res)
 
 
-def _check_stale_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -> None:
-    invalidated: set[str] = set()
+def _check_stale_in_stmts(
+    cname: str,
+    stmts: list[Stmt],
+    res: CheckResult,
+    invalidated: set[str] | None = None,
+) -> None:
+    # Nested when/if/require inherit the parent invalidated set.
+    # A fresh set here is how stale min_rtt snuck past after invalidate.
+    live = set(invalidated or ())
     for st in stmts:
         if st.kind == "invalidate":
-            invalidated.update(str(a) for a in st.args)
-        if st.kind == "let" and st.expr is not None:
-            _walk_stale(cname, st.expr, invalidated, res)
-        if st.kind == "chase" and st.expr is not None:
-            _walk_stale(cname, st.expr, invalidated, res)
-        if st.kind == "assign" and st.expr is not None:
-            _walk_stale(cname, st.expr, invalidated, res)
+            live.update(str(a) for a in st.args)
+        if st.kind in ("let", "chase", "assign", "when", "if", "require") and st.expr is not None:
+            _walk_stale(cname, st.expr, live, res)
+        if st.kind == "enter":
+            for a in st.args:
+                if isinstance(a, tuple) and len(a) == 2:
+                    _walk_stale(cname, a[1], live, res)
+                elif not isinstance(a, str):
+                    _walk_stale(cname, a, live, res)
+        if st.kind == "freeze":
+            for a in st.args:
+                if isinstance(a, str):
+                    if a in live:
+                        res.ok = False
+                        res.freshness = False
+                        err = (
+                            f"{cname}: read of invalidated sample {a} "
+                            "(freshness law)"
+                        )
+                        if err not in res.errors:
+                            res.errors.append(err)
+                else:
+                    _walk_stale(cname, a, live, res)
+            if st.expr is not None:
+                _walk_stale(cname, st.expr, live, res)
         if st.body:
-            _check_stale_in_stmts(cname, st.body, res)
+            _check_stale_in_stmts(cname, st.body, res, live)
+        else_body = _stmt_else_body(st)
+        if else_body:
+            _check_stale_in_stmts(cname, else_body, res, live)
 
 
 def _walk_stale(cname: str, expr, invalidated: set[str], res: CheckResult) -> None:
@@ -344,15 +377,17 @@ def _walk_stale(cname: str, expr, invalidated: set[str], res: CheckResult) -> No
         return
     if expr.kind == "name" and expr.name in invalidated:
         res.ok = False
-        res.errors.append(
-            f"{cname}: read of invalidated sample {expr.name} (freshness law)"
-        )
+        res.freshness = False
+        err = f"{cname}: read of invalidated sample {expr.name} (freshness law)"
+        if err not in res.errors:
+            res.errors.append(err)
     if expr.kind == "attr" and expr.left is not None and expr.left.kind == "name":
         if expr.left.name in invalidated:
             res.ok = False
-            res.errors.append(
-                f"{cname}: read of invalidated {expr.left.name}.{expr.name}"
-            )
+            res.freshness = False
+            err = f"{cname}: read of invalidated {expr.left.name}.{expr.name}"
+            if err not in res.errors:
+                res.errors.append(err)
     _walk_stale(cname, expr.left, invalidated, res)
     _walk_stale(cname, expr.right, invalidated, res)
     for a in expr.args:
@@ -1436,6 +1471,7 @@ def _check_prior_min_rtt(cname: str, stmts: list[Stmt], res: CheckResult) -> Non
     for st in _flatten_stmts(stmts):
         if st.kind == "assign" and st.name == "min_rtt" and _expr_has_prior_min_rtt(st.expr):
             res.ok = False
+            res.freshness = False
             res.errors.append(
                 f"{cname}: cannot write min_rtt from prior.min_rtt (freshness law)"
             )

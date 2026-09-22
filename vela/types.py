@@ -216,6 +216,7 @@ class CheckResult:
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True
+    freshness: bool = True
     writecap: str = ""
     fairness: str = ""
     jain_min: float | None = None

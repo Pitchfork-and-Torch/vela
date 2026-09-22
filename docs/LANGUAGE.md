@@ -52,7 +52,7 @@ use std.eval
 | `Hint<T>` | External signal (ASCENT-D, Orb, orbital). Fail-closed: corrupt => `None`. |
 | `Contract` | Multi-seed assertion set. Not executable on the packet path. |
 
-**Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`. The checker now rejects that assign.
+**Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. Nested when/if/require inherit that invalidate (a nested when cannot revive a stale sample). The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`. The checker now rejects that assign. After `enter Reprobe`, carried scale is `prior.x` (not the current name). `vela check` stamps `freshness` when the law holds.
 
 **Affine law.** `Sample` / `Interval` names (and ambient `min_rtt` / `bw`) are affine in each handler block. One statement may mention `rtt` twice (`explore: 1.15 * rtt, fill: 1.85 * rtt` is one use). A second statement must `let r = rtt` first. Guards (`when rtt > 20ms`, `bw.n >= 2`) do not consume. `enter Reprobe` advances the epoch: later reads of the current name are type errors; `prior.x` is the legal remnant. `vela check` stamps `affine` when the law holds.
 
@@ -304,6 +304,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Law | What it refuses |
 |-----|-----------------|
 | Level vs integrator | `when` / `every` `{ pace *= k }` without `integrate when` / `integrate every` |
+| Freshness | read after invalidate; nested when/if/require inherit the set; after enter Reprobe use prior.x |
 | Affine samples | second Sample read in one block; Sample @ e after `enter Reprobe` |
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
