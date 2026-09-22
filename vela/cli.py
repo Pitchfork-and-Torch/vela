@@ -167,6 +167,10 @@ def _main(argv: list[str] | None = None) -> int:
             return 1
         c = prog.controllers[0]
         print(f"ok  controller={c.name}  compose={' + '.join(c.compose)}")
+        if res.use_named_only:
+            from vela.types import USE_NAMED_ONLY_CHECK_LINE
+
+            print(f"    {USE_NAMED_ONLY_CHECK_LINE}")
         if res.observe_only:
             print("    observe-only  (no closed-write)")
         else:
