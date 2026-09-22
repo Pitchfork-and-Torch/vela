@@ -18,7 +18,7 @@ remaining LANGUAGE.md gaps checkable and runnable.
    harness runs 3 flows and scores RFC 5166 Jain. A jain assert
    without `leo_multi` is a type error. Missing rows are
    INCOMPLETE. Flagship Reach stays single-flow DualGate.
-   `examples/fair.vela` is the optional holdout.
+   `examples/fair.vela` is the optional holdout. `vela check` stamps `fair_mode=AIMD@1.0xBDP` when the holdout (or an explicit `FairMode` compose) is declared; observe-only, not a closed-write enable.
 3. **Soft-cut min at runtime.** Two soft cuts on the same event
    compose as `min` (more conservative remaining fraction).
    SoftFlicker 0.85 cannot undo SoftReprobe 0.58. That dump

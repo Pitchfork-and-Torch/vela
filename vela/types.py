@@ -16,6 +16,10 @@ UNKNOWN_DELAY_RATIO = 1.35
 POWER_OK_MIN_SEEDS = 8
 # RFC 5166 Jain holdout. Optional contract scenario, not a silent README.
 FAIRNESS_SCENARIO = "leo_multi"
+# FairMode mech cite (LANGUAGE Fairness): AIMD around 1.0 x BDP.
+# Checkable stamp only; does not enable closed-write cruise.
+HOUSE_FAIR_MODE_BDP_FRAC = 1.0
+FAIR_MODE_STAMP = "AIMD@1.0xBDP"
 KNOWN_SCENARIOS = frozenset({"leo_fast_ho", "leo_single", "terrestrial", "leo_multi"})
 
 
@@ -218,6 +222,7 @@ class CheckResult:
     hybrid: bool = True
     writecap: str = ""
     fairness: str = ""
+    fair_mode: str = ""  # FAIR_MODE_STAMP when FairMode or leo_multi holdout
     jain_min: float | None = None
     cuts_compose: str = ""
     path_bound: str = ""
