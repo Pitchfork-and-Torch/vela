@@ -1,7 +1,8 @@
 # Manual workday cook. Do not register a scheduled task from this script.
 param(
     [int]$Hours = 9,
-    [switch]$Publish
+    [switch]$Publish,
+    [switch]$DryRun
 )
 
 $ErrorActionPreference = "Stop"
@@ -17,19 +18,30 @@ $env:PYTHONPATH = $Root
 $env:PYTHONDONTWRITEBYTECODE = "1"
 
 Write-Host "[LOOP] space internet cook root=$Root until $Deadline"
-Write-Host "[LOOP] Touch lab\\STOP to halt."
+Write-Host "[LOOP] Safe pending language/eval only. Touch lab\\STOP to halt."
+Write-Host "[LOOP] Tick logs: results\\loop_ticks.jsonl + results\\loop_last.json"
+if ($DryRun) {
+    Write-Host "[LOOP] DryRun: preview ticks; no backlog/STATE/PUBLIC_PROGRESS mutation."
+}
 
 while ((Get-Date) -lt $Deadline) {
     if (Test-Path $Stop) {
         Write-Host "[LOOP] STOP file. Exit."
         break
     }
-    & $Py -3 (Join-Path $Root "scripts\space_internet_loop.py") --once
+    $onceArgs = @("-3", (Join-Path $Root "scripts\space_internet_loop.py"), "--once")
+    if ($DryRun) { $onceArgs += "--dry-run" }
+    & $Py @onceArgs
     $code = $LASTEXITCODE
     if ($Publish) {
-        & $Py -3 (Join-Path $Root "scripts\space_internet_loop.py") --publish
+        # Always sanitizer path. Never naive-copy lab PUBLIC_PROGRESS.
+        $pubArgs = @("-3", (Join-Path $Root "scripts\space_internet_loop.py"), "--publish")
+        if ($DryRun) { $pubArgs += "--dry-run" }
+        & $Py @pubArgs
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[LOOP] publish sanitizer failed exit=$LASTEXITCODE. Skip deploy."
+        } elseif ($DryRun) {
+            Write-Host "[LOOP] publish dry-run ok. Skip deploy."
         } else {
             $deploy = Join-Path $env:USERPROFILE "orbitstack\deploy.ps1"
             if (Test-Path $deploy) {
@@ -39,9 +51,15 @@ while ((Get-Date) -lt $Deadline) {
         }
     }
     $backlog = Get-Content (Join-Path $Root "lab\BACKLOG.json") -Raw
+    # Only safe pending language/eval keep the loop hot. Unsafe/done idle.
     if ($backlog -notmatch '"status": "pending"') {
         Write-Host "[LOOP] no pending backlog items. Idle 20m."
         Start-Sleep -Seconds 1200
+        continue
+    }
+    if ($DryRun) {
+        Write-Host "[LOOP] dry-run tick done. Idle 5m (no mutation)."
+        Start-Sleep -Seconds 300
         continue
     }
     if ($code -ne 0) {
@@ -52,4 +70,4 @@ while ((Get-Date) -lt $Deadline) {
     Start-Sleep -Seconds 90
 }
 
-Write-Host "[LOOP] done. Read lab\\STATE.md"
+Write-Host "[LOOP] done. Read lab\\STATE.md and results\\loop_last.json"

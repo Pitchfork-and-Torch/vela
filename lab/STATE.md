@@ -1,10 +1,11 @@
 # Loop state
 
 status: ok
-updated: 2026-09-18
+updated: 2026-09-22
 engine: LeoAware v3.4-p95 (73.57 / 138.37 vs BBR 70.88 / 138.83)
 vela: 0.4.3 affine + WriteCap linear + hybrid automata, observe-only Reach
 last_job: hybrid-automata
-next_job: none
+next_job: path-realism-rails
 stop: no
 passthrough seed7 45s Leo 88.65/108.4 Reach 88.65/108.4
+cook: loop actuator safe-pending + results/ logging; no closed-write enable
