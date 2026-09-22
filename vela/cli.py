@@ -150,11 +150,32 @@ def _main(argv: list[str] | None = None) -> int:
 
     if args.cmd == "digest":
         from vela.digest import compose_digest, source_digest
+        from vela.types import review_writes_in
 
         c = prog.controllers[0]
         print(f"source   {source_digest(src)}")
         print(f"compose  {compose_digest(c.compose)}")
         print(f"controller {c.name}")
+        print(f"posture  {c.posture}")
+        closed = review_writes_in(c.compose)
+        if c.posture == "observe" and closed:
+            print(f"closed-write REFUSED under observe: {closed}")
+            return 1
+        if c.posture == "observe":
+            print("observe-only  (no closed-write; safe LeoAware wrap export)")
+        elif closed:
+            print(f"closed-write {closed}  (posture review)")
+        res = check(prog)
+        if res.passthrough:
+            print("passthrough  (typed reconfig + typed loss; house cut 0.58)")
+        if res.typed_reconfig:
+            print("typed_reconfig  RttHop|Flicker")
+        if res.typed_loss:
+            print("typed_loss  Mobility|Congestive|Unknown")
+        if res.ok is False and c.posture == "observe":
+            for e in res.errors:
+                print(f"error: {e}")
+            return 1
         return 0
 
     if args.cmd == "check":
@@ -224,18 +245,26 @@ def _main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.cmd == "emit-rust":
-        from vela.emit_rust import emit_rust
+        from vela.emit_rust import EmitRustError, emit_rust
 
         res = check(prog)
         if not res.ok:
             for e in res.errors:
                 print(f"error: {e}")
             return 1
-        text = emit_rust(prog)
+        try:
+            text = emit_rust(prog)
+        except EmitRustError as e:
+            print(f"error: {e}")
+            return 1
         out = Path(args.out) if args.out else Path("emit") / f"{prog.controllers[0].name.lower()}.rs"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf-8", newline="\n")
         print(f"wrote {out} (IR sketch, not a quiche controller)")
+        if res.observe_only:
+            print("    observe_only=true  passthrough=%s  house_cut=0.58" % (
+                "true" if res.passthrough else "false",
+            ))
         return 0
 
     if args.cmd == "eval":

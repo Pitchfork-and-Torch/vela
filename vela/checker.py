@@ -1166,6 +1166,10 @@ def _has_typed_reconfig(c: Controller) -> bool:
     return True
 
 
+def controller_has_typed_reconfig(c: Controller) -> bool:
+    return _has_typed_reconfig(c)
+
+
 def controller_has_typed_loss(c: Controller) -> bool:
     return _has_typed_loss(c)
 
