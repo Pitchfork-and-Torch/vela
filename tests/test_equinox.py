@@ -223,11 +223,15 @@ controller Ok {
                 }
             ],
         }
+        # Views law: compose must match the controller (or a named view).
+        from vela.parser import parse as _parse
+
+        prog = _parse(src, "equinox.vela")
         rec = build_receipt(
             source=src,
             source_name="equinox.vela",
-            compose=["Detect", "SoftReprobe"],
-            config={"name": "Equinox"},
+            compose=list(prog.controllers[0].compose),
+            config={"name": "Equinox", "view": ""},
             summary=summary,
         )
         self.assertEqual(verify_receipt(rec, source=src), [])

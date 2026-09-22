@@ -205,11 +205,16 @@ def _main(argv: list[str] | None = None) -> int:
         if c.growth_compose:
             print(f"    growth_compose={c.growth_compose}")
         if res.compose_digest:
-            print(f"    digest={res.compose_digest[:16]}")
+            # Compose digest is the silent-operator-swap refuse. Name it compose_digest=
+            print(f"    compose_digest={res.compose_digest[:16]}")
         if res.authority:
             print(f"    authority={res.authority}")
         if res.views:
             print(f"    views={', '.join(res.views)}")
+            from vela.digest import compose_digest as _cd
+
+            for v in prog.views:
+                print(f"    view {v.name} compose_digest={_cd(v.compose)[:16]}")
         if prog.contracts:
             print(f"    contract={prog.contracts[0].name} vs {prog.contracts[0].baseline}")
         return 0

@@ -106,6 +106,13 @@ def build_receipt(
     summary: dict[str, Any],
 ) -> dict[str, Any]:
     rows = list(summary.get("rows") or [])
+    # view="" is the controller compose. A named view is a morphism of the
+    # same controller; claiming the other compose is the views-law refuse.
+    view = config.get("view")
+    if view is None:
+        view = ""
+    else:
+        view = str(view)
     body = {
         "vela": __version__,
         "alg": "sha256",
@@ -114,6 +121,7 @@ def build_receipt(
         "source_digest": source_digest(source),
         "compose": list(compose),
         "compose_digest": compose_digest(compose),
+        "view": view,
         "config_digest": config_digest(config),
         "paths": list(config.get("paths") or []),
         "path_digest": config.get("path_digest") or path_digest(config.get("paths") or []),
@@ -132,6 +140,63 @@ def build_receipt(
     return body
 
 
+
+def bind_compose_to_source(
+    compose: list[str],
+    source: str,
+    *,
+    view: str | None = None,
+) -> list[str]:
+    """Refuse claiming compose A as compose B when source is bound.
+
+    Equinox views law: `vela eval --view Observe` cannot pretend it ran the
+    other compose. Compose digest alone is self-consistent; this binds the
+    list to the program text (controller or a declared view).
+    """
+    from vela.parser import ParseError, parse
+
+    errs: list[str] = []
+    try:
+        prog = parse(source, "receipt-source")
+    except ParseError as e:
+        errs.append(f"source does not parse for compose bind: {e}")
+        return errs
+    if not prog.controllers:
+        errs.append("source has no controller for compose bind")
+        return errs
+    controller = prog.controllers[0]
+    base = list(controller.compose)
+    views = {v.name: list(v.compose) for v in prog.views}
+    got = list(compose)
+
+    if view:  # named view stamped on the receipt
+        if view not in views:
+            errs.append(f"view {view!r} not declared in source")
+            return errs
+        if got != views[view]:
+            errs.append(
+                f"compose does not match view {view} "
+                "(views law: cannot claim compose A as compose B)"
+            )
+        return errs
+
+    # view is "" or None (legacy receipts omit the key).
+    if got == base:
+        return errs
+    for name, mechs in views.items():
+        if got == mechs:
+            errs.append(
+                f"compose matches view {name} but receipt view is unset "
+                "(cannot claim view compose as controller)"
+            )
+            return errs
+    errs.append(
+        "compose does not match controller "
+        "(silent operator swap / views law)"
+    )
+    return errs
+
+
 def verify_receipt(
     receipt: dict[str, Any],
     *,
@@ -144,6 +209,11 @@ def verify_receipt(
 
     A swapped goodput only fails when rows (or an eval summary) are bound.
     `vela receipt --source` alone cannot see the numbers.
+
+    With `--source`, compose is bound to the program: the list must be the
+    controller compose or a declared view. Claiming compose A as compose B
+    (views law / silent operator swap) is an error even when digests match
+    themselves.
     """
     errs: list[str] = []
     if not isinstance(receipt, dict):
@@ -163,6 +233,18 @@ def verify_receipt(
         got = source_digest(source)
         if got != receipt.get("source_digest"):
             errs.append("source_digest does not match provided source")
+        elif receipt.get("compose") is not None:
+            # Views law / silent operator swap: compose must be the
+            # controller or a declared view of this source. Self-hash
+            # alone cannot catch claiming compose A as compose B.
+            view = receipt.get("view")
+            errs.extend(
+                bind_compose_to_source(
+                    list(receipt["compose"]),
+                    source,
+                    view=view if view else None,
+                )
+            )
     if receipt.get("compose") is not None:
         cd = compose_digest(list(receipt["compose"]))
         if cd != receipt.get("compose_digest"):

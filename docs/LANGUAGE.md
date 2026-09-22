@@ -311,9 +311,9 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
 | Cut refinement | `cut(1.2)` |
-| Compose digest | silent operator swap |
-| Eval receipt | a verdict detached from its source; a swapped row without `--eval` |
-| Views | eval of compose A claimed as compose B |
+| Compose digest | silent operator swap; `vela check` prints `compose_digest=<hex>` on Reach |
+| Eval receipt | a verdict detached from its source; a swapped row without `--eval`; compose unbound from source |
+| Views | eval of compose A claimed as compose B; receipt `--source` binds view+compose |
 | Power label | silent n<8 p-value; checker and harness share `power=low` |
 
 Existing `lang vela 0.1` programs still parse. WriteCap stays opt-in.
