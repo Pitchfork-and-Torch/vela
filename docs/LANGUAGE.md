@@ -89,7 +89,7 @@ compose growth = max
 
 Mechanism names are an operator sum. After the list, optional combinators may sit on their own lines inside the controller, or as trailing clauses after the compose list (`compose Detect + SoftReprobe compose cuts = min`).
 
-- `compose cuts = min` -- required when two `hard` epoch cuts share an event. Soft cuts compose as `min` without a clause (check-time and kernel). SoftFlicker 0.85 cannot undo SoftReprobe 0.58.
+- `compose cuts = min` -- required when two `hard` epoch cuts share an event. Soft cuts compose as `min` without a clause (check-time and kernel). SoftFlicker 0.85 cannot undo SoftReprobe 0.58. When SoftFlicker is composed with SoftReprobe, `vela check` stamps `soft-cut-min` / `compose cuts = min` (do not retune 0.58).
 - `compose growth = min | max | sum` -- required when two cwnd raisers share a compose (any pair among `OCE`, `HorizonChase`, `TrimFill`, `QuietReach`, `TrimReclaim`). Wrong picks still check if they are explicit.
 
 Existing programs need neither clause. Shipped flagship examples stay observe-only.
@@ -111,7 +111,7 @@ cuts:   none | soft | hard
 phase:  ack | epoch | both
 ```
 
-The checker rejects two `hard` cuts on the same event unless the author writes `compose cuts = min`. Soft cuts compose as `min(cut_a, cut_b)` (the more conservative cut wins) at check-time *and* in the kernel. SoftFlicker cannot raise the window after the house 0.58 cut. This is the language-level answer to "OCE stacked on SER double-moved the window."
+The checker rejects two `hard` cuts on the same event unless the author writes `compose cuts = min`. Soft cuts compose as `min(cut_a, cut_b)` (the more conservative cut wins) at check-time *and* in the kernel. SoftFlicker cannot raise the window after the house 0.58 cut. This is the language-level answer to "OCE stacked on SER double-moved the window." `vela check` prints `soft-cut-min  (compose cuts = min; SoftFlicker 0.85 cannot raise after 0.58)` when SoftFlicker is present with SoftReprobe (review ablation); SoftReprobe cut stays 0.58.
 
 ### Statistical contracts
 
@@ -348,7 +348,7 @@ See [INGRESS.md](INGRESS.md). Summary:
 |-----|-----------------|
 | No-oracle | `next_capacity` / future PathState (sim freeze-lead peek) |
 | Fairness holdout | a Jain sentence with no `leo_multi` rows |
-| Soft-cut min | SoftFlicker 0.85 raising the window after 0.58 |
+| Soft-cut min | SoftFlicker 0.85 raising the window after 0.58 (`soft-cut-min` / `compose cuts = min` stamp when SoftFlicker+SoftReprobe) |
 
 `vela check examples/reach.vela` prints `no-oracle`. Kernel
 `on_path_hint` always passes `next_capacity_bps=None`. Calendar

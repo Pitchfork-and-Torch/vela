@@ -216,6 +216,8 @@ class CheckResult:
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True
+    # SoftFlicker+SoftReprobe: soft cuts compose as min (0.85 cannot raise after 0.58).
+    soft_cut_min: bool = False
     writecap: str = ""
     fairness: str = ""
     jain_min: float | None = None

@@ -30,7 +30,7 @@ binaries.
 3. **Kinded reconfig.** `on Reconfig match` is a closed taxonomy
    (`RttHop | Flicker`), same shape as `Loss`. On the observe rail
    a bare Reconfig is a type error, and `enter Reprobe(cut: x)` must
-   stay 0.58. SoftFlicker 0.85 dumped seed 7 and stays review.
+   stay 0.58. SoftFlicker 0.85 dumped seed 7 and stays review. When SoftFlicker is composed with SoftReprobe, `vela check` stamps `soft-cut-min` / `compose cuts = min` (runtime min; 0.85 cannot raise after 0.58; do not retune).
 4. **Typed loss.** `on Loss match` is a closed taxonomy
    (`Mobility | Congestive | Unknown`). On the observe rail a bare
    Loss is a type error, Mobility must hold, and Unknown may cut
