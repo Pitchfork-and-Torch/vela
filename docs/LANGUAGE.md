@@ -17,7 +17,7 @@ This document is the complete design: philosophy, syntax, stdlib, flagship contr
 1. **Epoch-typed reactive programming** - signals (`rtt`, `bw`, `delay_ratio`, `p_ho`) fire on ACK, loss, hint, and epoch edges.
 2. **Affine provenance for samples** - a `Sample<T> @ e` cannot be read in epoch `e+1` unless it is explicitly named `prior` (soft, discounted, never a min-RTT). The checker now enforces a use-once calculus per block: a second read of the same Sample is a type error unless the author `let`-binds it. After `enter Reprobe` the epoch has moved, so `rtt` is dead and `prior.rtt` is the discounted copy. Mixing `rtt` and `prior.rtt` in one expression is a provenance error.
 3. **Algebraic loss** - `Loss = Mobility | Congestive | Unknown`. Recovery is type-directed.
-4. **Monoidal mechanism composition** - `Detect + SoftReprobe + IntervalBw` is an operator sum with declared effects. Two cutters on the same event are a compile error unless the author writes `compose cuts = min`.
+4. **Monoidal mechanism composition** - `Detect + SoftReprobe + IntervalBw` is an operator sum with declared effects. Two cutters on the same event are a compile error unless the author writes `compose cuts = min`. `vela check` stamps `effects=...` as the sorted monoid of declared write targets so undeclared side effects fail closed. SoftReprobe house cut stays 0.58.
 5. **Contract-oriented evaluation** - dual-gate, terrestrial, fairness, and confidence intervals are part of the program text.
 
 This is not "Python with nicer names." Python will happily keep a 20 ms min-RTT across a 90 ms hop. VELA will not.
@@ -110,6 +110,8 @@ writes: {cwnd, pace, min_rtt, ...}
 cuts:   none | soft | hard
 phase:  ack | epoch | both
 ```
+
+`vela check` prints `effects=bw|...|reconfig  (monoid writes; undeclared fails closed)` when compose lists Detect, SoftReprobe, IntervalBw, or any other stdlib mech with that schema. A composed mech missing reads/writes/cuts/phase is a type error. SoftReprobe cut stays 0.58.
 
 The checker rejects two `hard` cuts on the same event unless the author writes `compose cuts = min`. Soft cuts compose as `min(cut_a, cut_b)` (the more conservative cut wins) at check-time *and* in the kernel. SoftFlicker cannot raise the window after the house 0.58 cut. This is the language-level answer to "OCE stacked on SER double-moved the window."
 

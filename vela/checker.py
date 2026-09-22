@@ -34,7 +34,9 @@ from vela.types import (
     STDLIB_MODULES,
     WRITE_TARGETS,
     CheckResult,
+    effects_stamp_line,
     is_observe_only,
+    monoidal_write_effects,
     review_writes_in,
 )
 
@@ -73,6 +75,14 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        # Monoidal effects stamp: Detect|SoftReprobe|IntervalBw|... write union.
+        # Undeclared schema on a composed stdlib mech fails closed.
+        writes, eff_errs = monoidal_write_effects(first.compose)
+        for msg in eff_errs:
+            res.ok = False
+            res.errors.append(f"{first.name}: {msg}")
+        if writes and not eff_errs:
+            res.effects = effects_stamp_line(writes)
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:

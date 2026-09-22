@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "effects-monoid-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "vela check stamps effects= monoid writes when compose lists Detect|SoftReprobe|IntervalBw|...; undeclared schema fails closed. SoftReprobe 0.58.",
+      "status": "done"
     }
   ]
 }

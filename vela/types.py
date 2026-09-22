@@ -193,6 +193,41 @@ STDLIB_MECHANISMS = {
     },
 }
 
+
+# Mechs declare reads/writes/cuts/phase (LANGUAGE monoidal composition).
+# Detect + SoftReprobe + IntervalBw is the operator-sum example.
+EFFECTS_SCHEMA_KEYS = ("reads", "writes", "cuts", "phase")
+
+
+def monoidal_write_effects(names: Iterable[str]) -> tuple[list[str], list[str]]:
+    """Union of declared write targets; errors if a known mech lacks schema.
+
+    Unknown names are ignored here (checker already fail-closes them).
+    Undeclared effects (missing reads/writes/cuts/phase) fail closed.
+    """
+    writes: set[str] = set()
+    errors: list[str] = []
+    for n in names:
+        decl = STDLIB_MECHANISMS.get(n)
+        if decl is None:
+            continue
+        for key in EFFECTS_SCHEMA_KEYS:
+            if key not in decl:
+                errors.append(
+                    f"undeclared effects: {n} missing {key} "
+                    "(monoid compose requires reads/writes/cuts/phase)"
+                )
+        writes |= set(decl.get("writes", ()))
+    return sorted(writes), errors
+
+
+def effects_stamp_line(writes: list[str]) -> str:
+    """Visible check stamp body: a|b|c (empty => empty string)."""
+    if not writes:
+        return ""
+    return "|".join(writes)
+
+
 FRESH_TYPES = {"Sample", "Interval", "min_rtt", "bw"}
 
 
@@ -220,6 +255,7 @@ class CheckResult:
     fairness: str = ""
     jain_min: float | None = None
     cuts_compose: str = ""
+    effects: str = ""
     path_bound: str = ""
     path_digest: str = ""
 
