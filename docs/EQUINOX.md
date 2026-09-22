@@ -57,6 +57,12 @@ binaries.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.
+10. **Affine samples.** `Sample` / `Interval` names are use-once per
+   handler block. A second read of the same Sample is a type error
+   unless the author `let`-binds it. After `enter Reprobe` the epoch
+   has moved: `rtt` is dead and `prior.rtt` is the discounted remnant.
+   `vela check` stamps `affine-samples` (second Sample read refuse;
+   Sample @ e use-once; e+1 is prior) on Reach and Equinox.
 
 ## Commands
 

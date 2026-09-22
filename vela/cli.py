@@ -182,7 +182,7 @@ def _main(argv: list[str] | None = None) -> int:
         if res.no_oracle:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:
-            print("    affine  (Sample @ e is use-once; e+1 is prior)")
+            print("    affine-samples  (second Sample read refuse; Sample @ e use-once; e+1 is prior)")
         if res.hybrid:
             print("    hybrid  (on = jump; when/every = flow)")
         if res.writecap == "linear":
