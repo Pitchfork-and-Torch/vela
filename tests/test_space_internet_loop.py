@@ -361,6 +361,10 @@ class TestSafeOnce(unittest.TestCase):
 class TestBacklogStarlinkItems(unittest.TestCase):
     def test_repo_backlog_has_safe_pending_starlink_items(self) -> None:
         data = json.loads((ROOT / "lab" / "BACKLOG.json").read_text(encoding="utf-8"))
+        by_id = {it["id"]: it for it in data["items"]}
+        for done in ("path-realism-rails", "hint-ingress-fail-closed"):
+            self.assertEqual(by_id[done]["status"], "done", done)
+            self.assertEqual(by_id[done].get("pr"), 28, done)
         pending = [
             it
             for it in data["items"]
@@ -368,8 +372,6 @@ class TestBacklogStarlinkItems(unittest.TestCase):
         ]
         ids = {it["id"] for it in pending}
         for need in (
-            "path-realism-rails",
-            "hint-ingress-fail-closed",
             "dual-gate-honesty-label",
             "power-label-surface",
         ):
