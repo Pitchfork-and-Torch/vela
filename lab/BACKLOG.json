@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "power-low-cli-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Eval/receipt CLI stamp power=low n<8 not journal (align check warning + harness).",
+      "status": "done"
     }
   ]
 }

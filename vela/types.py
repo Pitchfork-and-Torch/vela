@@ -24,6 +24,19 @@ def eval_power(n_seeds: int) -> str:
     return "low" if int(n_seeds) < POWER_OK_MIN_SEEDS else "ok"
 
 
+def power_cli_line(n_seeds: int) -> str:
+    """One ASCII CLI stamp shared by check / eval / receipt.
+
+    n < POWER_OK_MIN_SEEDS => power=low. Means ACCEPT may still be legal.
+    Never a journal / p-value claim. SoftReprobe cut stays 0.58 elsewhere.
+    """
+    n = int(n_seeds)
+    power = eval_power(n)
+    if power == "low":
+        return f"power=low  n={n}  n<{POWER_OK_MIN_SEEDS}  not journal"
+    return f"power=ok  n={n}  n>={POWER_OK_MIN_SEEDS}"
+
+
 def assert_names_jain(left: str) -> bool:
     s = str(left).lower().replace(" ", "")
     return "jain" in s or "fairness" in s
@@ -213,6 +226,7 @@ class CheckResult:
     typed_loss: bool = False
     passthrough: bool = False
     power: str = ""
+    n_seeds: int | None = None
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True
