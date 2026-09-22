@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "freeze-ease-cap",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "PredictiveFreeze wrong-calendar ease capped at 6%. vela check stamps freeze-ease<=6%. Observe pace*=k above cap is a type error. Kernel capped_pre_ho_pace.",
+      "status": "done"
     }
   ]
 }

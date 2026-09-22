@@ -179,6 +179,12 @@ def _main(argv: list[str] | None = None) -> int:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
+        if res.freeze_ease_cap is not None:
+            pct = res.freeze_ease_cap * 100.0
+            print(
+                f"    freeze-ease<={pct:g}%  "
+                "(wrong calendar cannot stall)"
+            )
         if res.no_oracle:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:

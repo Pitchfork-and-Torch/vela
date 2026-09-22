@@ -4,7 +4,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from vela.ast import Program
-from vela.types import assert_names_jain, is_observe_only, parse_jain_floor
+from vela.types import (
+    HOUSE_PRE_HO_PACE,
+    assert_names_jain,
+    is_observe_only,
+    parse_jain_floor,
+)
 
 
 @dataclass
@@ -21,7 +26,7 @@ class VelaConfig:
     chase_rtts: float = 2.60
     chase_bdp_div: float = 1.26
     rollback_delay: float = 1.40
-    pre_ho_pace: float = 0.94
+    pre_ho_pace: float = HOUSE_PRE_HO_PACE
     trim_hold: bool = False
     trim_fill: bool = False
     trim_reclaim: bool = False

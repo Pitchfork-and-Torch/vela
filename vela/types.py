@@ -9,6 +9,10 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+# PredictiveFreeze wrong-calendar pace ease. Remaining fraction is 0.94.
+# Ease above 6% under observe is a type error so a wrong calendar cannot stall.
+HOUSE_FREEZE_EASE_CAP = 0.06
+HOUSE_PRE_HO_PACE = 1.0 - HOUSE_FREEZE_EASE_CAP  # 0.94
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
 # Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays
@@ -222,6 +226,7 @@ class CheckResult:
     cuts_compose: str = ""
     path_bound: str = ""
     path_digest: str = ""
+    freeze_ease_cap: float | None = None
 
     def raise_if_error(self) -> None:
         if not self.ok:

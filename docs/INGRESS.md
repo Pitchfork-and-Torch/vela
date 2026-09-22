@@ -34,7 +34,12 @@ py -3 -m unittest discover -s tests -v
 ```
 
 `vela check examples/reach.vela` must print `observe-only`,
-`passthrough`, and `no-oracle`.
+`passthrough`, `freeze-ease<=6%`, and `no-oracle`.
+
+**Freeze ease cap (Physics).** PredictiveFreeze wrong-calendar pace
+ease is capped at 6% (`HOUSE_FREEZE_EASE_CAP`; remaining
+`pre_ho_pace` 0.94). Under observe, `pace *= k` with ease above 6%
+is a type error. The kernel clamps via `capped_pre_ho_pace`.
 
 `vela eval examples/fair.vela --fast` is INCOMPLETE for Jain
 (fast skips `leo_multi`). That is honest.

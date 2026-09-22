@@ -259,7 +259,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 ## F. Limitations (language and algorithm)
 
-**Physics.** VELA cannot see the next satellite before the path changes unless a real hint exists. `p_ho` is a calendar estimate from past gaps. Irregular hops (ISL reroute, weather, beam reshape) will fool the calendar. Predictive freeze then becomes a mild pace ease at the wrong time. The kernel caps that ease (default 6%) so a wrong calendar cannot stall the flow.
+**Physics.** VELA cannot see the next satellite before the path changes unless a real hint exists. `p_ho` is a calendar estimate from past gaps. Irregular hops (ISL reroute, weather, beam reshape) will fool the calendar. Predictive freeze then becomes a mild pace ease at the wrong time. The kernel caps that ease (default 6%, `HOUSE_FREEZE_EASE_CAP`, remaining `pre_ho_pace` 0.94) so a wrong calendar cannot stall the flow. This is a checkable language/kernel law, not silent magic: `vela check` stamps `freeze-ease<=6%` when `PredictiveFreeze` is composed or observe `Calendar` can drive freeze; under observe, `pace *= k` with ease above 6% (`k < 0.94`) is a type error; under review it is a warning. The kernel clamps `VelaConfig.pre_ho_pace` through `capped_pre_ho_pace`.
 
 **Information.** IntervalBw needs samples. The first 1-2 RTT of an epoch are supposed to be uncertain. Forcing a tight interval early is the same bug as a stale min-RTT, with extra ceremony.
 
@@ -284,11 +284,11 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority; split/borrow) |
-| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
+| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, freeze-ease<=6%, power=low n<8, no-oracle, leo_multi Jain |
 | `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
-| `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
+| `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts, freeze ease cap 6%) |
 | `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
 | `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
@@ -308,6 +308,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
+| Freeze ease cap | observe `pace *= k` with ease > 6% (wrong calendar stall) |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
 | Cut refinement | `cut(1.2)` |

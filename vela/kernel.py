@@ -8,11 +8,39 @@ from typing import TYPE_CHECKING, Optional
 from vela.compose import apply_composed_cut
 from vela.ir import VelaConfig
 from vela.oracle import refuse_oracle_hint
+from vela.types import HOUSE_FREEZE_EASE_CAP, HOUSE_PRE_HO_PACE
 
 if TYPE_CHECKING:
     pass
 
 MSS = 1200
+
+
+def freeze_ease_of_remaining(remaining: float) -> float:
+    """Ease fraction from a remaining pace multiplier (0.94 -> 0.06)."""
+    rem = float(remaining)
+    if rem <= 0.0 or rem > 1.0:
+        return 1.0
+    return max(0.0, 1.0 - rem)
+
+
+def freeze_ease_ok(ease: float) -> bool:
+    """True when ease is within the house PredictiveFreeze cap."""
+    return float(ease) <= HOUSE_FREEZE_EASE_CAP + 1e-12
+
+
+def capped_pre_ho_pace(requested: float | None = None) -> float:
+    """House PredictiveFreeze remaining pace.
+
+    Wrong-calendar freeze must not stall the flow. Ease above
+    HOUSE_FREEZE_EASE_CAP (default 6%) clamps to HOUSE_PRE_HO_PACE.
+    """
+    rem = HOUSE_PRE_HO_PACE if requested is None else float(requested)
+    if rem <= 0.0 or rem > 1.0:
+        return HOUSE_PRE_HO_PACE
+    if not freeze_ease_ok(freeze_ease_of_remaining(rem)):
+        return HOUSE_PRE_HO_PACE
+    return rem
 
 
 def _median(xs: list[float]) -> float:
@@ -42,6 +70,8 @@ class HorizonCCA:
 
     def __init__(self, cfg: Optional[VelaConfig] = None, **kw):
         self.cfg = cfg or VelaConfig()
+        # Physics law: wrong-calendar PredictiveFreeze ease is capped at 6%.
+        self.cfg.pre_ho_pace = capped_pre_ho_pace(self.cfg.pre_ho_pace)
         self.name = self.cfg.name or "Horizon"
         self._leo = self._make_leo(**kw)
         self._ho_gaps: deque[float] = deque(maxlen=8)
