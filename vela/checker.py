@@ -18,6 +18,8 @@ from vela.types import (
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    HOUSE_FREEZE_EASE_CAP,
+    HOUSE_PRE_HO_PACE,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -73,6 +75,8 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        if controller_stamps_freeze_ease(first):
+            res.freeze_ease_cap = HOUSE_FREEZE_EASE_CAP
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:
@@ -279,6 +283,7 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
                 _check_house_cut_in_stmts(c.name, arm.body, res)
 
     _check_passthrough_cruise(c, res)
+    _check_freeze_ease(c, res)
     _check_hint_surface(c, prog, res)
     _check_oracle(c, res)
     hints = _hint_names(c)
@@ -992,6 +997,70 @@ def house_cut_error(cname: str, n: float) -> str:
         f"{cname}: observe-only Reprobe cut({n}) must be {HOUSE_ENDPOINT_CUT} "
         "(house endpoint; SoftFlicker is review)"
     )
+
+
+def freeze_ease_error(cname: str, ease: float) -> str:
+    pct = ease * 100.0
+    cap_pct = HOUSE_FREEZE_EASE_CAP * 100.0
+    return (
+        f"{cname}: observe-only freeze ease {pct:g}% exceeds house cap "
+        f"{cap_pct:g}% (wrong calendar cannot stall; "
+        f"pre_ho_pace>={HOUSE_PRE_HO_PACE})"
+    )
+
+
+def freeze_ease_warning(cname: str, ease: float) -> str:
+    pct = ease * 100.0
+    cap_pct = HOUSE_FREEZE_EASE_CAP * 100.0
+    return (
+        f"{cname}: freeze ease {pct:g}% above house cap {cap_pct:g}% "
+        f"(review; wrong calendar can stall)"
+    )
+
+
+def controller_stamps_freeze_ease(c: Controller) -> bool:
+    """Stamp when PredictiveFreeze or observe Calendar can drive freeze ease."""
+    if "PredictiveFreeze" in c.compose:
+        return True
+    return c.posture == "observe" and "Calendar" in c.compose
+
+
+def _pace_scale_remaining(st: Stmt) -> float | None:
+    """Literal remaining fraction from `pace *= k` (k in (0, 1])."""
+    if st.kind != "assign" or st.name != "pace":
+        return None
+    op = str(st.args[0]) if st.args else "="
+    if op != "*=":
+        return None
+    n = _lit_num(st.expr)
+    if n is None:
+        return None
+    if not (0.0 < n <= 1.0):
+        return None
+    return n
+
+
+def _check_freeze_ease(c: Controller, res: CheckResult) -> None:
+    """Refuse/warn pace*=k freeze ease above HOUSE_FREEZE_EASE_CAP.
+
+    Physics: a wrong calendar must not stall the flow. Under observe the
+    house ease cap is a type error. Under review it is a warning so
+    ablation stays named.
+    """
+    bodies = [w.body for w in c.whens] + [e.body for e in c.everys]
+    for body in bodies:
+        for st in _flatten_stmts(body):
+            rem = _pace_scale_remaining(st)
+            if rem is None:
+                continue
+            ease = 1.0 - rem
+            if ease <= HOUSE_FREEZE_EASE_CAP + 1e-12:
+                continue
+            if c.posture == "observe":
+                res.ok = False
+                res.errors.append(freeze_ease_error(c.name, ease))
+            else:
+                res.warnings.append(freeze_ease_warning(c.name, ease))
 
 
 def power_low_warning(name: str, n_seeds: int) -> str:
