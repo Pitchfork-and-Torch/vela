@@ -55,7 +55,9 @@ section J. `vela receipt --eval` is what makes a swapped number
 fail. `--fast` stamps `gate=fast`.
 
 0.4.3 locks the gate label and lands affine samples, linear
-WriteCap, and hybrid automata. See `docs/LANGUAGE.md` Equinox
+WriteCap, and hybrid automata. Observe flagships stamp
+`writecap=absent|budget|linear` on `vela check` (Reach absent;
+Equinox budget at authority 0) without enabling cruise writes. See `docs/LANGUAGE.md` Equinox
 laws and section K. `--fast` cannot become house. Workers write
 the result row to `--out`. ACCEPT on `gate=fast` is not a
 dual-gate win.

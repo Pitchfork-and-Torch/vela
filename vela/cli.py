@@ -189,6 +189,11 @@ def _main(argv: list[str] | None = None) -> int:
             print("    writecap=linear  (split/borrow; no ambient write)")
         elif res.writecap == "budget":
             print("    writecap=budget  (integer authority)")
+        elif res.writecap == "absent":
+            print(
+                "    writecap=absent  "
+                "(no WriteCap; observe flagship, no cruise write)"
+            )
         if res.path_bound:
             print(f"    path={res.path_bound}")
         if res.fairness:
@@ -207,7 +212,8 @@ def _main(argv: list[str] | None = None) -> int:
         if res.compose_digest:
             print(f"    digest={res.compose_digest[:16]}")
         if res.authority:
-            print(f"    authority={res.authority}")
+            auth = ", ".join(f"{k}:{v}" for k, v in res.authority.items())
+            print(f"    authority={{{auth}}}")
         if res.views:
             print(f"    views={', '.join(res.views)}")
         if prog.contracts:

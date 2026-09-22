@@ -740,42 +740,47 @@ def _check_cuts_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -> Non
 def writecap_exhausted_error(cname: str, writes: int, budget: int) -> str:
     return (
         f"{cname}: WriteCap exhausted ({writes} writes, budget {budget}). "
-        f"No ambient authority. Raise `authority` or remove the write."
+        f"No ambient authority after a Starlink hop/flicker epoch. "
+        f"Raise `authority` or remove the cruise write."
     )
 
 
 def writecap_ambient_error(cname: str, what: str) -> str:
     return (
         f"{cname}: cruise write `{what}` without borrow "
-        "(WriteCap is linear; split/borrow)"
+        "(WriteCap is linear; split/borrow once per epoch; "
+        "Starlink hop/flicker must not get a silent ambient cwnd write)"
     )
 
 
 def writecap_reuse_error(cname: str, name: str) -> str:
     return (
         f"{cname}: WriteCap {name} already consumed "
-        "(linear; split or borrow once)"
+        "(linear; split or borrow once per epoch; "
+        "a second hop/flicker write needs a fresh split child)"
     )
 
 
 def writecap_unknown_error(cname: str, name: str) -> str:
     return (
         f"{cname}: unknown WriteCap {name} "
-        "(declare WriteCap or split a parent into this name)"
+        "(declare WriteCap or split a parent into this name; "
+        "observe Reach has no WriteCap at all)"
     )
 
 
 def writecap_target_error(cname: str, cap: str, target: str, got: str) -> str:
     return (
         f"{cname}: borrow {cap} is WriteCap<{target}>, cannot write {got} "
-        "(linear target)"
+        "(linear target; pace under a cwnd cap is not a Starlink cruise escape)"
     )
 
 
 def writecap_split_sum_error(cname: str, parent: str, need: int, got: int) -> str:
     return (
         f"{cname}: split {parent} weights sum to {got}, parent budget {need} "
-        "(linear; partition the budget)"
+        "(linear; partition the epoch budget exactly; "
+        "unweighted arity must equal authority)"
     )
 
 
@@ -840,6 +845,9 @@ def _check_write_cap(c: Controller, res: CheckResult) -> None:
         _collect_cap_traffic(body, None, borrows, writes)
     linear = bool(c.splits) or bool(borrows)
     if not caps and not linear:
+        # Observe flagships (Reach) declare no WriteCap: stamp absent
+        # so vela check cannot silently omit authority honesty.
+        res.writecap = "absent"
         return
     if not linear:
         n_writes = sum(1 for owner, _st in writes if owner is None)

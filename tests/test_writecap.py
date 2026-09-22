@@ -57,7 +57,7 @@ class TestWriteCapBudget(unittest.TestCase):
         src = (EX / "reach.vela").read_text(encoding="utf-8")
         res = check(parse(src, "reach.vela"))
         self.assertTrue(res.ok, res.errors)
-        self.assertEqual(res.writecap, "")
+        self.assertEqual(res.writecap, "absent")
         self.assertTrue(res.passthrough)
         self.assertTrue(res.affine)
         self.assertTrue(res.no_oracle)

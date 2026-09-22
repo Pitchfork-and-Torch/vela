@@ -306,7 +306,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Level vs integrator | `when` / `every` `{ pace *= k }` without `integrate when` / `integrate every` |
 | Affine samples | second Sample read in one block; Sample @ e after `enter Reprobe` |
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
-| WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
+| WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split; silent ambient cwnd after Starlink hop/flicker |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
@@ -323,7 +323,13 @@ fill, hold` consumes `cap` and partitions the budget (unweighted: one
 each, parent budget must equal arity; or `fill:1, hold:1`). `borrow fill {
 cwnd = ... }` spends that child. A second borrow of the same name, a write
 outside borrow after split, or `pace` under `WriteCap<cwnd>` is a type
-error. `vela check` stamps `writecap=linear` or `writecap=budget`.
+error. Starlink hop/flicker epochs do not unlock ambient cruise writes:
+split/borrow is once per epoch budget, and a silent ambient `cwnd` write
+is the same bug as a silent SoftReprobe cut retune. `vela check` stamps
+`writecap=linear`, `writecap=budget`, or `writecap=absent` (Reach: no
+WriteCap declared; observe flagship, no cruise write). Equinox prints
+`authority={cwnd:0, pace:0}` with `writecap=budget`. Absent is honesty,
+not a write grant.
 Reconfig match is required on the observe rail (`RttHop | Flicker`,
 house cut 0.58). Observe Loss must match `Mobility | Congestive | Unknown`
 (Mobility holds; Unknown needs `delay_ratio > 1.35`). Observe `when`/`every`
