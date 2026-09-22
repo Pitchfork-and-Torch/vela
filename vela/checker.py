@@ -18,6 +18,8 @@ from vela.types import (
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    HOUSE_PRIOR_DISCOUNT_WINDOW_S,
+    HOUSE_PRIOR_SCALE_DISCOUNT,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -69,6 +71,8 @@ def check(prog: Program) -> CheckResult:
         res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
         res.hint_fail_closed = _has_hint_surface(first)
         res.typed_reconfig = _has_typed_reconfig(first)
+        if controller_stamps_prior_scale_discount(first):
+            res.prior_scale_discount = HOUSE_PRIOR_SCALE_DISCOUNT
         res.typed_loss = _has_typed_loss(first)
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
@@ -281,6 +285,7 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
     _check_passthrough_cruise(c, res)
     _check_hint_surface(c, prog, res)
     _check_oracle(c, res)
+    _check_prior_scale_discount(c, res)
     hints = _hint_names(c)
 
     intervals = {s.name for s in c.signals if s.typ.name == "Interval"}
@@ -1566,3 +1571,213 @@ def _walk_interval_point(
     _walk_interval_point(cname, expr.right, intervals, proved, res)
     for a in expr.args:
         _walk_interval_point(cname, a, intervals, proved, res)
+
+
+def controller_stamps_prior_scale_discount(c: Controller) -> bool:
+    """Stamp when SoftReprobe or IntervalBw can carry prior.bw/prior.bdp."""
+    return "SoftReprobe" in c.compose or "IntervalBw" in c.compose
+
+
+def prior_scale_discount_error(cname: str, detail: str) -> str:
+    cap = HOUSE_PRIOR_SCALE_DISCOUNT
+    win = HOUSE_PRIOR_DISCOUNT_WINDOW_S
+    return (
+        f"{cname}: observe-only refuses {detail} in the first {win:g}s "
+        f"of a new epoch (prior.bw/prior.bdp mandatory discount "
+        f"scale<={cap:g}; undiscounted prior is a stale min-RTT)"
+    )
+
+
+def prior_scale_discount_warning(cname: str, detail: str) -> str:
+    cap = HOUSE_PRIOR_SCALE_DISCOUNT
+    win = HOUSE_PRIOR_DISCOUNT_WINDOW_S
+    return (
+        f"{cname}: {detail} in the first {win:g}s of a new epoch "
+        f"(review; prior.bw/prior.bdp mandatory discount scale<={cap:g})"
+    )
+
+
+def _expr_has_prior_scale_name(expr, names: frozenset[str]) -> bool:
+    """True if expr roots at prior.<name> for name in names."""
+    if expr is None or not hasattr(expr, "kind"):
+        return False
+    if expr.kind == "attr" and expr.left is not None:
+        if (
+            expr.name in names
+            and expr.left.kind == "name"
+            and expr.left.name == "prior"
+        ):
+            return True
+        if _expr_has_prior_scale_name(expr.left, names):
+            return True
+    if _expr_has_prior_scale_name(getattr(expr, "left", None), names):
+        return True
+    if _expr_has_prior_scale_name(getattr(expr, "right", None), names):
+        return True
+    return any(
+        _expr_has_prior_scale_name(a, names)
+        for a in getattr(expr, "args", []) or []
+        if hasattr(a, "kind")
+    )
+
+
+_PRIOR_SCALE_NAMES = frozenset({"bw", "bdp"})
+
+
+def _prior_scale_factor(expr) -> float | None:
+    """Literal scale on prior.bw/prior.bdp, or 1.0 for bare prior.*.
+
+    Recognizes: prior.bw, prior.bdp, k * prior.bw, prior.bw * k,
+    and one attr level (prior.bw.mid). Returns None when the expr is
+    not a prior.bw/prior.bdp scale form (or scale is non-literal).
+    """
+    if expr is None or not hasattr(expr, "kind"):
+        return None
+    # bare prior.bw / prior.bdp / prior.bw.mid
+    if expr.kind == "attr":
+        if _expr_has_prior_scale_name(expr, _PRIOR_SCALE_NAMES):
+            # attr-only: treat as scale 1.0 unless wrapped in *
+            # But prior.bw.mid is still scale 1.0 of the prior interval.
+            if expr.name in _PRIOR_SCALE_NAMES or (
+                expr.left is not None
+                and expr.left.kind == "attr"
+                and expr.left.name in _PRIOR_SCALE_NAMES
+            ):
+                # Ensure no other non-prior operands hide here.
+                return 1.0
+        return None
+    if expr.kind == "binop" and expr.name == "*":
+        left, right = expr.left, expr.right
+        n_left = _lit_num(left)
+        n_right = _lit_num(right)
+        if n_left is not None and _expr_has_prior_scale_name(right, _PRIOR_SCALE_NAMES):
+            return float(n_left)
+        if n_right is not None and _expr_has_prior_scale_name(left, _PRIOR_SCALE_NAMES):
+            return float(n_right)
+        return None
+    return None
+
+
+def _prior_scale_detail(st: Stmt) -> str | None:
+    """Detail string when assign uses prior.bw/prior.bdp above the cap."""
+    if st.kind != "assign":
+        return None
+    # Targets that carry epoch scale from prior.
+    if st.name not in ("bw", "bdp", "cwnd", "pace"):
+        return None
+    scale = _prior_scale_factor(st.expr)
+    if scale is None:
+        return None
+    if scale <= HOUSE_PRIOR_SCALE_DISCOUNT + 1e-12:
+        return None
+    which = "prior.bw"
+    if _expr_has_prior_scale_name(st.expr, frozenset({"bdp"})):
+        which = "prior.bdp"
+    return f"{st.name} = {scale:g} * {which}"
+
+
+def _pred_proves_early_prior_window(expr) -> bool:
+    """Predicate claims age within first HOUSE_PRIOR_DISCOUNT_WINDOW_S seconds."""
+    if expr is None or not hasattr(expr, "kind"):
+        return False
+    if expr.kind != "binop":
+        return False
+    op = expr.name
+    left, right = expr.left, expr.right
+    names: set[str] = set()
+
+    def collect(e) -> None:
+        if e is None or not hasattr(e, "kind"):
+            return
+        if e.kind == "name":
+            names.add(e.name)
+        elif e.kind == "attr":
+            names.add(e.name)
+            collect(e.left)
+        collect(getattr(e, "left", None))
+        collect(getattr(e, "right", None))
+        for a in getattr(e, "args", []) or []:
+            if hasattr(a, "kind"):
+                collect(a)
+
+    collect(left)
+    collect(right)
+    early_keys = {"age", "epoch_age", "t_since_reconfig", "reconfig_age"}
+    if names & early_keys:
+        num = _lit_num(right) if _lit_num(right) is not None else _lit_num(left)
+        if num is not None and op in ("<", "<="):
+            if num <= float(HOUSE_PRIOR_DISCOUNT_WINDOW_S):
+                return True
+        # age < 2 * s / age < 2s literal already covered; also age < 2 * unit
+        if right is not None and right.kind == "binop" and right.name == "*":
+            n = _lit_num(right.left) or _lit_num(right.right)
+            if n is not None and op in ("<", "<=") and n <= float(HOUSE_PRIOR_DISCOUNT_WINDOW_S):
+                return True
+    return _pred_proves_early_prior_window(left) or _pred_proves_early_prior_window(right)
+
+
+def _stmts_after_enter_local(stmts: list[Stmt]) -> list[Stmt]:
+    out: list[Stmt] = []
+    seen = False
+    for st in stmts:
+        if st.kind == "enter":
+            seen = True
+            continue
+        if seen:
+            out.append(st)
+            if st.body:
+                out.extend(_flatten_stmts(st.body))
+    return out
+
+
+def _record_prior_scale(
+    c: Controller, res: CheckResult, detail: str
+) -> None:
+    if c.posture == "observe":
+        res.ok = False
+        res.errors.append(prior_scale_discount_error(c.name, detail))
+    else:
+        res.warnings.append(prior_scale_discount_warning(c.name, detail))
+
+
+def _scan_prior_scale_stmts(c: Controller, res: CheckResult, stmts: list[Stmt]) -> None:
+    for st in _flatten_stmts(stmts):
+        detail = _prior_scale_detail(st)
+        if detail is not None:
+            _record_prior_scale(c, res, detail)
+
+
+def _check_prior_scale_discount(c: Controller, res: CheckResult) -> None:
+    """Refuse undiscounted prior.bw/prior.bdp in the first 2s of a new epoch.
+
+    Freshness law (LANGUAGE.md): kernel stores last-epoch scale as
+    prior.bw / prior.bdp with mandatory discount <= 0.75 in the first
+    HOUSE_PRIOR_DISCOUNT_WINDOW_S of a new epoch. Under observe, assigning
+    bw/bdp/cwnd/pace from prior.bw/prior.bdp at scale > 0.75 (including
+    bare prior.* = 1.0) after Reconfig/enter or under an early-age when
+    is a type error. Review warns so ablation stays named.
+    """
+    if not controller_stamps_prior_scale_discount(c):
+        return
+
+    for o in c.ons:
+        if o.event == "Reconfig":
+            # Reconfig is an epoch edge -- always inside the early window.
+            _scan_prior_scale_stmts(c, res, o.body)
+            for arm in o.match_arms:
+                _scan_prior_scale_stmts(c, res, arm.body)
+        else:
+            _scan_prior_scale_stmts(c, res, _stmts_after_enter_local(o.body))
+            for arm in o.match_arms:
+                _scan_prior_scale_stmts(
+                    c, res, _stmts_after_enter_local(arm.body)
+                )
+
+    for w in c.whens:
+        if _pred_proves_early_prior_window(w.pred):
+            _scan_prior_scale_stmts(c, res, w.body)
+        else:
+            _scan_prior_scale_stmts(c, res, _stmts_after_enter_local(w.body))
+    for e in c.everys:
+        _scan_prior_scale_stmts(c, res, _stmts_after_enter_local(e.body))
+

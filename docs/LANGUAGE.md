@@ -52,7 +52,7 @@ use std.eval
 | `Hint<T>` | External signal (ASCENT-D, Orb, orbital). Fail-closed: corrupt => `None`. |
 | `Contract` | Multi-seed assertion set. Not executable on the packet path. |
 
-**Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`. The checker now rejects that assign.
+**Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`. The checker now rejects that assign. Under observe, `bw`/`bdp`/`cwnd`/`pace` from `prior.bw`/`prior.bdp` at scale `> 0.75` (including bare `prior.*`) in the first 2 s after Reconfig/enter is a type error. `vela check` stamps `prior-scale-discount<=0.75` when SoftReprobe or IntervalBw is composed; do not retune.
 
 **Affine law.** `Sample` / `Interval` names (and ambient `min_rtt` / `bw`) are affine in each handler block. One statement may mention `rtt` twice (`explore: 1.15 * rtt, fill: 1.85 * rtt` is one use). A second statement must `let r = rtt` first. Guards (`when rtt > 20ms`, `bw.n >= 2`) do not consume. `enter Reprobe` advances the epoch: later reads of the current name are type errors; `prior.x` is the legal remnant. `vela check` stamps `affine` when the law holds.
 
