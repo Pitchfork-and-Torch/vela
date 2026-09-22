@@ -174,7 +174,11 @@ def _main(argv: list[str] | None = None) -> int:
         if res.hint_fail_closed:
             print("    hint=fail-closed  (missing is None, not a hop oracle)")
         if res.typed_reconfig:
-            print("    reconfig=RttHop|Flicker  (house cut 0.58)")
+            kinds = res.reconfig_kinds or "RttHop|Flicker"
+            print(
+                f"    reconfig={kinds}  "
+                "(kinded match required; SoftFlicker review-only)"
+            )
         if res.typed_loss:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:

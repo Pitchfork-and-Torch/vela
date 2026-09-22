@@ -31,6 +31,8 @@ binaries.
    (`RttHop | Flicker`), same shape as `Loss`. On the observe rail
    a bare Reconfig is a type error, and `enter Reprobe(cut: x)` must
    stay 0.58. SoftFlicker 0.85 dumped seed 7 and stays review.
+   `vela check` stamps `reconfig=RttHop|Flicker` (kinded match required;
+   SoftFlicker review-only); do not retune 0.58.
 4. **Typed loss.** `on Loss match` is a closed taxonomy
    (`Mobility | Congestive | Unknown`). On the observe rail a bare
    Loss is a type error, Mobility must hold, and Unknown may cut
