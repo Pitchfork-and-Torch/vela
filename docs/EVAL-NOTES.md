@@ -131,3 +131,14 @@ Isolated workers. `leo_fast_ho` seed 7, 45s. Observe-only Reach.
 | Reach | 88.65 | 108.4 |
 
 MATCH within 0.05 Mbps / 0.2 ms. Locked Leo rail held. Not a dual-gate house-gate claim. JSON: `results/eval_reach-passthrough.json`.
+
+## L. Efficacy summary line (VELA cook 2026-09-22)
+
+`vela eval` and `vela receipt` print one ASCII **efficacy** line when fields
+are present:
+
+`eval_law` · `dead_seconds` (hop / RttHop) · `flicker_dead_ms` (Flicker) · `power`
+
+Formatter: `vela/eval_summary.py`. Does not recompute hop/flicker dead metrics
+(open cooks #46 / #53 stamp those blocks). SoftReprobe cut 0.58 held on the
+line. Observe-only. No dish Mbps.

@@ -132,6 +132,11 @@ def _main(argv: list[str] | None = None) -> int:
             f"verdict={rec.get('verdict')}  gate={rec.get('gate') or '-'}  "
             f"rows={bound}"
         )
+        # One honest Starlink efficacy surface (eval_law / hop dead_seconds /
+        # flicker_dead_ms / power when present). Helpers understand #46/#53 shapes.
+        from vela.eval_summary import print_efficacy_summary
+
+        print_efficacy_summary(summary, receipt=rec)
         if summary is None:
             print("    pass --eval to bind seed rows (a swapped number fails then)")
         return 0
@@ -298,8 +303,26 @@ def _main(argv: list[str] | None = None) -> int:
             for e in errs:
                 print(f"error: {e}")
             return 1
-        dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
+        dump_keys = [
+            k
+            for k in (
+                "verdict",
+                "power",
+                "gate",
+                "eval_law",
+                "dead_seconds",
+                "flicker_dead_ms",
+                "asserts",
+                "tables",
+            )
+            if k in summary
+        ]
         print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
+        # Efficacy surface: eval_law + hop dead_seconds + flicker_dead_ms + power
+        # on one line when present (forward-compat with open #46 / #53).
+        from vela.eval_summary import print_efficacy_summary
+
+        print_efficacy_summary(summary, receipt=receipt)
         print(f"wrote {out}")
         print(
             f"receipt {rp}  {receipt['receipt_digest'][:16]}  "
