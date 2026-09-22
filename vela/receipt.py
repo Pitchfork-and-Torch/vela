@@ -93,6 +93,12 @@ def gate_cli_line(gate: str, verdict: str | None = None) -> str:
     return line
 
 
+def no_oracle_cli_token(no_oracle: bool | None = True) -> str:
+    """Receipt/CLI visibility of no-oracle on house (and other) evals."""
+    flag = "true" if no_oracle else "false"
+    return f"no-oracle={flag}"
+
+
 def rows_merkle(rows: list[dict]) -> str:
     return merkle([row_digest(r) for r in rows])
 
@@ -128,6 +134,13 @@ def build_receipt(
             config.get("scenarios"),
         ),
     }
+    # House eval / receipt visibility: no-oracle is a committed stamp.
+    if "no_oracle" in config:
+        body["no_oracle"] = bool(config.get("no_oracle"))
+    elif "no_oracle" in summary:
+        body["no_oracle"] = bool(summary.get("no_oracle"))
+    else:
+        body["no_oracle"] = True
     body["receipt_digest"] = tagged("receipt", _canon(body))
     return body
 

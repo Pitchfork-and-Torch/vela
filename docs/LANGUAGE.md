@@ -346,13 +346,16 @@ See [INGRESS.md](INGRESS.md). Summary:
 
 | Law | What it refuses |
 |-----|-----------------|
-| No-oracle | `next_capacity` / future PathState (sim freeze-lead peek) |
+| No-oracle (`no-oracle`) | `next_capacity` / future PathState (sim freeze-lead peek) |
 | Fairness holdout | a Jain sentence with no `leo_multi` rows |
 | Soft-cut min | SoftFlicker 0.85 raising the window after 0.58 |
 
-`vela check examples/reach.vela` prints `no-oracle`. Kernel
+`vela check examples/reach.vela` prints
+`no-oracle  (refuse next_capacity / future PathState)`. Kernel
 `on_path_hint` always passes `next_capacity_bps=None`. Calendar
-`p_ho` from past gaps stays legal.
+`p_ho` from past gaps stays legal. House eval receipts carry
+`no_oracle=true` and `vela receipt` / `vela eval` print
+`no-oracle=true` (CLI visibility on house evals).
 
 `examples/fair.vela` is the optional holdout. It is observe-only
 Reach plus `scenario leo_multi` and `assert mean(jain) >= 0.85`.
@@ -384,9 +387,11 @@ of seed rows. A swapped goodput or a relabeled verdict fails.
 
 `gate=house` is seeds 13,7,42,99,123 at 90s with `leo_fast_ho`
 and terrestrial. `gate=fast` is the 45s two-seed path. `--fast`
-is not the house gate. Coupled-RNG house LeoAware remains
-73.57 / 138.37 vs BBR 70.88 / 138.83. Do not mix those figures
-with OPE-fair v3.7.
+is not the house gate. Receipts stamp `no_oracle` from the eval
+config so a house run cannot silently drop the refuse of
+`next_capacity` / future PathState. Coupled-RNG house LeoAware
+remains 73.57 / 138.37 vs BBR 70.88 / 138.83. Do not mix those
+figures with OPE-fair v3.7.
 
 ## K. Gate label (VELA 0.4.3)
 
