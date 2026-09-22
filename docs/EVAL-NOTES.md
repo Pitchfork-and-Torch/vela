@@ -117,7 +117,7 @@ Thesis: the leftover is the quiet middle of an epoch on easy paths (seeds 7, 123
 
 **passthrough-law:** `vela check examples/reach.vela` now stamps `passthrough` (no cruise write on `when`/`every`). That is the language rail for confirm-passthrough.
 
-**typed-loss:** `vela check examples/reach.vela` now stamps `loss=Mobility|Congestive|Unknown`. A bare Loss, a Mobility cut, or an Unknown cut without `delay_ratio > 1.35` is a type error on observe. Compile no longer stamps `typed_loss` for a bare handler. No packet-path change.
+**typed-loss:** `vela check examples/reach.vela` stamps `typed_loss=Mobility|Congestive|Unknown` and `unknown_needs_delay_ratio>1.35`. A bare Loss, a Mobility cut, or an Unknown cut without `delay_ratio > 1.35` is a type error on observe. Compile no longer stamps `typed_loss` for a bare handler. SoftReprobe cut stays 0.58 (do not retune). No packet-path change.
 
 **teaser-safety:** README "Language in one screen" was the old Horizon cruise write (`pace = bw.mid` / `chase`). That dumped seed 7 and is a type error on observe. The teaser is now Reach. `vela` fences in README must check observe-only + passthrough. No packet-path change.
 
