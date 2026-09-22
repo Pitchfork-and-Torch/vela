@@ -121,6 +121,8 @@ def build_receipt(
         "rows_merkle": rows_merkle(rows),
         "verdict": summary.get("verdict"),
         "power": summary.get("power"),
+        "n_seeds": summary.get("n_seeds"),
+        "journal": summary.get("journal", False),
         "honesty": summary.get("honesty"),
         "gate": summary.get("gate") or eval_gate(
             config.get("seeds"),
@@ -176,7 +178,7 @@ def verify_receipt(
             config = summary.get("config")
         if rows is None and "rows" in summary:
             rows = list(summary.get("rows") or [])
-        for key in ("verdict", "power", "honesty", "gate"):
+        for key in ("verdict", "power", "n_seeds", "journal", "honesty", "gate"):
             if key in receipt and key in summary and receipt.get(key) != summary.get(key):
                 errs.append(f"{key} does not match eval")
     if config is not None:

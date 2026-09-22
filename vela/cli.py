@@ -9,7 +9,7 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
-from vela.types import POWER_OK_MIN_SEEDS
+from vela.types import POWER_OK_MIN_SEEDS, power_cli_line
 
 
 class InputError(Exception):
@@ -132,6 +132,16 @@ def _main(argv: list[str] | None = None) -> int:
             f"verdict={rec.get('verdict')}  gate={rec.get('gate') or '-'}  "
             f"rows={bound}"
         )
+        # power=low for n<8 on the receipt CLI (align check + harness).
+        n_seeds = rec.get("n_seeds")
+        if n_seeds is None and isinstance(summary, dict):
+            n_seeds = summary.get("n_seeds")
+        if n_seeds is not None:
+            print(f"    {power_cli_line(int(n_seeds))}")
+        elif rec.get("power") == "low":
+            print(f"    power=low  (n<{POWER_OK_MIN_SEEDS}  not journal)")
+        elif rec.get("power") == "ok":
+            print(f"    power=ok  (n>={POWER_OK_MIN_SEEDS})")
         if summary is None:
             print("    pass --eval to bind seed rows (a swapped number fails then)")
         return 0
@@ -194,9 +204,12 @@ def _main(argv: list[str] | None = None) -> int:
         if res.fairness:
             extra = f" jain>={res.jain_min}" if res.jain_min is not None else ""
             print(f"    fairness={res.fairness}{extra}")
-        if res.power == "low":
+        if res.power and res.n_seeds is not None:
+            print(f"    {power_cli_line(res.n_seeds)}")
+        elif res.power == "low":
             print(
-                f"    power=low  (n<{POWER_OK_MIN_SEEDS}; means ACCEPT still legal)"
+                f"    power=low  (n<{POWER_OK_MIN_SEEDS}  not journal; "
+                "means ACCEPT still legal)"
             )
         elif res.power == "ok":
             print(f"    power=ok  (n>={POWER_OK_MIN_SEEDS})")
@@ -298,8 +311,25 @@ def _main(argv: list[str] | None = None) -> int:
             for e in errs:
                 print(f"error: {e}")
             return 1
-        dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
+        dump_keys = [
+            k
+            for k in (
+                "verdict",
+                "power",
+                "n_seeds",
+                "journal",
+                "gate",
+                "asserts",
+                "tables",
+            )
+            if k in summary
+        ]
         print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
+        # Eval summary line: power=low when n<8 without claiming journal significance.
+        if summary.get("n_seeds") is not None:
+            print(power_cli_line(int(summary["n_seeds"])))
+        elif summary.get("power") == "low":
+            print(f"power=low  (n<{POWER_OK_MIN_SEEDS}  not journal)")
         print(f"wrote {out}")
         print(
             f"receipt {rp}  {receipt['receipt_digest'][:16]}  "

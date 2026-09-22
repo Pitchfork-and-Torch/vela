@@ -111,9 +111,12 @@ def check(prog: Program) -> CheckResult:
                     f"(known: {', '.join(sorted(KNOWN_SCENARIOS))})"
                 )
     if prog.contracts:
+        seed_counts = [len(c.seeds) for c in prog.contracts]
+        # Stamp the smallest n so a low contract cannot hide behind a larger one.
+        res.n_seeds = min(seed_counts)
         res.power = (
             "low"
-            if any(eval_power(len(c.seeds)) == "low" for c in prog.contracts)
+            if any(eval_power(n) == "low" for n in seed_counts)
             else "ok"
         )
         first_con = prog.contracts[0]

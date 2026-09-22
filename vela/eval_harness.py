@@ -390,7 +390,7 @@ def parse_worker_stdout(text: str) -> dict | None:
 def honesty_text(gate: str) -> str:
     return (
         "Means only. p-values are not claimed. "
-        f"power=low when n<{POWER_OK_MIN_SEEDS}. "
+        f"power=low when n<{POWER_OK_MIN_SEEDS} (not journal). "
         f"gate={gate} (--fast is not the house gate). "
         "Coupled-RNG house LeoAware is 73.57/138.37 vs BBR 70.88/138.83. "
         "Do not mix these numbers with OPE-fair v3.7 prompt figures."
@@ -627,11 +627,15 @@ def _summarize(
     obs_seeds = sorted({int(r["seed"]) for r in rows}) if rows else list(cfg.seeds)
     obs_scens = sorted({str(r["scenario"]) for r in rows}) if rows else list(cfg.scenarios)
     gate = eval_gate(obs_seeds, duration_s, obs_scens)
+    power = eval_power(n_seeds)
     out = {
         "verdict": _decide_verdict(
             verdicts, n_seeds, contract_min, _required_asserts(cfg)
         ),
-        "power": eval_power(n_seeds),
+        "power": power,
+        "n_seeds": int(n_seeds),
+        # Means ACCEPT may still be legal; never a journal / p-value claim.
+        "journal": False,
         "gate": gate,
         "tables": tables,
         "asserts": verdicts,
