@@ -94,7 +94,7 @@ Mechanism names are an operator sum. After the list, optional combinators may si
 
 Existing programs need neither clause. Shipped flagship examples stay observe-only.
 
-**Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only`, `reconfig=RttHop|Flicker`, `loss=Mobility|Congestive|Unknown`, and `passthrough`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
+**Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only`, `reconfig=RttHop|Flicker`, `loss=Mobility|Congestive|Unknown`, `passthrough`, and `early-epoch=2rtt`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
 
 **Passthrough law.** Observe-only is not yet a LeoAware wrap if a `when` or `every` body writes the packet path. `pace =`, `cwnd =`, `chase`, `cut`, and `enter Reprobe` on the cruise path are type errors under `posture observe`. Sample `freeze` and typed Reconfig/Loss policy stay legal: those are LeoAware. Horizon's leftover `pace = bw.mid` dumped seed 7 (65/181) and is now unrepresentable on observe. Review may keep a cruise write so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `passthrough` (LeoAware wrap; no cruise write).
 
@@ -219,7 +219,7 @@ The leftover vs BBR on seeds 7 and 123 is **not a missing fill**. Seed 7 90s run
 
 **Reach** is the beam reach: name the typed reconfig, keep the house-winning cut, and make every failed successor a stdlib operator you have to *choose*.
 
-Shipped compose: `Detect + SoftReprobe + Calendar + IntervalBw + WriteBudget + DualGateGuard`. `posture observe` (the default). Bit-identical to LeoAware when the write flags are off. `vela check examples/reach.vela` proves observe-only, typed reconfig, typed loss, and passthrough: a closed-write operator in this compose is a type error unless the author writes `posture review`. A bare Reconfig or a 0.85 flicker cut is a type error on the observe rail. A bare Loss, a Mobility cut, or an Unknown cut without `delay_ratio > 1.35` is a type error on the observe rail. A cruise `pace`/`cwnd`/`chase` write is a type error on the observe rail.
+Shipped compose: `Detect + SoftReprobe + Calendar + IntervalBw + WriteBudget + DualGateGuard`. `posture observe` (the default). Bit-identical to LeoAware when the write flags are off. `vela check examples/reach.vela` proves observe-only, typed reconfig, typed loss, passthrough, and early-epoch IntervalBw (a tight band needs `epoch.age >= 2 * rtt`): a closed-write operator in this compose is a type error unless the author writes `posture review`. A bare Reconfig or a 0.85 flicker cut is a type error on the observe rail. A bare Loss, a Mobility cut, or an Unknown cut without `delay_ratio > 1.35` is a type error on the observe rail. A cruise `pace`/`cwnd`/`chase` write is a type error on the observe rail.
 
 Typed reconfig (check-time on observe; SoftFlicker stays review):
 
@@ -261,7 +261,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Physics.** VELA cannot see the next satellite before the path changes unless a real hint exists. `p_ho` is a calendar estimate from past gaps. Irregular hops (ISL reroute, weather, beam reshape) will fool the calendar. Predictive freeze then becomes a mild pace ease at the wrong time. The kernel caps that ease (default 6%) so a wrong calendar cannot stall the flow.
 
-**Information.** IntervalBw needs samples. The first 1-2 RTT of an epoch are supposed to be uncertain. Forcing a tight interval early is the same bug as a stale min-RTT, with extra ceremony.
+**Information.** IntervalBw needs samples. The first 1-2 RTT of an epoch are supposed to be uncertain. Forcing a tight interval early is the same bug as a stale min-RTT, with extra ceremony. On `posture observe` the checker refuses that. A point read of an Interval under `epoch.age < 2 * rtt` or `epoch.rtts < 2` is a type error even when `n >= 2`. `uncertainty` at or below 0.40 needs a mature guard, `epoch.age >= 2 * rtt` or `epoch.rtts >= 2`. `n >= 2` alone stays the older uncertainty law. `vela check` stamps `early-epoch=2rtt`. Review may name the early tight band so ablation stays a program.
 
 **Statistics.** Five seeds do not make a journal result. VELA marks `power=low` when n<8 (check warning + eval JSON) and still allows ACCEPT on the dual-gate *means* (the OrbitStack house rule). It refuses a `p < 0.05` badge unless the contract asks for n>=8 or a paired bootstrap and gets them.
 
@@ -284,7 +284,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority; split/borrow) |
-| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
+| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, early-epoch IntervalBw, power=low n<8, no-oracle, leo_multi Jain |
 | `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
@@ -315,6 +315,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Eval receipt | a verdict detached from its source; a swapped row without `--eval` |
 | Views | eval of compose A claimed as compose B |
 | Power label | silent n<8 p-value; checker and harness share `power=low` |
+| Early-epoch IntervalBw | observe point read in the first 2 RTT, or uncertainty <= 0.40 without `epoch.age >= 2 * rtt` |
 
 Existing `lang vela 0.1` programs still parse. WriteCap stays opt-in.
 A declared `WriteCap<cwnd> @ epoch` with no `split` / `borrow` is still an

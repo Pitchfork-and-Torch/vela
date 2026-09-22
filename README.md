@@ -40,7 +40,7 @@ py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela --
 py -3 -m unittest discover -s tests -v
 ```
 
-`vela check examples/reach.vela` must print `observe-only`, `passthrough`, `no-oracle`, `affine`, and `hybrid`. That is the no-regress rail, not a rival CCA.
+`vela check examples/reach.vela` must print `observe-only`, `passthrough`, `no-oracle`, `affine`, `hybrid`, and `early-epoch=2rtt`. That is the no-regress rail, not a rival CCA.
 
 Evaluate against the OrbitStack / LeoAware research sim (clone `Pitchfork-and-Torch/leo-aware-transport`, or set `LEO_AWARE_TRANSPORT`):
 
@@ -108,7 +108,7 @@ contract DualGate vs BBRv3approx {
 
 **Reach** is the current VELA program on top of LeoAware. It names typed reconfig (RTT hop vs flicker) and keeps the load-bearing 0.58 cut. Every additive write we tried failed a house seed. Those operators live in the stdlib so the next gift to LeoAware cannot be an unnamed flag.
 
-`examples/reach.vela`. `vela check` proves it is observe-only, names typed reconfig (`RttHop | Flicker`, house cut 0.58), names typed loss (`Mobility | Congestive | Unknown`), and stamps `passthrough` (no cruise write). Closed-write operators are a type error unless the author writes `posture review`. A `when` / `every` pace or cwnd write is also a type error on observe. A Mobility cut or an unguarded Unknown cut is a type error on observe. Horizon stays as the first observe-only compose. `examples/ascent.vela` is the fail-closed Starlink assist path: a missing hint is None, not a hop oracle. See [docs/LANGUAGE.md](docs/LANGUAGE.md) and [docs/EVAL-NOTES.md](docs/EVAL-NOTES.md).
+`examples/reach.vela`. `vela check` proves it is observe-only, names typed reconfig (`RttHop | Flicker`, house cut 0.58), names typed loss (`Mobility | Congestive | Unknown`), stamps `passthrough` (no cruise write), and stamps `early-epoch=2rtt` (a tight IntervalBw band needs two RTT). Closed-write operators are a type error unless the author writes `posture review`. A `when` / `every` pace or cwnd write is also a type error on observe. A Mobility cut or an unguarded Unknown cut is a type error on observe. Horizon stays as the first observe-only compose. `examples/ascent.vela` is the fail-closed Starlink assist path: a missing hint is None, not a hop oracle. See [docs/LANGUAGE.md](docs/LANGUAGE.md) and [docs/EVAL-NOTES.md](docs/EVAL-NOTES.md).
 
 ## Layout
 
