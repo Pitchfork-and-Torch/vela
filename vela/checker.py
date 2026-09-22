@@ -18,6 +18,7 @@ from vela.types import (
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    SOFT_FLICKER_CUT,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -72,6 +73,11 @@ def check(prog: Program) -> CheckResult:
         res.typed_loss = _has_typed_loss(first)
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
+        # SoftFlicker alone (without SoftReprobe): stamp review cut 0.85.
+        # Does not raise SoftReprobe / house 0.58. SoftFlicker+SoftReprobe
+        # soft-cut-min honesty is a separate surface.
+        if "SoftFlicker" in first.compose and "SoftReprobe" not in first.compose:
+            res.softflicker_cut = SOFT_FLICKER_CUT
         res.cuts_compose = first.cuts_compose or ""
     _check_paths(prog, res)
     for con in prog.contracts:
