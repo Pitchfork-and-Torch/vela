@@ -37,7 +37,10 @@ binaries.
    only after `delay_ratio > 1.35`. Review may name a Mobility cut.
 5. **Content-addressed stdlib.** Each mechanism has a domain-separated
    SHA-256 of its effect row (`VELA1|mech|...`). Compose order is part
-   of the digest. `vela mech` prints the catalog.
+   of the digest. `vela mech` prints the catalog. `vela check` also
+   stamps `effects=...` as the monoid of declared write targets
+   (Detect / SoftReprobe / IntervalBw / ...) so undeclared side
+   effects fail closed. SoftReprobe cut stays 0.58.
 6. **Eval receipt.** `vela eval` writes `receipt_<tag>.json`: source
    digest, compose digest, config digest, path digest, merkle of seed
    rows, verdict, gate. `vela receipt --source` checks the receipt

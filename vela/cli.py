@@ -200,6 +200,11 @@ def _main(argv: list[str] | None = None) -> int:
             )
         elif res.power == "ok":
             print(f"    power=ok  (n>={POWER_OK_MIN_SEEDS})")
+        if res.effects:
+            print(
+                f"    effects={res.effects}  "
+                "(monoid writes; undeclared fails closed)"
+            )
         if c.cuts_compose:
             print(f"    cuts_compose={c.cuts_compose}")
         if c.growth_compose:
