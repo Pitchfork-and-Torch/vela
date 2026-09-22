@@ -291,7 +291,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
 | `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
 | `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
-| `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
+| `examples/*.vela` | Reach (flagship), Equinox (0.3 discipline), Ascent (fail-closed hint), Fair (0.4 holdout), Horizon, Luff, OCE-class |
 
 ## G. Equinox (VELA 0.3)
 
