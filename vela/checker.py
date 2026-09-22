@@ -10,6 +10,7 @@ from vela.path import (
     parse_program_paths,
     path_digest,
     path_needs_std_error,
+    sim_ne_orbit_warning,
     unbound_path_warning,
 )
 from vela.types import (
@@ -1025,6 +1026,9 @@ def _check_paths(prog: Program, res: CheckResult) -> None:
         unbound = unbound_path_warning(law)
         if unbound:
             res.warnings.append(unbound)
+        honesty = sim_ne_orbit_warning(law)
+        if honesty:
+            res.warnings.append(honesty)
     bound = [law for law in laws if law.bound]
     if bound:
         res.path_bound = bound[0].stamp()

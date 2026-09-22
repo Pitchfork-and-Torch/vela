@@ -4,6 +4,11 @@ A `path` block is not a comment. Check parses it, eval binds the
 handover rails the sibling sim actually takes, and the receipt
 commits the declared law. Calendar `p_ho` still comes from past
 gaps. CSV traces stay unwired.
+
+Honesty: LeoPath / LeoFastHO rails are Starlink-class lab models,
+not an orbit or cell replay. Check stamps `sim!=orbit` so a mix of
+from_csv with parametric rails, or an orbit/cell/replay claim from
+lab rails, cannot pass unlabeled.
 """
 from __future__ import annotations
 
@@ -14,7 +19,15 @@ from vela.ast import PathModel
 from vela.digest import tagged
 from vela.types import KNOWN_SCENARIOS
 
-PATH_FIELDS = frozenset({"handover", "rtt_jump", "capacity", "mobility_loss"})
+PATH_FIELDS = frozenset(
+    {"handover", "rtt_jump", "capacity", "mobility_loss", "honesty", "from_csv"}
+)
+PARAMETRIC_PATH_FIELDS = frozenset(
+    {"handover", "rtt_jump", "capacity", "mobility_loss"}
+)
+# from_csv is recognized for honesty / mix detection only on this cook.
+# Full CSV PathModel wiring stays on open PR #48; we do not load traces here.
+SIM_NE_ORBIT = "sim!=orbit"
 
 # Program name -> contract scenario. Unmapped names stay unbound.
 PATH_SCENARIO = {
@@ -108,13 +121,17 @@ class PathLaw:
         }
 
     def stamp(self) -> str:
+        honesty = f" {SIM_NE_ORBIT}" if path_needs_sim_ne_orbit(self) else ""
+        if "from_csv" in self.fields and self.handover_interval_s is None:
+            scen = self.scenario or "unbound"
+            return f"{self.name}:{scen} from_csv (lab){honesty}"
         if self.handover_interval_s is None:
-            return f"{self.name}  (unbound)"
+            return f"{self.name}  (unbound){honesty}"
         jitter = self.handover_jitter_s
         jtxt = f"+/-{jitter:g}s" if jitter is not None else ""
         rail = "house" if self.house else "named"
         scen = self.scenario or "unbound"
-        return f"{self.name}:{scen} {self.handover_interval_s:g}s{jtxt} ({rail})"
+        return f"{self.name}:{scen} {self.handover_interval_s:g}s{jtxt} ({rail}){honesty}"
 
 
 def path_needs_std_error() -> str:
@@ -143,6 +160,12 @@ def parse_path_model(model: PathModel) -> PathLaw:
     for key, raw in model.fields.items():
         if key not in PATH_FIELDS:
             law.errors.append(path_unknown_field_error(model.name, key))
+            continue
+        if key == "honesty":
+            # Free-text label; sim!=orbit acknowledges lab != orbit.
+            continue
+        if key == "from_csv":
+            # Honesty surface only; do not load CSV bytes (see PR #48).
             continue
         text = " ".join(
             str(raw).replace("(", " ").replace(")", " ").replace(",", " ").split()
@@ -239,6 +262,71 @@ def path_overlay(
             getattr(cfg, "handover_jitter_s", None),
         )
     return None, None
+
+
+def has_honesty_label(law: PathLaw) -> bool:
+    """True when the path block already labels sim!=orbit."""
+    raw = str(law.fields.get("honesty", "")).lower()
+    compact = raw.replace(" ", "")
+    return SIM_NE_ORBIT in compact or "sim!=orbit" in compact
+
+
+def path_claims_orbit_replay(law: PathLaw) -> bool:
+    """Name looks like an orbit/cell replay claim from lab rails."""
+    n = law.name.lower()
+    return any(tok in n for tok in ("orbit", "cell", "replay"))
+
+
+def path_mixes_csv_parametric(law: PathLaw) -> bool:
+    """from_csv plus LeoFastHO parametric rails in one path block."""
+    has_csv = "from_csv" in law.fields
+    has_param = bool(PARAMETRIC_PATH_FIELDS & set(law.fields))
+    return has_csv and has_param
+
+
+def path_needs_sim_ne_orbit(law: PathLaw) -> bool:
+    """Stamp when lab rails must not be read as orbit/cell replay."""
+    is_leo = bool(law.scenario) and str(law.scenario).startswith("leo_")
+    return bool(
+        is_leo
+        or path_claims_orbit_replay(law)
+        or path_mixes_csv_parametric(law)
+        or "from_csv" in law.fields
+    )
+
+
+def sim_ne_orbit_warning(law: PathLaw) -> str | None:
+    """Warn/stamp sim!=orbit for unlabeled mix or orbit-claim lab rails.
+
+    SoftReprobe cut stays 0.58. Observe-only. No dish Mbps claim.
+    """
+    mix = path_mixes_csv_parametric(law)
+    labeled = has_honesty_label(law)
+    if labeled:
+        return None
+    if mix:
+        return (
+            f"{SIM_NE_ORBIT}: path {law.name} mixes from_csv with "
+            "LeoFastHO parametric rails without honesty label "
+            "(lab != orbit; not a cell replay)"
+        )
+    if "from_csv" in law.fields:
+        return (
+            f"{SIM_NE_ORBIT}: path {law.name} from_csv is lab replay "
+            "(not orbit; not a dish Mbps claim)"
+        )
+    if path_claims_orbit_replay(law):
+        return (
+            f"{SIM_NE_ORBIT}: path {law.name} claims orbit/cell replay "
+            "from lab rails (LeoPath is Starlink-class, not a cell replay)"
+        )
+    is_leo = bool(law.scenario) and str(law.scenario).startswith("leo_")
+    if is_leo:
+        return (
+            f"{SIM_NE_ORBIT}: path {law.name} LeoPath is Starlink-class "
+            "(not a cell replay; lab rails != orbit)"
+        )
+    return None
 
 
 def house_mismatch_warning(law: PathLaw) -> str | None:

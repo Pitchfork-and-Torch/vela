@@ -273,7 +273,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Hints can lie.** Fail-closed integrity (ASCENT-D) stops bit flips. It does not stop a malicious or stale honest hint with a valid MAC. Role + age checks are the remaining rail; they are not a PKI.
 
-**Sim != orbit.** `LeoPath` is a Starlink-*class* model (handover, jump, flicker, mobility burst). It is not a replay of a particular cell or a particular software release. Real CSV traces are a `path` object. Until they are wired, numbers are lab numbers.
+**Sim != orbit.** `LeoPath` is a Starlink-*class* model (handover, jump, flicker, mobility burst). It is not a replay of a particular cell or a particular software release, and it is not an orbit ephemeris. Check warns/stamps `sim!=orbit` when a program uses LeoFastHO lab rails, mixes `from_csv` with parametric rails without an `honesty ~ "sim!=orbit"` label, or names a path like an orbit/cell replay. Real CSV traces are a `path` object (wired on a sibling cook); numbers remain lab numbers. No dish Mbps claim.
 
 **OCE-era complexity.** VELA does not delete LeoAware. It wraps the parts that worked (Detect, SoftReprobe, delay yield) and refuses the parts that exploded (unnamed flags, double cuts, README-only wins). Researchers can still write a bad controller in VELA. They cannot write an *invisible* one.
 
@@ -290,7 +290,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
 | `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
-| `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
+| `vela/path.py` | Path law: parse, bind, digest, `sim!=orbit` honesty. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
 ## G. Equinox (VELA 0.3)
