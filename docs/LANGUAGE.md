@@ -52,7 +52,7 @@ use std.eval
 | `Hint<T>` | External signal (ASCENT-D, Orb, orbital). Fail-closed: corrupt => `None`. |
 | `Contract` | Multi-seed assertion set. Not executable on the packet path. |
 
-**Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`. The checker now rejects that assign.
+**Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. Nested when/if/require inherit that invalidate (a nested when cannot revive a stale sample). The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`. The checker now rejects that assign.
 
 **Affine law.** `Sample` / `Interval` names (and ambient `min_rtt` / `bw`) are affine in each handler block. One statement may mention `rtt` twice (`explore: 1.15 * rtt, fill: 1.85 * rtt` is one use). A second statement must `let r = rtt` first. Guards (`when rtt > 20ms`, `bw.n >= 2`) do not consume. `enter Reprobe` advances the epoch: later reads of the current name are type errors; `prior.x` is the legal remnant. `vela check` stamps `affine` when the law holds.
 
@@ -96,7 +96,7 @@ Existing programs need neither clause. Shipped flagship examples stay observe-on
 
 **Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only`, `reconfig=RttHop|Flicker`, `loss=Mobility|Congestive|Unknown`, and `passthrough`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
 
-**Passthrough law.** Observe-only is not yet a LeoAware wrap if a `when` or `every` body writes the packet path. `pace =`, `cwnd =`, `chase`, `cut`, and `enter Reprobe` on the cruise path are type errors under `posture observe`. Sample `freeze` and typed Reconfig/Loss policy stay legal: those are LeoAware. Horizon's leftover `pace = bw.mid` dumped seed 7 (65/181) and is now unrepresentable on observe. Review may keep a cruise write so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `passthrough` (LeoAware wrap; no cruise write).
+**Passthrough law.** Observe-only is not yet a LeoAware wrap if a `when` or `every` body writes the packet path. `pace =`, `cwnd =`, `chase`, `cut`, and `enter Reprobe` on the cruise path are type errors under `posture observe`. Observe `on` handlers also cannot invent capacity (`pace`/`cwnd`/`chase`); SoftReprobe `cut`/`enter` stay legal. Sample `freeze` and typed Reconfig/Loss policy stay legal: those are LeoAware. Horizon's leftover `pace = bw.mid` dumped seed 7 (65/181) and is now unrepresentable on observe. Review may keep a cruise write so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `passthrough` (LeoAware wrap; no cruise write).
 
 **Typed reconfig (observe rail).** `on Reconfig` under `posture observe` must match the closed taxonomy `RttHop | Flicker`. A bare `on Reconfig(e) { ... }` is a type error: hop and flicker are not the same event. SoftFlicker (cut 0.85 on flicker) dumped seed 7; the house endpoint cut stays 0.58 on both arms. `enter Reprobe(cut: x)` or `cut(x)` inside an observe Reconfig body must be 0.58. Review may keep a bare Reconfig or a different cut so ablation stays named.
 
@@ -290,7 +290,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
 | `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
 | `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
-| `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
+| `vela/path.py` | Path law: parse, bounds, bind, digest, capacity overlay. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
 
 ## G. Equinox (VELA 0.3)
@@ -305,9 +305,10 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 |-----|-----------------|
 | Level vs integrator | `when` / `every` `{ pace *= k }` without `integrate when` / `integrate every` |
 | Affine samples | second Sample read in one block; Sample @ e after `enter Reprobe` |
+| Freshness | read after invalidate; nested when/if inherit the set |
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
-| Passthrough | observe `when`/`every` writing pace/cwnd/chase |
+| Passthrough | observe `when`/`every` writing pace/cwnd/chase; observe `on` inventing capacity |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
 | Cut refinement | `cut(1.2)` |
@@ -361,8 +362,7 @@ That is the honest fast path, not a skip of the law.
 
 ## I. Path bind (VELA 0.4.1)
 
-A `path` block is the model object, not a comment. Check parses
-handover / rtt_jump / capacity / mobility_loss. Eval binds the
+A `path` block is the model object, not a comment. Check parses handover / rtt_jump / capacity / mobility_loss. Inverted ranges, non-positive capacity, zero handover interval, jitter that exceeds the interval, and a zero mobility window are type errors. Capacity and rtt_jump numerics bind into the compiled config (and path_capacity_overlay) so eval can take the same rails. Eval binds the
 handover rails the sibling sim actually takes. The receipt commits
 the declared law. `use std.path` is required to name a path.
 

@@ -247,5 +247,34 @@ controller Probe {
             self.assertTrue(res.ok, (name, res.errors))
 
 
+    def test_orb_channel_proves_some(self):
+        src = _src(
+            "use std.hint",
+            """
+  when hint.orb {
+    freeze min_rtt, bw for 1.4 * rtt
+  }
+""",
+        )
+        res = check(parse(src, "orb.vela"))
+        self.assertTrue(res.ok, res.errors)
+
+    def test_hint_error_names_ascent_orb(self):
+        src = _src(
+            "use std.hint",
+            """
+  every ack {
+    let x = hint.ascent
+  }
+""",
+        )
+        res = check(parse(src, "bare-hint-msg.vela"))
+        self.assertFalse(res.ok)
+        self.assertTrue(
+            any("ASCENT-D/Orb" in e and "hop oracle" in e for e in res.errors),
+            res.errors,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

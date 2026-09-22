@@ -6,6 +6,7 @@ from vela.digest import compose_digest
 from vela.ir import parse_report_ci
 from vela.oracle import oracle_error, oracle_name_of
 from vela.path import (
+    house_capacity_mismatch_warning,
     house_mismatch_warning,
     parse_program_paths,
     path_digest,
@@ -324,19 +325,46 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
     _check_hybrid(c, res)
 
 
-def _check_stale_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -> None:
-    invalidated: set[str] = set()
+def _check_stale_in_stmts(
+    cname: str,
+    stmts: list[Stmt],
+    res: CheckResult,
+    invalidated: set[str] | None = None,
+) -> None:
+    # Nested when/if/require inherit the parent invalidated set.
+    # A fresh set here is how stale min_rtt snuck past after invalidate.
+    live = set(invalidated or ())
     for st in stmts:
         if st.kind == "invalidate":
-            invalidated.update(str(a) for a in st.args)
-        if st.kind == "let" and st.expr is not None:
-            _walk_stale(cname, st.expr, invalidated, res)
-        if st.kind == "chase" and st.expr is not None:
-            _walk_stale(cname, st.expr, invalidated, res)
-        if st.kind == "assign" and st.expr is not None:
-            _walk_stale(cname, st.expr, invalidated, res)
+            live.update(str(a) for a in st.args)
+        if st.kind in ("let", "chase", "assign", "when", "if", "require") and st.expr is not None:
+            _walk_stale(cname, st.expr, live, res)
+        if st.kind == "enter":
+            for a in st.args:
+                if isinstance(a, tuple) and len(a) == 2:
+                    _walk_stale(cname, a[1], live, res)
+                elif not isinstance(a, str):
+                    _walk_stale(cname, a, live, res)
+        if st.kind == "freeze":
+            for a in st.args:
+                if isinstance(a, str):
+                    if a in live:
+                        res.ok = False
+                        err = (
+                            f"{cname}: read of invalidated sample {a} "
+                            "(freshness law)"
+                        )
+                        if err not in res.errors:
+                            res.errors.append(err)
+                else:
+                    _walk_stale(cname, a, live, res)
+            if st.expr is not None:
+                _walk_stale(cname, st.expr, live, res)
         if st.body:
-            _check_stale_in_stmts(cname, st.body, res)
+            _check_stale_in_stmts(cname, st.body, res, live)
+        else_body = _stmt_else_body(st)
+        if else_body:
+            _check_stale_in_stmts(cname, else_body, res, live)
 
 
 def _walk_stale(cname: str, expr, invalidated: set[str], res: CheckResult) -> None:
@@ -1022,6 +1050,9 @@ def _check_paths(prog: Program, res: CheckResult) -> None:
         warn = house_mismatch_warning(law)
         if warn:
             res.warnings.append(warn)
+        cap_warn = house_capacity_mismatch_warning(law)
+        if cap_warn:
+            res.warnings.append(cap_warn)
         unbound = unbound_path_warning(law)
         if unbound:
             res.warnings.append(unbound)
@@ -1108,6 +1139,7 @@ def cruise_write_error(cname: str, what: str) -> str:
 
 
 def _cruise_write_label(st: Stmt) -> str | None:
+    """Writes illegal on observe when/every (cruise path)."""
     if st.kind == "assign" and st.name in WRITE_TARGETS:
         op = str(st.args[0]) if st.args else "="
         return f"{st.name} {op}"
@@ -1117,6 +1149,16 @@ def _cruise_write_label(st: Stmt) -> str | None:
         return "cut"
     if st.kind == "enter":
         return f"enter {st.name}" if st.name else "enter"
+    return None
+
+
+def _on_capacity_write_label(st: Stmt) -> str | None:
+    """pace/cwnd/chase invent capacity. Legal SoftReprobe cut/enter stay on-jump."""
+    if st.kind == "assign" and st.name in WRITE_TARGETS:
+        op = str(st.args[0]) if st.args else "="
+        return f"{st.name} {op}"
+    if st.kind == "chase":
+        return "chase"
     return None
 
 
@@ -1131,6 +1173,19 @@ def controller_cruise_writes(c: Controller) -> list[str]:
     return found
 
 
+def controller_on_capacity_writes(c: Controller) -> list[str]:
+    """Observe on-handlers must not invent capacity (LeoAware wrap)."""
+    found: list[str] = []
+    for o in c.ons:
+        bodies = [o.body] + [arm.body for arm in o.match_arms]
+        for body in bodies:
+            for st in _flatten_stmts(body):
+                label = _on_capacity_write_label(st)
+                if label:
+                    found.append(label)
+    return found
+
+
 def controller_is_passthrough(c: Controller) -> bool:
     return (
         c.posture == "observe"
@@ -1138,6 +1193,7 @@ def controller_is_passthrough(c: Controller) -> bool:
         and _has_typed_reconfig(c)
         and _has_typed_loss(c)
         and not controller_cruise_writes(c)
+        and not controller_on_capacity_writes(c)
     )
 
 
@@ -1145,7 +1201,7 @@ def _check_passthrough_cruise(c: Controller, res: CheckResult) -> None:
     if c.posture != "observe":
         return
     seen: set[str] = set()
-    for label in controller_cruise_writes(c):
+    for label in controller_cruise_writes(c) + controller_on_capacity_writes(c):
         if label in seen:
             continue
         seen.add(label)
@@ -1274,7 +1330,7 @@ def _check_house_cut_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -
 def hint_law_error(cname: str, name: str) -> str:
     return (
         f"{cname}: Hint {name} used without a Some-proof "
-        "(hint law; fail-closed)"
+        "(hint law; fail-closed; ASCENT-D/Orb missing is None, not a hop oracle)"
     )
 
 
