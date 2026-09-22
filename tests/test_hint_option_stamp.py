@@ -157,6 +157,11 @@ class TestHintOptionDocs(unittest.TestCase):
         self.assertIn("bare `hint.ascent` in arithmetic is illegal", text)
         self.assertIn("`use std.hint` is required", text)
 
+    def test_ingress_names_ascent_stamp(self):
+        text = (DOCS / "INGRESS.md").read_text(encoding="utf-8")
+        self.assertIn("hint=Some|None", text)
+        self.assertIn("ascent.vela", text)
+
 
 if __name__ == "__main__":
     unittest.main()
