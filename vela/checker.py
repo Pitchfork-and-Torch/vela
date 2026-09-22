@@ -6,6 +6,7 @@ from vela.digest import compose_digest
 from vela.ir import parse_report_ci
 from vela.oracle import oracle_error, oracle_name_of
 from vela.path import (
+    house_capacity_mismatch_warning,
     house_mismatch_warning,
     parse_program_paths,
     path_digest,
@@ -1049,6 +1050,9 @@ def _check_paths(prog: Program, res: CheckResult) -> None:
         warn = house_mismatch_warning(law)
         if warn:
             res.warnings.append(warn)
+        cap_warn = house_capacity_mismatch_warning(law)
+        if cap_warn:
+            res.warnings.append(cap_warn)
         unbound = unbound_path_warning(law)
         if unbound:
             res.warnings.append(unbound)

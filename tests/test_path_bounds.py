@@ -219,5 +219,21 @@ path LeoFastHO {
         self.assertIsNone(hi2)
 
 
+    def test_house_capacity_mismatch_warns(self):
+        src = _prog(
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 10Mbps 50Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+"""
+        )
+        res = check(parse(src, "cap-mis.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertTrue(any("not the house" in w and "Mbps" in w for w in res.warnings), res.warnings)
+
+
 if __name__ == "__main__":
     unittest.main()

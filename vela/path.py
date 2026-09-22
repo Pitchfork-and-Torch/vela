@@ -31,6 +31,8 @@ PATH_SCENARIO = {
 # House leo_fast_ho rails. Flagship examples already write these.
 HOUSE_HANDOVER_INTERVAL_S = 12.0
 HOUSE_HANDOVER_JITTER_S = 4.0
+HOUSE_CAPACITY_LO_BPS = 20e6
+HOUSE_CAPACITY_HI_BPS = 120e6
 
 _NUM = r"([0-9]+(?:\.[0-9]+)?)"
 _HANDOVER = re.compile(
@@ -353,6 +355,25 @@ def house_mismatch_warning(law: PathLaw) -> str | None:
         f"{law.handover_interval_s:g}s+/-{law.handover_jitter_s:g}s "
         f"is not the house {HOUSE_HANDOVER_INTERVAL_S:g}s+/-"
         f"{HOUSE_HANDOVER_JITTER_S:g}s rail"
+    )
+
+
+def house_capacity_mismatch_warning(law: PathLaw) -> str | None:
+    """Warn when leo_fast_ho capacity is not the house 20-120 Mbps rail."""
+    if law.scenario != "leo_fast_ho":
+        return None
+    if law.capacity_lo_bps is None or law.capacity_hi_bps is None:
+        return None
+    if (
+        abs(law.capacity_lo_bps - HOUSE_CAPACITY_LO_BPS) < 1.0
+        and abs(law.capacity_hi_bps - HOUSE_CAPACITY_HI_BPS) < 1.0
+    ):
+        return None
+    lo = law.capacity_lo_bps / 1e6
+    hi = law.capacity_hi_bps / 1e6
+    return (
+        f"path {law.name}: leo_fast_ho capacity {lo:g}-{hi:g}Mbps "
+        f"is not the house {HOUSE_CAPACITY_LO_BPS/1e6:g}-{HOUSE_CAPACITY_HI_BPS/1e6:g}Mbps rail"
     )
 
 
