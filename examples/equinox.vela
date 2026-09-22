@@ -7,7 +7,12 @@ use std.control
 use std.path
 use std.eval
 
-// Equinox: VELA 0.3. The language, not another cwnd guess.
+// Equinox: VELA 0.3 discipline demo. Not a closed-write intro.
+//
+// House packet-path flagship remains examples/reach.vela (observe-only
+// LeoAware wrap). Equinox is the same compose class with authority 0,
+// WriteCap budget refuse, views, and receipt laws. Check stamps must
+// match Reach: passthrough, typed reconfig/loss, house cut 0.58.
 //
 // Equation Group discipline, inverted:
 //   no ambient authority, fail-closed kinds, hashed operators, ledger.
@@ -16,7 +21,8 @@ use std.eval
 // Polymorphism, the PL kind:
 //   views are first-class compose morphisms. Not self-modifying code.
 //
-// Packet path is still LeoAware. Writes stay in the stdlib.
+// Packet path is still LeoAware. Writes stay in the stdlib (review only).
+// SoftFlicker / HorizonChase are not this compose. No dish Mbps.
 // The leap is that a claim without a receipt does not compile as truth.
 
 controller Equinox {

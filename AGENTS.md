@@ -10,10 +10,19 @@ Canonical language tree for **VELA** (Variance-aware Epoch Language for Adaptati
 - License: MIT. GitHub: public `Pitchfork-and-Torch/vela` (open source). Site: https://vela.jonbailey.xyz/
 - Do not relicense the sibling leo-aware-transport tree.
 
+## Flagship surface
+
+- Packet-path flagship: observe-only `examples/reach.vela` (passthrough, typed reconfig/loss, house cut 0.58).
+- Equinox: `examples/equinox.vela` is the 0.3 discipline demo on that compose class. Not a closed-write intro.
+- Ascent: fail-closed Starlink hint assist. SoftFlicker / HorizonChase stay review.
+- Blend: `docs/CONSTELLATION.md`, `docs/EQUINOX.md`. No dish Mbps.
+
 ## Commands
 
 ```
+py -3 -m vela check examples/reach.vela
 py -3 -m vela check examples/equinox.vela
+py -3 -m vela check examples/ascent.vela
 py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
 py -3 -m vela compile examples/equinox.vela
@@ -26,3 +35,4 @@ py -3 -m unittest discover -s tests -v
 
 Never claim a dual-gate win without the eval harness JSON. Coupled-RNG historical numbers (v3.4-p95 73.57 / 138.37) are not comparable to OPE-fair figures.
 `--publish` must run the progress sanitizer. Never copy `lab/PUBLIC_PROGRESS.json` onto a public site.
+Do not market Equinox WriteCap / review posture as the Starlink intro.

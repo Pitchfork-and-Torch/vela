@@ -1,16 +1,37 @@
 # VELA 0.3 Equinox
 
-The language, not another cwnd guess.
+Discipline demo for the observe-only Reach wrap. Not a closed-write intro.
+Not a rival CCA.
 
-Equation Group code is famous for modular operators, least privilege,
-fail-closed paths, and a ledger. We steal the *discipline* and invert
-the ethics: no ambient write to the window, no claim without a hash,
-no silent compose. We do not ship implants, polymorphic malware, or
-packet-path crypto that hides a controller.
+Equinox steals Equation Group *discipline* and inverts the ethics: no
+ambient write to the window, no claim without a hash, no silent compose.
+We do not ship implants, polymorphic malware, or packet-path crypto that
+hides a controller.
 
 Modern cryptography here means **commitment**, not ciphertext on the
 wire. Polymorphism here means **typed views**, not self-modifying
 binaries.
+
+## Flagship surface (Starlink usefulness)
+
+| Surface | Role |
+|---------|------|
+| `examples/reach.vela` | Packet-path flagship. Observe-only LeoAware wrap. |
+| `examples/equinox.vela` | Language / discipline demo on the same compose class. |
+| `examples/ascent.vela` | Fail-closed Starlink hint assist (missing is None). |
+
+`vela check` on Equinox and Reach must stamp the same observe-only laws:
+
+- `observe-only  (no closed-write)`
+- `reconfig=RttHop|Flicker  (house cut 0.58)`
+- `loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)`
+- `passthrough  (LeoAware wrap; no cruise write)`
+
+House SoftReprobe cut stays **0.58** on hop and flicker. SoftFlicker and
+HorizonChase stay `posture review` until a named ablation is green. Do not merge a review closed-write compose as the flagship. Do not claim
+dish Mbps.
+
+See `docs/CONSTELLATION.md` and `docs/MISSION.md`.
 
 ## Laws added in 0.3
 
@@ -20,13 +41,15 @@ binaries.
    `every ack { pace *= k }` is the same death class: write `integrate every`.
    A nested `when` inside `on` cannot opt in.
 2. **No ambient authority.** A `WriteCap<cwnd> @ epoch` plus
-   `authority { cwnd: 0 }` refuses cruise writes. Reconfig still
-   invalidates samples. Observe is the default power.
-   WriteCap is linear when the author writes `split` / `borrow`:
-   `split cap into fill, hold` partitions the budget; `borrow fill { cwnd = ... }`
-   spends that piece. A second borrow, a write outside borrow after split,
-   or a `pace` write under `WriteCap<cwnd>` is a type error. Without
-   split/borrow the integer budget still holds.
+   `authority { cwnd: 0 }` refuses cruise writes. That is a refuse rail,
+   not a closed-write enable. Reconfig still invalidates samples.
+   Observe is the default power. WriteCap is linear when the author
+   writes `split` / `borrow`: `split cap into fill, hold` partitions the
+   budget; `borrow fill { cwnd = ... }` spends that piece. A second
+   borrow, a write outside borrow after split, or a `pace` write under
+   `WriteCap<cwnd>` is a type error. Without split/borrow the integer
+   budget still holds. Equinox ships authority 0 so the demo cannot
+   write the window.
 3. **Kinded reconfig.** `on Reconfig match` is a closed taxonomy
    (`RttHop | Flicker`), same shape as `Loss`. On the observe rail
    a bare Reconfig is a type error, and `enter Reprobe(cut: x)` must
@@ -61,16 +84,22 @@ binaries.
 ## Commands
 
 ```
+py -3 -m vela check examples/reach.vela
 py -3 -m vela check examples/equinox.vela
+py -3 -m vela check examples/ascent.vela
 py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
 py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela
 py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela --eval results/eval_reach.json
 ```
 
+Reach and Equinox share the Detect + SoftReprobe + Calendar + IntervalBw
++ WriteBudget + DualGateGuard compose digest when both stay observe-only.
+
 ## What 0.3 does not do
 
 It does not replace LeoAware. The engine remains v3.4-p95 at
 73.57 / 138.37 vs BBR 70.88 / 138.83. Equinox makes the next illegal
 write a compile error instead of a 90s seed dump, so gifts to that
-engine can be composed without stacking unnamed flags.
+engine can be composed without stacking unnamed flags. It does not
+market WriteCap or review posture as the Starlink intro.
