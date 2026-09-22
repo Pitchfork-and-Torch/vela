@@ -178,7 +178,7 @@ def _main(argv: list[str] | None = None) -> int:
         if res.typed_loss:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:
-            print("    passthrough  (LeoAware wrap; no cruise write)")
+            print("    passthrough  (on/when/every cannot invent pace/cwnd/chase; LeoAware wrap)")
         if res.no_oracle:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:

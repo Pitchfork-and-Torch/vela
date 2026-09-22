@@ -65,7 +65,7 @@
       "kind": "language",
       "safe": true,
       "public": true,
-      "note": "Observe-only when/every cannot write pace/cwnd; Reach is a LeoAware wrap at check time",
+      "note": "Observe on/when/every cannot invent pace/cwnd/chase; SoftReprobe cut/enter stay legal on jump; Reach stamps passthrough",
       "status": "done"
     },
     {
@@ -162,6 +162,14 @@
       "safe": true,
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
+      "status": "done"
+    },
+    {
+      "id": "passthrough-on-capacity-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "vela check stamps passthrough (on/when/every cannot invent pace/cwnd/chase; LeoAware wrap). Observe on cannot invent capacity.",
       "status": "done"
     }
   ]
