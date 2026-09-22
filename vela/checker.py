@@ -27,6 +27,7 @@ from vela.types import (
     UNKNOWN_DELAY_RATIO,
     LOSS_KINDS,
     RECONFIG_KINDS,
+    WALL_CLOCK_CAPACITY_NAMES,
     assert_names_jain,
     eval_power,
     parse_jain_floor,
@@ -322,6 +323,7 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
     _check_write_cap(c, res)
     _check_affine(c, res)
     _check_hybrid(c, res)
+    _check_epoch_clock(c, res)
 
 
 def _check_stale_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -> None:
@@ -463,6 +465,7 @@ def _check_hybrid_flow(
             continue
         res.ok = False
         res.hybrid = False
+        res.epoch_clock = False
         err = hybrid_jump_in_flow_error(cname, _jump_label(st), surface)
         if err not in res.errors:
             res.errors.append(err)
@@ -480,6 +483,7 @@ def _check_hybrid_jumps(cname: str, stmts: list[Stmt], res: CheckResult) -> None
             continue
         res.ok = False
         res.hybrid = False
+        res.epoch_clock = False
         err = hybrid_unknown_mode_error(cname, st.name or "?")
         if err not in res.errors:
             res.errors.append(err)
@@ -492,6 +496,7 @@ def _check_hybrid(c: Controller, res: CheckResult) -> None:
         if e.tick not in HYBRID_TICKS:
             res.ok = False
             res.hybrid = False
+            res.epoch_clock = False
             err = hybrid_tick_error(c.name, e.tick)
             if err not in res.errors:
                 res.errors.append(err)
@@ -500,6 +505,84 @@ def _check_hybrid(c: Controller, res: CheckResult) -> None:
         _check_hybrid_jumps(c.name, o.body, res)
         for arm in o.match_arms:
             _check_hybrid_jumps(c.name, arm.body, res)
+
+
+def wall_clock_capacity_error(cname: str, name: str) -> str:
+    return (
+        f"{cname}: {name} invents wall-clock capacity "
+        "(epoch-clock; advances on ack|reconfig only)"
+    )
+
+
+def wall_clock_capacity_name_of(expr) -> str | None:
+    """Return a wall-clock capacity invent name if this expr uses one."""
+    if expr is None or not hasattr(expr, "kind"):
+        return None
+    if expr.kind == "name" and expr.name in WALL_CLOCK_CAPACITY_NAMES:
+        return expr.name
+    if expr.kind == "attr" and expr.name in WALL_CLOCK_CAPACITY_NAMES:
+        return expr.name
+    if expr.kind == "attr" and expr.left is not None and getattr(expr.left, "kind", None) == "name":
+        combo = f"{expr.left.name}.{expr.name}"
+        if expr.name in WALL_CLOCK_CAPACITY_NAMES:
+            return expr.name
+        if combo in {
+            "path.wall_capacity",
+            "path.wall_bw",
+            "hint.wall_capacity",
+        }:
+            return combo
+    return None
+
+
+def _walk_wall_clock(cname: str, expr, res: CheckResult) -> None:
+    if expr is None:
+        return
+    hit = wall_clock_capacity_name_of(expr)
+    if hit:
+        res.ok = False
+        res.epoch_clock = False
+        err = wall_clock_capacity_error(cname, hit)
+        if err not in res.errors:
+            res.errors.append(err)
+        return
+    _walk_wall_clock(cname, getattr(expr, "left", None), res)
+    _walk_wall_clock(cname, getattr(expr, "right", None), res)
+    for a in getattr(expr, "args", []) or []:
+        _walk_wall_clock(cname, a, res)
+
+
+def _check_wall_clock_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -> None:
+    for st in _flatten_stmts(stmts):
+        if st.expr is not None:
+            _walk_wall_clock(cname, st.expr, res)
+        for a in st.args:
+            if hasattr(a, "kind"):
+                _walk_wall_clock(cname, a, res)
+            elif isinstance(a, tuple) and len(a) == 2:
+                _walk_wall_clock(cname, a[1], res)
+
+
+def _check_epoch_clock(c: Controller, res: CheckResult) -> None:
+    """Epoch advances on reconfig; flows tick ack|epoch; refuse wall-clock capacity."""
+    if not res.hybrid:
+        res.epoch_clock = False
+    for o in c.ons:
+        _check_wall_clock_in_stmts(c.name, o.body, res)
+        for arm in o.match_arms:
+            _check_wall_clock_in_stmts(c.name, arm.body, res)
+    for w in c.whens:
+        _walk_wall_clock(c.name, w.pred, res)
+        _check_wall_clock_in_stmts(c.name, w.body, res)
+    for e in c.everys:
+        _check_wall_clock_in_stmts(c.name, e.body, res)
+    for s in c.signals:
+        if s.name in WALL_CLOCK_CAPACITY_NAMES:
+            res.ok = False
+            res.epoch_clock = False
+            err = wall_clock_capacity_error(c.name, s.name)
+            if err not in res.errors:
+                res.errors.append(err)
 
 
 def affine_reuse_error(cname: str, name: str) -> str:
