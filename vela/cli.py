@@ -177,6 +177,11 @@ def _main(argv: list[str] | None = None) -> int:
             print("    reconfig=RttHop|Flicker  (house cut 0.58)")
         if res.typed_loss:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
+            if res.unknown_fail_closed:
+                print(
+                    "    unknown=fail-closed  "
+                    "(delay_ratio<=1.35 refuses cut at check)"
+                )
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
         if res.no_oracle:

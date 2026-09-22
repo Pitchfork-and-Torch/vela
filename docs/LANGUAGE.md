@@ -94,13 +94,13 @@ Mechanism names are an operator sum. After the list, optional combinators may si
 
 Existing programs need neither clause. Shipped flagship examples stay observe-only.
 
-**Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only`, `reconfig=RttHop|Flicker`, `loss=Mobility|Congestive|Unknown`, and `passthrough`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
+**Observe vs review posture.** `posture observe` is the default. Composing a closed-write operator (`HorizonChase`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker`, `TrimHold`) or legacy `OCE` is a type error. Flagship Reach is checkable without those operators: `vela check examples/reach.vela` prints `observe-only`, `reconfig=RttHop|Flicker`, `loss=Mobility|Congestive|Unknown`, `unknown=fail-closed` (delay_ratio<=1.35 refuses cut at check), and `passthrough`. `posture review` is ablation-only. It lets a program name a closed-write compose so the next session does not re-guess it. Review is not a packet-path enable. Do not merge a review compose as the flagship.
 
 **Passthrough law.** Observe-only is not yet a LeoAware wrap if a `when` or `every` body writes the packet path. `pace =`, `cwnd =`, `chase`, `cut`, and `enter Reprobe` on the cruise path are type errors under `posture observe`. Sample `freeze` and typed Reconfig/Loss policy stay legal: those are LeoAware. Horizon's leftover `pace = bw.mid` dumped seed 7 (65/181) and is now unrepresentable on observe. Review may keep a cruise write so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `passthrough` (LeoAware wrap; no cruise write).
 
 **Typed reconfig (observe rail).** `on Reconfig` under `posture observe` must match the closed taxonomy `RttHop | Flicker`. A bare `on Reconfig(e) { ... }` is a type error: hop and flicker are not the same event. SoftFlicker (cut 0.85 on flicker) dumped seed 7; the house endpoint cut stays 0.58 on both arms. `enter Reprobe(cut: x)` or `cut(x)` inside an observe Reconfig body must be 0.58. Review may keep a bare Reconfig or a different cut so ablation stays named.
 
-**Typed loss (observe rail).** `on Loss` under `posture observe` must match the closed taxonomy `Mobility | Congestive | Unknown`. A bare `on Loss(k) { cut(...) }` is a type error: mobility is not congestive. Mobility must hold (a Mobility cut is a type error). Unknown may cut only after a `delay_ratio > 1.35` proof (`require` / `when` / `if`). An unguarded Unknown cut is a type error. Congestive may cut. Review may keep a bare Loss or a Mobility cut so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `loss=Mobility|Congestive|Unknown`. Compile no longer stamps `typed_loss` for a bare Loss handler.
+**Typed loss (observe rail).** `on Loss` under `posture observe` must match the closed taxonomy `Mobility | Congestive | Unknown`. A bare `on Loss(k) { cut(...) }` is a type error: mobility is not congestive. Mobility must hold (a Mobility cut is a type error). Unknown may cut only after a `delay_ratio > 1.35` proof (`require` / `when` / `if`). An unguarded Unknown cut is a type error. Congestive may cut. Review may keep a bare Loss or a Mobility cut so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` stamps `loss=Mobility|Congestive|Unknown` and `unknown=fail-closed` (delay_ratio<=1.35 refuses cut at check; fail-closed, not advisory). SoftReprobe cut stays 0.58 (do not retune). Compile no longer stamps `typed_loss` for a bare Loss handler.
 
 Each mechanism declares:
 
@@ -326,7 +326,7 @@ outside borrow after split, or `pace` under `WriteCap<cwnd>` is a type
 error. `vela check` stamps `writecap=linear` or `writecap=budget`.
 Reconfig match is required on the observe rail (`RttHop | Flicker`,
 house cut 0.58). Observe Loss must match `Mobility | Congestive | Unknown`
-(Mobility holds; Unknown needs `delay_ratio > 1.35`). Observe `when`/`every`
+(Mobility holds; Unknown needs `delay_ratio > 1.35`; check stamps `unknown=fail-closed` when delay_ratio<=1.35 refuses cut). Observe `when`/`every`
 cannot write pace/cwnd (passthrough). `power=low` is n<8 at check and
 eval; five-seed ACCEPT on means stays legal. Flagship sources:
 `examples/equinox.vela` (language) and `examples/reach.vela` (house policy).

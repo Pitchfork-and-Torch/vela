@@ -34,7 +34,10 @@ binaries.
 4. **Typed loss.** `on Loss match` is a closed taxonomy
    (`Mobility | Congestive | Unknown`). On the observe rail a bare
    Loss is a type error, Mobility must hold, and Unknown may cut
-   only after `delay_ratio > 1.35`. Review may name a Mobility cut.
+   only after `delay_ratio > 1.35`. An Unknown cut with
+   `delay_ratio<=1.35` fails closed at check (`unknown=fail-closed`).
+   SoftReprobe cut stays 0.58 (do not retune). Review may name a
+   Mobility cut.
 5. **Content-addressed stdlib.** Each mechanism has a domain-separated
    SHA-256 of its effect row (`VELA1|mech|...`). Compose order is part
    of the digest. `vela mech` prints the catalog.
