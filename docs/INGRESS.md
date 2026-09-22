@@ -59,3 +59,19 @@ WriteCap, and hybrid automata. See `docs/LANGUAGE.md` Equinox
 laws and section K. `--fast` cannot become house. Workers write
 the result row to `--out`. ACCEPT on `gate=fast` is not a
 dual-gate win.
+
+## Path flicker vs hop (steward cook)
+
+`path` may declare `flicker ~ every Xs jitter Ys` for mid-epoch capacity
+steps (sibling starlink_v2 ~2.8s+/-1.2s). That is **not** `RttHop`.
+Endpoint Detect still kinds the event; SoftReprobe cut stays 0.58 on
+both arms. SoftFlicker (0.85) remains review.
+
+Handover and flicker cadences reject a non-positive period and reject
+jitter larger than the period (next event must not fall into the past).
+`hop` / `RttHop` / `Flicker` as path field names are type errors: use
+`handover` + `rtt_jump` for hop-class rails and `flicker` for mid-epoch
+capacity.
+
+`examples/starlink_flicker.vela` names the rails. `examples/ascent_erased.vela`
+is the fail-closed assist sibling (None holds; no invented hop).
