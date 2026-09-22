@@ -111,6 +111,12 @@ def check(prog: Program) -> CheckResult:
                     f"(known: {', '.join(sorted(KNOWN_SCENARIOS))})"
                 )
     if prog.contracts:
+        forgot_floor = [
+            c.name
+            for c in prog.contracts
+            if not any("terrestrial" in a.left for a in c.asserts)
+        ]
+        res.terrestrial = "missing" if forgot_floor else "named"
         res.power = (
             "low"
             if any(eval_power(len(c.seeds)) == "low" for c in prog.contracts)
@@ -992,6 +998,21 @@ def house_cut_error(cname: str, n: float) -> str:
         f"{cname}: observe-only Reprobe cut({n}) must be {HOUSE_ENDPOINT_CUT} "
         "(house endpoint; SoftFlicker is review)"
     )
+
+
+def terrestrial_check_line(kind: str) -> str:
+    """Check stamp for the incomplete-terrestrial verdict. No throughput figure."""
+    if kind == "named":
+        return (
+            "terrestrial=named  "
+            "(absent rows are INCOMPLETE; a measured miss is FAIL)"
+        )
+    if kind == "missing":
+        return (
+            "terrestrial=missing  "
+            "(eval verdict INCOMPLETE, never ACCEPT)"
+        )
+    return ""
 
 
 def power_low_warning(name: str, n_seeds: int) -> str:

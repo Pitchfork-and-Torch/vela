@@ -8,6 +8,7 @@ Only JSON under `results/` is a claim. This file is the lab log.
 - `--fast` is 45s / 2 seeds. Not the house gate. Do not mix `--seeds` or `--duration` with it.
 - House gate: seeds 13,7,42,99,123 · 90s · `leo_fast_ho` + terrestrial.
 - `power=low` when n<8 (checker warning + eval JSON). Five-seed ACCEPT on means is still legal. Not a p-value.
+- `vela check` stamps `terrestrial=named` or `terrestrial=missing`. A forgotten terrestrial assert is INCOMPLETE at eval, never ACCEPT. A measured miss on a present floor is FAIL. SoftReprobe / HOUSE_ENDPOINT_CUT stays 0.58.
 - A receipt without `--eval` is a self-check. `vela receipt --source --eval` is what fails a swapped goodput. `--fast` stamps `gate=fast`.
 - Gate is stamped from the rows that ran. Isolated workers write the result row to `--out`.
 
