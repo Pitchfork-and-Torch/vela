@@ -23,6 +23,8 @@ remaining LANGUAGE.md gaps checkable and runnable.
    compose as `min` (more conservative remaining fraction).
    SoftFlicker 0.85 cannot undo SoftReprobe 0.58. That dump
    (seed 7 45s: 55.2 / 123.8) is now a combinator, not a hope.
+   When SoftFlicker is present with SoftReprobe, `vela check` stamps
+   `soft-cut-min` / `compose cuts = min`. Do not retune 0.58.
 
 ## Commands
 

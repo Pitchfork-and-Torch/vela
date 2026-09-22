@@ -72,6 +72,11 @@ def check(prog: Program) -> CheckResult:
         res.typed_loss = _has_typed_loss(first)
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
+        # SoftFlicker with SoftReprobe: soft cuts compose as min at runtime.
+        # SoftFlicker 0.85 cannot raise the window after house SoftReprobe 0.58.
+        res.soft_cut_min = (
+            "SoftFlicker" in first.compose and "SoftReprobe" in first.compose
+        )
         res.cuts_compose = first.cuts_compose or ""
     _check_paths(prog, res)
     for con in prog.contracts:
