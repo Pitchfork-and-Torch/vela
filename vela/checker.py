@@ -1014,7 +1014,7 @@ def _check_paths(prog: Program, res: CheckResult) -> None:
     if "std.path" not in prog.uses:
         res.ok = False
         res.errors.append(path_needs_std_error())
-    laws = parse_program_paths(prog.paths)
+    laws = parse_program_paths(prog.paths, source_name=prog.source_name)
     for law in laws:
         for err in law.errors:
             res.ok = False

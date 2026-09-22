@@ -143,6 +143,12 @@ path LeoFastHO {
   capacity ~ uniform(20Mbps, 120Mbps)
   mobility_loss ~ burst(p=0.08, window=400ms) on reconfig
 }
+
+// Additive CSV bind (same PathModel). Digest commits file sha256.
+// Lab replay != orbit. No dish Mbps.
+path LeoFastHO {
+  from_csv ~ "tests/fixtures/starlink_tiny.csv"
+}
 ```
 
 The same model object is used by the discrete-event simulator **and** by `PredictiveFreeze` (`p_ho` is the model's predictive CDF, not a magic oracle of the next hop time). The kernel refuses `next_capacity` / future PathState even if the sim offers a freeze-lead peek. Calendar `p_ho` is estimated from detected gaps, never from future RNG.
@@ -273,7 +279,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Hints can lie.** Fail-closed integrity (ASCENT-D) stops bit flips. It does not stop a malicious or stale honest hint with a valid MAC. Role + age checks are the remaining rail; they are not a PKI.
 
-**Sim != orbit.** `LeoPath` is a Starlink-*class* model (handover, jump, flicker, mobility burst). It is not a replay of a particular cell or a particular software release. Real CSV traces are a `path` object. Until they are wired, numbers are lab numbers.
+**Sim != orbit.** `LeoPath` is a Starlink-*class* model (handover, jump, flicker, mobility burst). It is not a replay of a particular cell or a particular software release. Real CSV traces are a `path` object via `from_csv ~ "trace.csv"` (timed RTT / capacity / handover markers; content hash in the path digest). Wired replay is still a lab number: not orbit, not a dish Mbps claim.
 
 **OCE-era complexity.** VELA does not delete LeoAware. It wraps the parts that worked (Detect, SoftReprobe, delay yield) and refuses the parts that exploded (unnamed flags, double cuts, README-only wins). Researchers can still write a bad controller in VELA. They cannot write an *invisible* one.
 
@@ -362,17 +368,22 @@ That is the honest fast path, not a skip of the law.
 ## I. Path bind (VELA 0.4.1)
 
 A `path` block is the model object, not a comment. Check parses
-handover / rtt_jump / capacity / mobility_loss. Eval binds the
-handover rails the sibling sim actually takes. The receipt commits
-the declared law. `use std.path` is required to name a path.
+handover / rtt_jump / capacity / mobility_loss / from_csv. Eval binds
+the handover rails (or CSV replay) the sibling sim actually takes.
+The receipt commits the declared law (CSV content hash when wired).
+`use std.path` is required to name a path.
 
 `path LeoFastHO` binds `scenario leo_fast_ho`. Flagship examples
 already write the house rails (12s handover, 4s jitter). Unbound
 names warn; a leo_fast_ho that is not those rails warns. Unknown
 or unparseable fields are type errors.
 
-Calendar `p_ho` still comes from past gaps. CSV traces stay
-unwired. The kernel still refuses `next_capacity`.
+Calendar `p_ho` still comes from past gaps. CSV traces wire
+with `from_csv ~ "trace.csv"` into the same path object (fail-closed
+on missing file, bad headers, non-positive capacity, inverted time;
+digest commits the CSV content hash). Parametric LeoFastHO stays
+valid; CSV is additive. Lab replay is still not orbit. The kernel
+still refuses `next_capacity`.
 
 ## J. Receipt bind (VELA 0.4.2)
 
