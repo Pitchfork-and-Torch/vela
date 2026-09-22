@@ -8,19 +8,13 @@ use std.path
 use std.hint
 use std.eval
 
-// Ascent: fail-closed assist path for Starlink-class hints.
+// Ascent erased: the assist channel is gone. Fail closed.
 //
-// Today's Starlink has no official path-hint API. A missing or
-// erased ASCENT-D / Orb hint is None, not the next hop time.
-// Acting on None is a type error (hint law). None is not RttHop.
-//
-// Observe-only. No closed-write. LeoAware remains the engine.
-// Compose Detect + SoftReprobe; do not fork them. When the hint
-// is Some, freeze samples. When it is None, hold. Endpoint still
-// owns hop vs flicker (typed reconfig; SoftReprobe cut 0.58).
-// A phantom hop from an erased hint would be an oracle.
+// Starlink today has no official path-hint API. Erase-on-fail means
+// the signal is None. Hold. Do not invent a hop time. Do not cut.
+// Detect + SoftReprobe still own the packet path. Observe-only.
 
-controller Ascent {
+controller AscentErased {
   posture observe
   compose Detect + SoftReprobe + Calendar + IntervalBw + DualGateGuard
 
@@ -54,10 +48,6 @@ controller Ascent {
       freeze min_rtt, bw for 1.4 * rtt
     }
     None => hold
-  }
-
-  when hint.ascent {
-    freeze min_rtt, bw for 1.4 * rtt
   }
 }
 

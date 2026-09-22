@@ -60,7 +60,8 @@ def write_passthrough_result(
         "honesty": (
             "Means only. Do not mix with OPE-fair v3.7 prompt figures. "
             "House champion remains LeoAware v3.4-p95 73.57/138.37 vs BBR 70.88/138.83. "
-            "gate=fast. Not a house-gate dual-gate claim."
+            "gate=fast. Not a house-gate dual-gate claim. "
+            "Hop vs flicker: house SoftReprobe cut 0.58 on both arms."
         ),
         "gate": "fast",
         "scenario": "leo_fast_ho",
@@ -392,6 +393,8 @@ def honesty_text(gate: str) -> str:
         "Means only. p-values are not claimed. "
         f"power=low when n<{POWER_OK_MIN_SEEDS}. "
         f"gate={gate} (--fast is not the house gate). "
+        "Hop (RttHop / handover) is not mid-epoch flicker; "
+        "SoftReprobe cut stays 0.58 on both; SoftFlicker is review. "
         "Coupled-RNG house LeoAware is 73.57/138.37 vs BBR 70.88/138.83. "
         "Do not mix these numbers with OPE-fair v3.7 prompt figures."
     )
