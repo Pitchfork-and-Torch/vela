@@ -70,6 +70,9 @@ def check(prog: Program) -> CheckResult:
         res.hint_fail_closed = _has_hint_surface(first)
         res.typed_reconfig = _has_typed_reconfig(first)
         res.typed_loss = _has_typed_loss(first)
+        if res.typed_loss:
+            # Unknown delay gate is fail-closed at check (not advisory).
+            res.unknown_fail_closed = True
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""

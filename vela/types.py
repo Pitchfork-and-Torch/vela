@@ -211,6 +211,8 @@ class CheckResult:
     hint_fail_closed: bool = False
     typed_reconfig: bool = False
     typed_loss: bool = False
+    # When typed_loss: Unknown cut with delay_ratio<=1.35 fails closed at check.
+    unknown_fail_closed: bool = False
     passthrough: bool = False
     power: str = ""
     no_oracle: bool = True

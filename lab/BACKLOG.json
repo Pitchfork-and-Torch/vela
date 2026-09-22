@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "unknown-failclosed-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "vela check stamps unknown=fail-closed (delay_ratio<=1.35 refuses cut at check). Fail-closed, not advisory. SoftReprobe cut stays 0.58.",
+      "status": "done"
     }
   ]
 }
