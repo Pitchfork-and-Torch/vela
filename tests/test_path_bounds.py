@@ -7,6 +7,7 @@ from vela.checker import check
 from vela.parser import parse
 from vela.path import (
     path_capacity_overlay,
+    path_rtt_overlay,
     path_inverted_bounds_error,
     path_jitter_exceeds_error,
     path_zero_capacity_error,
@@ -250,6 +251,19 @@ path LeoFastHO {
         self.assertTrue(res.ok, res.errors)
         self.assertIn("named", res.path_bound)
         self.assertNotIn("(house)", res.path_bound)
+
+
+    def test_path_rtt_overlay(self):
+        from pathlib import Path as P
+        from vela.ir import program_to_config
+
+        src = (P(__file__).resolve().parents[1] / "examples" / "reach.vela").read_text(
+            encoding="utf-8"
+        )
+        cfg = program_to_config(parse(src, "reach.vela"))
+        lo, hi = path_rtt_overlay("leo_fast_ho", cfg)
+        self.assertEqual(lo, 0.02)
+        self.assertEqual(hi, 0.09)
 
 
 if __name__ == "__main__":

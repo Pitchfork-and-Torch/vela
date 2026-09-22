@@ -355,6 +355,23 @@ def path_capacity_overlay(
         )
     return None, None
 
+def path_rtt_overlay(
+    scenario: str, cfg
+) -> tuple[float | None, float | None]:
+    """RTT-jump rails declared for this scenario, or (None, None)."""
+    if cfg is None:
+        return None, None
+    for item in getattr(cfg, "paths", None) or []:
+        if isinstance(item, dict) and item.get("scenario") == scenario:
+            return item.get("rtt_jump_lo_s"), item.get("rtt_jump_hi_s")
+    if getattr(cfg, "path_scenario", "") == scenario:
+        return (
+            getattr(cfg, "rtt_jump_lo_s", None),
+            getattr(cfg, "rtt_jump_hi_s", None),
+        )
+    return None, None
+
+
 def house_mismatch_warning(law: PathLaw) -> str | None:
     if law.scenario != "leo_fast_ho" or not law.bound:
         return None
