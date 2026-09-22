@@ -130,6 +130,21 @@ def path_parse_error(name: str, field: str) -> str:
     return f"path {name}: cannot parse {field} (path law)"
 
 
+
+def path_inverted_range_error(name: str, field: str) -> str:
+    return (
+        f"path {name}: {field} lo must be <= hi "
+        "(inverted uniform is not a path rail)"
+    )
+
+
+def path_zero_mobility_window_error(name: str) -> str:
+    return (
+        f"path {name}: mobility_loss window must be positive "
+        "(a zero window is not a burst)"
+    )
+
+
 def path_empty_error(name: str) -> str:
     return f"path {name}: empty model (path law; a claim needs rails)"
 
@@ -167,6 +182,15 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.rtt_jump_hi_s = _to_seconds(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if (
+                law.rtt_jump_lo_s is not None
+                and law.rtt_jump_hi_s is not None
+                and law.rtt_jump_lo_s > law.rtt_jump_hi_s
+            ):
+                law.errors.append(path_inverted_range_error(model.name, key))
+                law.rtt_jump_lo_s = None
+                law.rtt_jump_hi_s = None
         elif key == "capacity":
             m = _UNIFORM.match(text)
             if not m:
@@ -177,6 +201,15 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.capacity_hi_bps = _to_bps(m.group(3), m.group(4))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if (
+                law.capacity_lo_bps is not None
+                and law.capacity_hi_bps is not None
+                and law.capacity_lo_bps > law.capacity_hi_bps
+            ):
+                law.errors.append(path_inverted_range_error(model.name, key))
+                law.capacity_lo_bps = None
+                law.capacity_hi_bps = None
         elif key == "mobility_loss":
             m = _BURST.match(text)
             if not m:
@@ -191,6 +224,11 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.mobility_window_s = _to_seconds(m.group(2), m.group(3))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+                continue
+            if law.mobility_window_s is None or law.mobility_window_s <= 0:
+                law.errors.append(path_zero_mobility_window_error(model.name))
+                law.mobility_p = None
+                law.mobility_window_s = None
     return law
 
 
