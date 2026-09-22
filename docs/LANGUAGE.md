@@ -126,7 +126,7 @@ contract DualGate vs BBRv3approx {
 }
 ```
 
-`vela eval` runs the contract. The compiler will **not** emit a `// beats BBR` comment. The JSON verdict is ACCEPT / FAIL / INCOMPLETE (missing terrestrial, too few seeds, etc.). The harness now emits that top-level `INCOMPLETE` when terrestrial is missing or `n_seeds` is below the contract minimum; a measured miss on a present assert is `FAIL`, and `INCOMPLETE` is never `ACCEPT`.
+`vela eval` runs the contract. The compiler will **not** emit a `// beats BBR` comment. The JSON verdict is ACCEPT / FAIL / INCOMPLETE (missing terrestrial, too few seeds, etc.). The harness now emits that top-level `INCOMPLETE` when terrestrial is missing or `n_seeds` is below the contract minimum; a measured miss on a present assert is `FAIL`, and `INCOMPLETE` is never `ACCEPT`. `vela check` stamps `terrestrial=named` when every contract names a terrestrial assert, and `terrestrial=missing` when one does not. A missing floor stays a warning plus that stamp: eval is INCOMPLETE, never ACCEPT.
 
 Fairness is optional and first-class. A second `scenario leo_multi` plus `assert mean(jain) >= 0.85` is the RFC 5166 holdout. The sibling sim already had 3-flow `leo_multi`; VELA now scores Jain in `evaluate()` instead of leaving it in a README. A jain assert without `leo_multi` is a type error. Missing multi-flow rows are INCOMPLETE. Flagship Reach stays single-flow DualGate. See `examples/fair.vela`.
 
@@ -284,7 +284,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority; split/borrow) |
-| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
+| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain, terrestrial verdict stamp |
 | `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |

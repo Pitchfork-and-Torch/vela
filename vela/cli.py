@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from vela import __version__
-from vela.checker import check
+from vela.checker import check, terrestrial_check_line
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
 from vela.types import POWER_OK_MIN_SEEDS
@@ -200,6 +200,9 @@ def _main(argv: list[str] | None = None) -> int:
             )
         elif res.power == "ok":
             print(f"    power=ok  (n>={POWER_OK_MIN_SEEDS})")
+        terr_line = terrestrial_check_line(res.terrestrial)
+        if terr_line:
+            print(f"    {terr_line}")
         if c.cuts_compose:
             print(f"    cuts_compose={c.cuts_compose}")
         if c.growth_compose:
