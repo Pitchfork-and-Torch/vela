@@ -67,6 +67,10 @@ STDLIB_MODULES = frozenset(
 )
 WRITE_TARGETS = ("cwnd", "pace")
 INTEGRATOR_OPS = ("*=", "+=", "-=", "/=")
+INTEGRATOR_STAMP = "integrator=level"
+INTEGRATOR_CHECK_LINE = (
+    "integrator=level  (when/every *= needs integrate; not per-ACK)"
+)
 POSTURES = ("observe", "review")
 # Hybrid automata: on = discrete jump, when/every = flow.
 HYBRID_JUMP_KINDS = frozenset({"enter", "invalidate", "cut"})
@@ -216,6 +220,7 @@ class CheckResult:
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True
+    integrator: bool = True
     writecap: str = ""
     fairness: str = ""
     jain_min: float | None = None
