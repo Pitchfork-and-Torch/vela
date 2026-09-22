@@ -57,6 +57,10 @@ binaries.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.
+10. **prior.x carry.** Samples carried across `enter Reprobe` must be
+   named `prior.x` or the check fails closed. Current-epoch `rtt` after
+   Reprobe is dead; `prior.rtt` is the discounted remnant.
+   `vela check` stamps `prior_x_carry` when the law holds.
 
 ## Commands
 
