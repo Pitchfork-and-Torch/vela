@@ -242,7 +242,7 @@ On this machine the locked sibling sim is LeoAware **v3.4-p95** (coupled-RNG era
 
 `vela eval` writes `results/eval_*.json`. That file is the only allowed source for "Horizon beats X" sentences. If an eval misses the stretch 5-10% goodput target, the language is still the product; the controller is a program you can change without rewriting the kernel.
 
-Lab note (first `--fast` eval, 45s, seeds 13+7): a literal `pace *= 0.94` on every ACK while `p_ho > 0.35` destroyed seed 7 (65 / 181 vs LeoAware 89 / 108). That is exactly the class of accident VELA is meant to make visible: a `when` body is a *level*, not a per-ACK multiply, unless the author writes an integrator. Kernel 0.1.1 sets pace from `bw.mid` and requires `p_ho > 0.55` plus three real HO-scale gaps before the calendar is trusted.
+Lab note (first `--fast` eval, 45s, seeds 13+7): a literal `pace *= 0.94` on every ACK while `p_ho > 0.35` destroyed seed 7 (65 / 181 vs LeoAware 89 / 108). That is exactly the class of accident VELA is meant to make visible: a `when` body is a *level*, not a per-ACK multiply, unless the author writes an integrator. Kernel 0.1.1 sets pace from `bw.mid` and requires `p_ho > 0.55` plus three real HO-scale gaps before the calendar is trusted. `vela check` stamps `predictive_freeze=needs_3_ho_gaps` when `PredictiveFreeze` is composed (fire-condition honesty; not a dish Mbps claim).
 
 ## E. Real-world impact (Starlink-class)
 

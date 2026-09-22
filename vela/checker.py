@@ -18,6 +18,8 @@ from vela.types import (
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    PREDICTIVE_FREEZE_FIRE_STAMP,
+    PREDICTIVE_FREEZE_MIN_HO_GAPS,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -73,6 +75,8 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        if controller_stamps_predictive_freeze(first):
+            res.predictive_freeze = PREDICTIVE_FREEZE_FIRE_STAMP
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:
@@ -950,6 +954,19 @@ def _check_write_cap(c: Controller, res: CheckResult) -> None:
 
 
 INTERVAL_COUNT_ATTRS = frozenset({"n", "e"})
+
+
+def controller_stamps_predictive_freeze(c: Controller) -> bool:
+    """Stamp when PredictiveFreeze is composed (fire needs N HO-scale gaps)."""
+    return "PredictiveFreeze" in c.compose
+
+
+def predictive_freeze_fire_line() -> str:
+    """Visible check line: fire-condition honesty from LANGUAGE/EVAL."""
+    return (
+        f"predictive_freeze={PREDICTIVE_FREEZE_FIRE_STAMP}  "
+        f"(p_ho gate; {PREDICTIVE_FREEZE_MIN_HO_GAPS} HO-scale gaps)"
+    )
 
 
 def closed_write_error(cname: str, writes: list[str]) -> str:

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Optional
 from vela.compose import apply_composed_cut
 from vela.ir import VelaConfig
 from vela.oracle import refuse_oracle_hint
+from vela.types import PREDICTIVE_FREEZE_MIN_HO_GAPS
 
 if TYPE_CHECKING:
     pass
@@ -206,7 +207,9 @@ class HorizonCCA:
 
     # ---- VELA mechanisms ----
     def _pred_ho_t(self) -> Optional[float]:
-        if len(self._ho_gaps) < 2 or self._last_ho_t < -1e8:
+        # LANGUAGE/EVAL: PredictiveFreeze needs N real HO-scale gaps
+        # before the calendar is trusted (not 2).
+        if len(self._ho_gaps) < PREDICTIVE_FREEZE_MIN_HO_GAPS or self._last_ho_t < -1e8:
             return None
         med = _median(list(self._ho_gaps))
         return float(self._last_ho_t) + med
