@@ -9,6 +9,11 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+# PredictiveFreeze fire-condition honesty (LANGUAGE/EVAL):
+# calendar trusted only after p_ho threshold + N real HO-scale gaps.
+PREDICTIVE_FREEZE_MIN_HO_GAPS = 3
+PREDICTIVE_FREEZE_P_HO = 0.55
+PREDICTIVE_FREEZE_FIRE_STAMP = "needs_3_ho_gaps"
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
 # Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays
@@ -222,6 +227,8 @@ class CheckResult:
     cuts_compose: str = ""
     path_bound: str = ""
     path_digest: str = ""
+    # PredictiveFreeze fire honesty: needs_3_ho_gaps when composed.
+    predictive_freeze: str = ""
 
     def raise_if_error(self) -> None:
         if not self.ok:

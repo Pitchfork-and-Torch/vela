@@ -62,7 +62,7 @@ Seed 7: 65.89 / 118.4 vs Leo 88.65 / 108.4 (chase dump).
 | 7 | 88.65 / 108.4 | 88.65 / 108.4 |
 | terr | 77.76 / 40.0 | 77.76 / 40.0 |
 
-PredictiveFreeze did not fire (needs 3 HO-scale gaps). Wrapper + compose = LeoAware within 0.02 Mbps. This is the no-regress rail.
+PredictiveFreeze did not fire (needs 3 HO-scale gaps). Check stamps `predictive_freeze=needs_3_ho_gaps` for that fire-condition honesty. Wrapper + compose = LeoAware within 0.02 Mbps. This is the no-regress rail.
 
 ### horizon-house (90s, partial, CPython 3.13 crash)
 
