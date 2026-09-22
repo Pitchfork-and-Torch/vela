@@ -297,9 +297,11 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 The 0.2 packet search closed: every additive write failed a house seed.
 0.3 evolves the *language* so those accidents are type errors, hashed
-operators, and receipts.
+operators, and receipts. Equinox is the discipline demo on the observe-only
+Reach compose class. It is not a closed-write intro and not a rival CCA.
+The packet-path flagship remains `examples/reach.vela`.
 
-See [EQUINOX.md](EQUINOX.md). Summary:
+See [EQUINOX.md](EQUINOX.md) and [CONSTELLATION.md](CONSTELLATION.md). Summary:
 
 | Law | What it refuses |
 |-----|-----------------|
@@ -329,7 +331,9 @@ house cut 0.58). Observe Loss must match `Mobility | Congestive | Unknown`
 (Mobility holds; Unknown needs `delay_ratio > 1.35`). Observe `when`/`every`
 cannot write pace/cwnd (passthrough). `power=low` is n<8 at check and
 eval; five-seed ACCEPT on means stays legal. Flagship sources:
-`examples/equinox.vela` (language) and `examples/reach.vela` (house policy).
+`examples/reach.vela` (packet-path house policy) and
+`examples/equinox.vela` (language / discipline demo on the same stamps).
+WriteCap authority 0 on Equinox refuses cruise writes; it does not enable them.
 
 Version: VELA 0.4.3 (affine samples, linear WriteCap, hybrid automata; --fast cannot be house; worker --out).
 Prior: VELA 0.4.2 (receipt bind: eval JSON is the number the hash sees).

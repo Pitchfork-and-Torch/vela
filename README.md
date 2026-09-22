@@ -114,8 +114,8 @@ contract DualGate vs BBRv3approx {
 
 ```
 vela/           compiler, type checker, composition kernel, Horizon CCA
-examples/       equinox.vela, reach.vela, fair.vela, ascent.vela, horizon.vela, luff.vela, leoaware_oce.vela
-docs/           LANGUAGE.md (complete design), EQUINOX.md, INGRESS.md
+examples/       reach.vela (flagship), equinox.vela (discipline), ascent.vela, fair.vela, horizon.vela, luff.vela, leoaware_oce.vela
+docs/           LANGUAGE.md, CONSTELLATION.md, EQUINOX.md, INGRESS.md, MISSION.md
 tests/          parser, types, kernel, eval verdicts
 emit/           compiled Python (generated)
 ```
@@ -130,7 +130,7 @@ VELA does not violate causality or invent capacity. A Starlink-class path still 
 
 **v0.4.3:** affine samples (use-once; e+1 is prior), linear WriteCap (`split` / `borrow`), hybrid automata (`on` jump, `when`/`every` flow). `--fast` cannot be mixed with `--seeds`/`--duration`. Gate is stamped from the rows that ran. A worker writes the result row to a file so a later stdout line cannot replace it. ACCEPT on `gate=fast` is not a house dual-gate claim.
 
-**v0.3 Equinox:** integrators in `when` / `every` are type errors. WriteCap is linear (`split` / `borrow`, else integer budget). Affine samples are use-once per block; `enter Reprobe` is e+1. Reconfig is a closed kind. Eval writes a SHA-256 receipt bound to source + compose + merkle of rows. Views are first-class compose morphisms. House LeoAware (coupled-RNG, not OPE-fair) remains 73.57 / 138.37 vs BBR 70.88 / 138.83. JSON + receipt under `results/` are the only win table. See `docs/INGRESS.md`, `docs/EQUINOX.md`, and `docs/EVAL-NOTES.md`.
+**v0.3 Equinox:** discipline demo on the observe-only Reach wrap (not a closed-write intro). Integrators in `when` / `every` are type errors. WriteCap authority 0 refuses cruise writes (`split` / `borrow` else integer budget). Affine samples are use-once per block; `enter Reprobe` is e+1. Reconfig is a closed kind at house cut 0.58. Eval writes a SHA-256 receipt bound to source + compose + merkle of rows. Views are first-class compose morphisms. House LeoAware (coupled-RNG, not OPE-fair) remains 73.57 / 138.37 vs BBR 70.88 / 138.83. JSON + receipt under `results/` are the only win table. See `docs/CONSTELLATION.md`, `docs/EQUINOX.md`, and `docs/EVAL-NOTES.md`.
 
 ## License
 
