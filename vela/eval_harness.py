@@ -352,6 +352,8 @@ def evaluate(
     summary["config"] = {
         "name": cfg.name,
         "mechanisms": cfg.mechanisms,
+        "view": getattr(cfg, "view", "") or "",
+        "compose_digest": getattr(cfg, "compose_digest", "") or "",
         "posture": cfg.posture,
         "observe_only": cfg.observe_only,
         "passthrough": cfg.passthrough,

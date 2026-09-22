@@ -48,7 +48,10 @@ binaries.
    rows that ran. Workers write the result row to `--out`.
 7. **Views.** `view Observe of Equinox { compose ... }` is a morphism
    of the same controller. `vela eval --view Observe` cannot pretend
-   it ran the other compose.
+   it ran the other compose. Receipts stamp `view` and `compose_digest`.
+   `vela receipt --source` binds compose to the controller or a declared
+   view (views law: refuse claiming compose A as compose B). Flagship
+   Reach `vela check` prints `compose_digest=<hex>` so the digest is visible.
 8. **Passthrough.** Observe `when` / `every` cannot write `pace`,
    `cwnd`, `chase`, or `cut`. Reach is a LeoAware wrap at check time.
    Sample `freeze` stays legal. Review may name a cruise write.

@@ -59,3 +59,7 @@ WriteCap, and hybrid automata. See `docs/LANGUAGE.md` Equinox
 laws and section K. `--fast` cannot become house. Workers write
 the result row to `--out`. ACCEPT on `gate=fast` is not a
 dual-gate win.
+
+## Compose digest / views law (0.4.x cook)
+
+`vela check` prints `compose_digest=<hex>` on flagship Reach. Eval receipts stamp `view` and `compose_digest`. `vela receipt --source` refuses a silent operator swap and refuses claiming compose A as compose B (Equinox views law). SoftReprobe cut stays 0.58. Observe-only. No closed-write. No dish Mbps.
