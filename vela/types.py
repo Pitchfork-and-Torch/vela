@@ -210,6 +210,8 @@ class CheckResult:
     closed_writes: list[str] = field(default_factory=list)
     hint_fail_closed: bool = False
     typed_reconfig: bool = False
+    # SoftReprobe house endpoint cut (0.58). Visible check stamp; do not retune.
+    house_endpoint_cut: float | None = None
     typed_loss: bool = False
     passthrough: bool = False
     power: str = ""

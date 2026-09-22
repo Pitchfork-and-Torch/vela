@@ -175,6 +175,10 @@ def _main(argv: list[str] | None = None) -> int:
             print("    hint=fail-closed  (missing is None, not a hop oracle)")
         if res.typed_reconfig:
             print("    reconfig=RttHop|Flicker  (house cut 0.58)")
+        if res.house_endpoint_cut is not None:
+            cut = res.house_endpoint_cut
+            print(f"    house_endpoint_cut={cut}")
+            print(f"    softreprobe_cut={cut}")
         if res.typed_loss:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:

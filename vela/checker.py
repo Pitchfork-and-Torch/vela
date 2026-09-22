@@ -69,6 +69,8 @@ def check(prog: Program) -> CheckResult:
         res.observe_only = first.posture == "observe" and is_observe_only(first.compose)
         res.hint_fail_closed = _has_hint_surface(first)
         res.typed_reconfig = _has_typed_reconfig(first)
+        if "SoftReprobe" in first.compose:
+            res.house_endpoint_cut = HOUSE_ENDPOINT_CUT
         res.typed_loss = _has_typed_loss(first)
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
