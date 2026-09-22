@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "interval-n2-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "vela check stamps interval_n>=2 / uncertainty-n when IntervalBw is composed or an Interval signal is declared. Visibility for the existing uncertainty law (bw as point requires n>=2). SoftReprobe cut stays 0.58.",
+      "status": "done"
     }
   ]
 }

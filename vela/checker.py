@@ -73,6 +73,10 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        # Uncertainty law stamp: Interval point-use requires n>=2 (visible).
+        interval_names = {s.name for s in first.signals if s.typ.name == "Interval"}
+        if "IntervalBw" in first.compose or interval_names:
+            res.interval_n2 = True
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:

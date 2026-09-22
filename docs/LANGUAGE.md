@@ -56,7 +56,7 @@ use std.eval
 
 **Affine law.** `Sample` / `Interval` names (and ambient `min_rtt` / `bw`) are affine in each handler block. One statement may mention `rtt` twice (`explore: 1.15 * rtt, fill: 1.85 * rtt` is one use). A second statement must `let r = rtt` first. Guards (`when rtt > 20ms`, `bw.n >= 2`) do not consume. `enter Reprobe` advances the epoch: later reads of the current name are type errors; `prior.x` is the legal remnant. `vela check` stamps `affine` when the law holds.
 
-**Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth. The checker now enforces this as a type error unless the same block proves `n >= 2`.
+**Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth. The checker now enforces this as a type error unless the same block proves `n >= 2`. `vela check` stamps `interval_n>=2` / `uncertainty-n` when `IntervalBw` is composed or an `Interval` signal is declared (Reach, Horizon, Equinox).
 
 **Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level. The checker now enforces it: `on Hint(h)` must match `Some | None`; `when hint.ascent` / `require hint.ascent then` prove Some; a bare `hint.ascent` in arithmetic is illegal. `use std.hint` is required to mention Hint. Today's Starlink has no official path-hint API, so absence is None, not a hop oracle. Flagship Reach stays defined without hints.
 
