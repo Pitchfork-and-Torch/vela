@@ -57,6 +57,7 @@ VELA_CONFIG = VelaConfig(
     handover_jitter_s={hjitter},
     paths={paths!r},
     path_digest={pdigest!r},
+    trace_csv={trace_csv!r},
 )
 
 CCA_NAME = {name!r}
@@ -116,6 +117,7 @@ def compile_program(prog: Program, *, strict: bool = True) -> tuple[str, VelaCon
         hjitter=cfg.handover_jitter_s,
         paths=cfg.paths,
         pdigest=cfg.path_digest,
+        trace_csv=getattr(cfg, "trace_csv", "") or "",
     )
     return text, cfg
 

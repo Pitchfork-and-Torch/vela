@@ -70,6 +70,7 @@ class VelaConfig:
     handover_jitter_s: float | None = None
     paths: list = field(default_factory=list)
     path_digest: str = ""
+    trace_csv: str = ""
 
 
 def parse_report_ci(reports: list[str]) -> tuple[float | None, list[str]]:
@@ -170,7 +171,7 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
     cfg.no_oracle = True
     from vela.path import parse_program_paths, path_digest
 
-    laws = parse_program_paths(prog.paths)
+    laws = parse_program_paths(prog.paths, source_name=prog.source_name)
     cfg.paths = [law.as_dict() for law in laws]
     cfg.path_digest = path_digest(laws)
     first_bound = next((law for law in laws if law.bound), None)
@@ -179,8 +180,12 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
         cfg.path_scenario = first_bound.scenario
         cfg.handover_interval_s = first_bound.handover_interval_s
         cfg.handover_jitter_s = first_bound.handover_jitter_s
+        if first_bound.csv_path and first_bound.csv_sha256:
+            cfg.trace_csv = first_bound.csv_path
     elif laws:
         cfg.path_name = laws[0].name
+        if laws[0].csv_path and laws[0].csv_sha256:
+            cfg.trace_csv = laws[0].csv_path
     if prog.contracts:
         con = prog.contracts[0]
         cfg.seeds = list(con.seeds)

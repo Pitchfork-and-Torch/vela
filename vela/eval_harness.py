@@ -17,6 +17,7 @@ from vela.path import (
     HOUSE_HANDOVER_INTERVAL_S,
     HOUSE_HANDOVER_JITTER_S,
     path_overlay,
+    path_trace_csv,
 )
 from vela.receipt import eval_gate
 from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power
@@ -123,6 +124,8 @@ def scenario_cfg(
 ):
     LeoPathConfig = mod["LeoPathConfig"]
     interval, jitter = path_overlay(name, cfg)
+    trace = path_trace_csv(name, cfg)
+    extra = {"trace_csv": trace} if trace else {}
     if name == "leo_fast_ho":
         return (
             LeoPathConfig(
@@ -134,6 +137,7 @@ def scenario_cfg(
                     HOUSE_HANDOVER_JITTER_S if jitter is None else jitter
                 ),
                 seed=seed,
+                **extra,
             ),
             1,
         )
@@ -143,18 +147,23 @@ def scenario_cfg(
                 duration_s=duration_s,
                 handover_interval_s=22 if interval is None else interval,
                 seed=seed,
+                **extra,
             ),
             1,
         )
     if name == "terrestrial":
         d = min(duration_s, 60.0)
-        return (LeoPathConfig(duration_s=d, seed=seed, terrestrial=True), 1)
+        return (
+            LeoPathConfig(duration_s=d, seed=seed, terrestrial=True, **extra),
+            1,
+        )
     if name == "leo_multi":
         return (
             LeoPathConfig(
                 duration_s=duration_s,
                 handover_interval_s=25 if interval is None else interval,
                 seed=seed,
+                **extra,
             ),
             3,
         )
@@ -367,6 +376,7 @@ def evaluate(
         "handover_jitter_s": cfg.handover_jitter_s,
         "paths": list(cfg.paths or []),
         "path_digest": cfg.path_digest,
+        "trace_csv": getattr(cfg, "trace_csv", "") or "",
         "gate": summary["gate"],
     }
     return summary
