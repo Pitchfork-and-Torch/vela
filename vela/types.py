@@ -9,6 +9,8 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+# Review SoftFlicker flicker cut. Visibility stamp only; does not raise SoftReprobe.
+SOFT_FLICKER_CUT = 0.85
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
 # Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays
@@ -216,6 +218,8 @@ class CheckResult:
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True
+    # SoftFlicker alone (no SoftReprobe): visible review cut; does not raise SoftReprobe.
+    softflicker_cut: float | None = None
     writecap: str = ""
     fairness: str = ""
     jain_min: float | None = None

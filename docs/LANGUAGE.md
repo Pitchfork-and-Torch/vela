@@ -98,7 +98,7 @@ Existing programs need neither clause. Shipped flagship examples stay observe-on
 
 **Passthrough law.** Observe-only is not yet a LeoAware wrap if a `when` or `every` body writes the packet path. `pace =`, `cwnd =`, `chase`, `cut`, and `enter Reprobe` on the cruise path are type errors under `posture observe`. Sample `freeze` and typed Reconfig/Loss policy stay legal: those are LeoAware. Horizon's leftover `pace = bw.mid` dumped seed 7 (65/181) and is now unrepresentable on observe. Review may keep a cruise write so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `passthrough` (LeoAware wrap; no cruise write).
 
-**Typed reconfig (observe rail).** `on Reconfig` under `posture observe` must match the closed taxonomy `RttHop | Flicker`. A bare `on Reconfig(e) { ... }` is a type error: hop and flicker are not the same event. SoftFlicker (cut 0.85 on flicker) dumped seed 7; the house endpoint cut stays 0.58 on both arms. `enter Reprobe(cut: x)` or `cut(x)` inside an observe Reconfig body must be 0.58. Review may keep a bare Reconfig or a different cut so ablation stays named.
+**Typed reconfig (observe rail).** `on Reconfig` under `posture observe` must match the closed taxonomy `RttHop | Flicker`. A bare `on Reconfig(e) { ... }` is a type error: hop and flicker are not the same event. SoftFlicker (cut 0.85 on flicker) dumped seed 7; the house endpoint cut stays 0.58 on both arms. `enter Reprobe(cut: x)` or `cut(x)` inside an observe Reconfig body must be 0.58. Review may keep a bare Reconfig or a different cut so ablation stays named. `vela check` stamps `softflicker_cut=0.85` when SoftFlicker is composed alone (without SoftReprobe); that stamp does not raise SoftReprobe / house 0.58.
 
 **Typed loss (observe rail).** `on Loss` under `posture observe` must match the closed taxonomy `Mobility | Congestive | Unknown`. A bare `on Loss(k) { cut(...) }` is a type error: mobility is not congestive. Mobility must hold (a Mobility cut is a type error). Unknown may cut only after a `delay_ratio > 1.35` proof (`require` / `when` / `if`). An unguarded Unknown cut is a type error. Congestive may cut. Review may keep a bare Loss or a Mobility cut so ablation stays named. The checker now enforces this: `vela check examples/reach.vela` prints `loss=Mobility|Congestive|Unknown`. Compile no longer stamps `typed_loss` for a bare Loss handler.
 
@@ -349,6 +349,7 @@ See [INGRESS.md](INGRESS.md). Summary:
 | No-oracle | `next_capacity` / future PathState (sim freeze-lead peek) |
 | Fairness holdout | a Jain sentence with no `leo_multi` rows |
 | Soft-cut min | SoftFlicker 0.85 raising the window after 0.58 |
+| SoftFlicker alone cut | SoftFlicker without SoftReprobe hiding cut 0.85 (`softflicker_cut=0.85`; does not raise SoftReprobe) |
 
 `vela check examples/reach.vela` prints `no-oracle`. Kernel
 `on_path_hint` always passes `next_capacity_bps=None`. Calendar
