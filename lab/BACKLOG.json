@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "enter-reprobe-only-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "vela check stamps enter=Reprobe-only (enter Cruise is a type error). Equinox law 10. SoftReprobe cut 0.58.",
+      "status": "done"
     }
   ]
 }

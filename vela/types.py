@@ -72,6 +72,12 @@ POSTURES = ("observe", "review")
 HYBRID_JUMP_KINDS = frozenset({"enter", "invalidate", "cut"})
 HYBRID_MODES = frozenset({"Reprobe"})
 HYBRID_TICKS = frozenset({"ack", "epoch"})
+# Enter-location law: only enter Reprobe is legal; enter Cruise is a type error.
+# Visible check stamp (distinct from hybrid jump/flow placement).
+ENTER_REPROBE_ONLY_STAMP = "enter=Reprobe-only"
+ENTER_REPROBE_ONLY_CHECK_LINE = (
+    "enter=Reprobe-only  (enter Cruise is a type error)"
+)
 
 # LANGUAGE.md D2 closed-write class. Stdlib only until a named ablation is green.
 CLOSED_WRITE_OPERATORS = frozenset(
