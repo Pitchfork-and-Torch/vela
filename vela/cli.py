@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from vela import __version__
-from vela.checker import check
+from vela.checker import FRESHNESS_CHECK_LINE, check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
 from vela.types import POWER_OK_MIN_SEEDS
@@ -183,6 +183,8 @@ def _main(argv: list[str] | None = None) -> int:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:
             print("    affine  (Sample @ e is use-once; e+1 is prior)")
+        if res.freshness:
+            print(f"    {FRESHNESS_CHECK_LINE}")
         if res.hybrid:
             print("    hybrid  (on = jump; when/every = flow)")
         if res.writecap == "linear":

@@ -57,6 +57,9 @@ binaries.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.
+10. **Freshness / nested prior.** `invalidate` sticks into nested
+   when/if/require. After `enter Reprobe`, the legal remnant is
+   `prior.x`. `vela check` stamps `freshness`.
 
 ## Commands
 
