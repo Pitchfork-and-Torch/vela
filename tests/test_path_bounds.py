@@ -235,5 +235,22 @@ path LeoFastHO {
         self.assertTrue(any("not the house" in w and "Mbps" in w for w in res.warnings), res.warnings)
 
 
+    def test_capacity_mismatch_not_stamped_house(self):
+        src = _prog(
+            """
+path LeoFastHO {
+  handover ~ every 12s jitter 4s
+  rtt_jump ~ uniform 20ms 90ms
+  capacity ~ uniform 10Mbps 50Mbps
+  mobility_loss ~ burst p=0.08 window=400ms
+}
+"""
+        )
+        res = check(parse(src, "cap-named.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertIn("named", res.path_bound)
+        self.assertNotIn("(house)", res.path_bound)
+
+
 if __name__ == "__main__":
     unittest.main()

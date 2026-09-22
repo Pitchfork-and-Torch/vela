@@ -92,13 +92,21 @@ class PathLaw:
 
     @property
     def house(self) -> bool:
-        return (
-            self.scenario == "leo_fast_ho"
-            and self.handover_interval_s is not None
-            and self.handover_jitter_s is not None
-            and abs(self.handover_interval_s - HOUSE_HANDOVER_INTERVAL_S) < 1e-9
-            and abs(self.handover_jitter_s - HOUSE_HANDOVER_JITTER_S) < 1e-9
-        )
+        if self.scenario != "leo_fast_ho":
+            return False
+        if self.handover_interval_s is None or self.handover_jitter_s is None:
+            return False
+        if abs(self.handover_interval_s - HOUSE_HANDOVER_INTERVAL_S) >= 1e-9:
+            return False
+        if abs(self.handover_jitter_s - HOUSE_HANDOVER_JITTER_S) >= 1e-9:
+            return False
+        # When capacity is declared, house means the house Mbps rail too.
+        if self.capacity_lo_bps is not None and self.capacity_hi_bps is not None:
+            if abs(self.capacity_lo_bps - HOUSE_CAPACITY_LO_BPS) >= 1.0:
+                return False
+            if abs(self.capacity_hi_bps - HOUSE_CAPACITY_HI_BPS) >= 1.0:
+                return False
+        return True
 
     def as_dict(self) -> dict:
         return {
@@ -348,7 +356,14 @@ def path_capacity_overlay(
     return None, None
 
 def house_mismatch_warning(law: PathLaw) -> str | None:
-    if law.scenario != "leo_fast_ho" or not law.bound or law.house:
+    if law.scenario != "leo_fast_ho" or not law.bound:
+        return None
+    if (
+        law.handover_interval_s is not None
+        and law.handover_jitter_s is not None
+        and abs(law.handover_interval_s - HOUSE_HANDOVER_INTERVAL_S) < 1e-9
+        and abs(law.handover_jitter_s - HOUSE_HANDOVER_JITTER_S) < 1e-9
+    ):
         return None
     return (
         f"path {law.name}: leo_fast_ho handover "
