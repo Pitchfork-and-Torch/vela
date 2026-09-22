@@ -211,6 +211,8 @@ class CheckResult:
     hint_fail_closed: bool = False
     typed_reconfig: bool = False
     typed_loss: bool = False
+    # When typed_loss, stamp LeoAware Unknown fall-through (do not retune).
+    unknown_needs_delay_ratio: float | None = None
     passthrough: bool = False
     power: str = ""
     no_oracle: bool = True

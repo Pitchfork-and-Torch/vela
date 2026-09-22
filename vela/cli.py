@@ -176,7 +176,9 @@ def _main(argv: list[str] | None = None) -> int:
         if res.typed_reconfig:
             print("    reconfig=RttHop|Flicker  (house cut 0.58)")
         if res.typed_loss:
-            print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
+            print("    typed_loss=Mobility|Congestive|Unknown")
+            if res.unknown_needs_delay_ratio is not None:
+                print(f"    unknown_needs_delay_ratio>{res.unknown_needs_delay_ratio}")
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
         if res.no_oracle:
