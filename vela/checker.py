@@ -1,6 +1,12 @@
 """VELA static checker: freshness, loss coverage, compose cuts, contracts."""
 from __future__ import annotations
 
+PRIOR_X_CARRY_CHECK_LINE = (
+    "prior_x_carry  (samples carried across enter Reprobe must be "
+    "prior.x or fail closed)"
+)
+
+
 from vela.ast import Controller, Program, Stmt, View
 from vela.digest import compose_digest
 from vela.ir import parse_report_ci
@@ -601,6 +607,7 @@ def _affine_note(
         if epoch_advanced:
             res.ok = False
             res.affine = False
+            res.prior_x_carry = False
             err = affine_epoch_error(cname, n)
         elif n in consumed:
             res.ok = False

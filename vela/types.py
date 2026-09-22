@@ -215,6 +215,7 @@ class CheckResult:
     power: str = ""
     no_oracle: bool = True
     affine: bool = True
+    prior_x_carry: bool = True
     hybrid: bool = True
     writecap: str = ""
     fairness: str = ""

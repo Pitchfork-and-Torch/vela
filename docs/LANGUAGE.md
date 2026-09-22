@@ -54,7 +54,7 @@ use std.eval
 
 **Freshness law.** Reading `min_rtt` after `invalidate min_rtt` is a type error. The kernel stores the last epoch's scale as `prior.bw` / `prior.bdp` with a mandatory discount (`<= 0.75` in the first 2 s of a new epoch). You cannot write `min_rtt = prior.min_rtt`. The checker now rejects that assign.
 
-**Affine law.** `Sample` / `Interval` names (and ambient `min_rtt` / `bw`) are affine in each handler block. One statement may mention `rtt` twice (`explore: 1.15 * rtt, fill: 1.85 * rtt` is one use). A second statement must `let r = rtt` first. Guards (`when rtt > 20ms`, `bw.n >= 2`) do not consume. `enter Reprobe` advances the epoch: later reads of the current name are type errors; `prior.x` is the legal remnant. `vela check` stamps `affine` when the law holds.
+**Affine law.** `Sample` / `Interval` names (and ambient `min_rtt` / `bw`) are affine in each handler block. One statement may mention `rtt` twice (`explore: 1.15 * rtt, fill: 1.85 * rtt` is one use). A second statement must `let r = rtt` first. Guards (`when rtt > 20ms`, `bw.n >= 2`) do not consume. `enter Reprobe` advances the epoch: later reads of the current name are type errors; `prior.x` is the legal remnant. Samples carried across `enter Reprobe` must be `prior.x` or the check fails closed. `vela check` stamps `affine` when the use-once law holds, and stamps `prior_x_carry` when the carry-across-Reprobe law holds.
 
 **Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth. The checker now enforces this as a type error unless the same block proves `n >= 2`.
 
@@ -305,6 +305,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 |-----|-----------------|
 | Level vs integrator | `when` / `every` `{ pace *= k }` without `integrate when` / `integrate every` |
 | Affine samples | second Sample read in one block; Sample @ e after `enter Reprobe` |
+| prior.x carry | Sample carried across `enter Reprobe` without `prior.x` (fail closed; stamps `prior_x_carry`) |
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
