@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "dual-gate-cli-stamp",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "CLI/receipt stamp dual_gate_claim=true|false. gate=fast ACCEPT is never a house DualGate win.",
+      "status": "done"
     }
   ]
 }

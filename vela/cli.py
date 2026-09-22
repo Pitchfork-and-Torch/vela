@@ -127,9 +127,17 @@ def _main(argv: list[str] | None = None) -> int:
                 print(f"error: {e}")
             return 1
         bound = "bound" if summary is not None else "unbound"
+        from vela.types import dual_gate_claim as _claim
+
+        gate = rec.get("gate") or "-"
+        if "dual_gate_claim" in rec:
+            claim_s = "true" if rec.get("dual_gate_claim") else "false"
+        else:
+            claim_s = "true" if _claim(str(gate), rec.get("verdict")) else "false"
         print(
             f"ok  receipt={rec.get('receipt_digest', '')[:16]}  "
-            f"verdict={rec.get('verdict')}  gate={rec.get('gate') or '-'}  "
+            f"verdict={rec.get('verdict')}  gate={gate}  "
+            f"dual_gate_claim={claim_s}  "
             f"rows={bound}"
         )
         if summary is None:
@@ -298,7 +306,7 @@ def _main(argv: list[str] | None = None) -> int:
             for e in errs:
                 print(f"error: {e}")
             return 1
-        dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
+        dump_keys = [k for k in ("verdict", "power", "gate", "dual_gate_claim", "asserts", "tables") if k in summary]
         print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
         print(f"wrote {out}")
         print(
