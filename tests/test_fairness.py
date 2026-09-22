@@ -8,6 +8,7 @@ from vela.checker import check, fairness_needs_multi_error
 from vela.eval_harness import _summarize, jain_index
 from vela.ir import VelaConfig, program_to_config
 from vela.parser import parse
+from vela.receipt import build_receipt, gate_cli_line
 from vela.types import FAIRNESS_SCENARIO, parse_jain_floor
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -166,7 +167,52 @@ contract DualGate vs BBRv3approx {
         self.assertEqual(summary["verdict"], "INCOMPLETE")
         fair = next(a for a in summary["asserts"] if a["assert"] == "fairness_jain")
         self.assertEqual(fair.get("note"), "INCOMPLETE")
+        self.assertEqual(fair.get("reason"), "leo_multi_rows_missing")
+        self.assertEqual(summary.get("fairness_holdout"), "INCOMPLETE")
         self.assertNotEqual(summary["verdict"], "ACCEPT")
+
+    def test_harness_stamps_scored_when_jain_rows_present(self):
+        cfg = VelaConfig(name=CCA, seeds=list(HOUSE), jain_min=0.85)
+        rows = _passing_core() + _rows("leo_multi", CCA, 40.0, 140.0, jain=0.92)
+        summary = _summarize(rows, cfg)
+        self.assertEqual(summary.get("fairness_holdout"), "scored")
+        self.assertEqual(summary["verdict"], "ACCEPT")
+
+    def test_no_fairness_holdout_when_jain_not_asked(self):
+        cfg = VelaConfig(name=CCA, seeds=list(HOUSE))
+        summary = _summarize(_passing_core(), cfg)
+        self.assertNotIn("fairness_holdout", summary)
+
+    def test_receipt_stamps_incomplete_holdout(self):
+        cfg = VelaConfig(name=CCA, seeds=list(HOUSE), jain_min=0.85)
+        summary = _summarize(_passing_core(), cfg)
+        summary["rows"] = _passing_core()
+        summary["config"] = {
+            "name": CCA,
+            "seeds": list(HOUSE),
+            "scenarios": ["leo_fast_ho", "terrestrial"],
+            "duration_s": 90.0,
+            "jain_min": 0.85,
+        }
+        src = (EX / "fair.vela").read_text(encoding="utf-8")
+        rec = build_receipt(
+            source=src,
+            source_name="fair.vela",
+            compose=["Detect", "SoftReprobe"],
+            config=summary["config"],
+            summary=summary,
+        )
+        self.assertEqual(rec.get("fairness_holdout"), "INCOMPLETE")
+        self.assertEqual(rec.get("verdict"), "INCOMPLETE")
+
+    def test_cli_labels_incomplete_not_accept_for_missing_leo_multi(self):
+        line = gate_cli_line("fast", "INCOMPLETE", fairness_holdout="INCOMPLETE")
+        self.assertIn("verdict=INCOMPLETE", line)
+        self.assertIn("leo_multi", line)
+        self.assertNotIn("ACCEPT here", line)
+        accept = gate_cli_line("fast", "ACCEPT")
+        self.assertIn("not a dual-gate win", accept)
+        self.assertNotIn("leo_multi", accept)
 
 
 

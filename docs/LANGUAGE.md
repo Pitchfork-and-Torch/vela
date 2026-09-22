@@ -347,7 +347,7 @@ See [INGRESS.md](INGRESS.md). Summary:
 | Law | What it refuses |
 |-----|-----------------|
 | No-oracle | `next_capacity` / future PathState (sim freeze-lead peek) |
-| Fairness holdout | a Jain sentence with no `leo_multi` rows |
+| Fairness holdout | a Jain sentence with no `leo_multi` rows; missing rows stamp `fairness_holdout=INCOMPLETE` (not ACCEPT) |
 | Soft-cut min | SoftFlicker 0.85 raising the window after 0.58 |
 
 `vela check examples/reach.vela` prints `no-oracle`. Kernel

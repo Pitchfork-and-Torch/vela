@@ -37,7 +37,9 @@ py -3 -m unittest discover -s tests -v
 `passthrough`, and `no-oracle`.
 
 `vela eval examples/fair.vela --fast` is INCOMPLETE for Jain
-(fast skips `leo_multi`). That is honest.
+(fast skips `leo_multi`). Eval JSON and the receipt stamp
+`fairness_holdout=INCOMPLETE` with reason `leo_multi_rows_missing`
+so the Jain assert cannot silently pass as ACCEPT. That is honest.
 
 ## What 0.4 does not do
 
