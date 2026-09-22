@@ -167,8 +167,18 @@ def _main(argv: list[str] | None = None) -> int:
             return 1
         c = prog.controllers[0]
         print(f"ok  controller={c.name}  compose={' + '.join(c.compose)}")
-        if res.observe_only:
-            print("    observe-only  (no closed-write)")
+        # Explicit posture= stamp (flagship honesty). Keep observe-only too.
+        from vela.types import (
+            POSTURE_OBSERVE_CHECK_LINE,
+            POSTURE_REVIEW_CHECK_LINE,
+        )
+
+        if c.posture == "observe":
+            print(f"    {POSTURE_OBSERVE_CHECK_LINE}")
+            if res.observe_only:
+                print("    observe-only  (no closed-write)")
+        elif c.posture == "review":
+            print(f"    {POSTURE_REVIEW_CHECK_LINE}")
         else:
             print(f"    posture={c.posture}")
         if res.hint_fail_closed:

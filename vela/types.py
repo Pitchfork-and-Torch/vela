@@ -68,6 +68,14 @@ STDLIB_MODULES = frozenset(
 WRITE_TARGETS = ("cwnd", "pace")
 INTEGRATOR_OPS = ("*=", "+=", "-=", "/=")
 POSTURES = ("observe", "review")
+# Visible check stamp. Flagship Reach prints posture=observe explicitly
+# (not only the older observe-only line). SoftReprobe house cut stays 0.58.
+POSTURE_OBSERVE_STAMP = "posture=observe"
+POSTURE_REVIEW_STAMP = "posture=review"
+POSTURE_OBSERVE_CHECK_LINE = "posture=observe  (flagship; no closed-write)"
+POSTURE_REVIEW_CHECK_LINE = (
+    "posture=review  (ablation; not a packet-path enable)"
+)
 # Hybrid automata: on = discrete jump, when/every = flow.
 HYBRID_JUMP_KINDS = frozenset({"enter", "invalidate", "cut"})
 HYBRID_MODES = frozenset({"Reprobe"})
