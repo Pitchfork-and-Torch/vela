@@ -246,6 +246,7 @@ def _main(argv: list[str] | None = None) -> int:
             for e in res.errors:
                 print(f"error: {e}")
             return 1
+        from vela.efficacy_summary import attach_efficacy, format_efficacy_cli
         from vela.eval_harness import evaluate, write_result
         from vela.ir import program_to_config
         from vela.receipt import (
@@ -277,12 +278,14 @@ def _main(argv: list[str] | None = None) -> int:
         planned = eval_gate(run_seeds, run_dur, run_scen)
         print(f"eval  controller={cfg.name}  {gate_cli_line(planned)}", flush=True)
         tag = args.tag or cfg.name.lower()
-        summary = evaluate(
-            cfg,
-            seeds=seeds,
-            scenarios=scenarios,
-            duration_s=duration,
-            include_oce=args.oce,
+        summary = attach_efficacy(
+            evaluate(
+                cfg,
+                seeds=seeds,
+                scenarios=scenarios,
+                duration_s=duration,
+                include_oce=args.oce,
+            )
         )
         out = write_result(summary, tag=tag)
         receipt = build_receipt(
@@ -298,8 +301,13 @@ def _main(argv: list[str] | None = None) -> int:
             for e in errs:
                 print(f"error: {e}")
             return 1
-        dump_keys = [k for k in ("verdict", "power", "gate", "asserts", "tables") if k in summary]
+        dump_keys = [
+            k
+            for k in ("verdict", "power", "gate", "asserts", "tables", "efficacy")
+            if k in summary
+        ]
         print(json.dumps({k: summary[k] for k in dump_keys}, indent=2))
+        print(format_efficacy_cli(summary))
         print(f"wrote {out}")
         print(
             f"receipt {rp}  {receipt['receipt_digest'][:16]}  "

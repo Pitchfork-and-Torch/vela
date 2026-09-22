@@ -59,3 +59,8 @@ WriteCap, and hybrid automata. See `docs/LANGUAGE.md` Equinox
 laws and section K. `--fast` cannot become house. Workers write
 the result row to `--out`. ACCEPT on `gate=fast` is not a
 dual-gate win.
+
+`vela eval` also prints one efficacy line: `eval_law`,
+`dead_seconds` (RttHop), and `flicker_dead_ms` (Flicker, not
+RttHop) together. Missing stamps say `not-stamped`. See
+`docs/LANGUAGE.md` section L. SoftReprobe cut stays 0.58.
