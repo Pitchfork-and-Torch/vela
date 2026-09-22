@@ -9,7 +9,7 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
-from vela.types import POWER_OK_MIN_SEEDS
+from vela.types import LEVEL_VS_INTEGRATOR_CHECK_LINE, POWER_OK_MIN_SEEDS
 
 
 class InputError(Exception):
@@ -183,6 +183,8 @@ def _main(argv: list[str] | None = None) -> int:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:
             print("    affine  (Sample @ e is use-once; e+1 is prior)")
+        if res.level_vs_integrator:
+            print(f"    {LEVEL_VS_INTEGRATOR_CHECK_LINE}")
         if res.hybrid:
             print("    hybrid  (on = jump; when/every = flow)")
         if res.writecap == "linear":

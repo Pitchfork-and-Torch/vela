@@ -9,6 +9,12 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+
+# Level vs integrator (Equinox law 1): when/every pace*= needs integrate.
+LEVEL_VS_INTEGRATOR_STAMP = "level_vs_integrator"
+LEVEL_VS_INTEGRATOR_CHECK_LINE = (
+    "level_vs_integrator  (when/every pace*= needs integrate; else type error)"
+)
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
 # Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays
@@ -215,6 +221,7 @@ class CheckResult:
     power: str = ""
     no_oracle: bool = True
     affine: bool = True
+    level_vs_integrator: bool = True
     hybrid: bool = True
     writecap: str = ""
     fairness: str = ""

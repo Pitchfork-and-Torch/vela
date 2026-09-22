@@ -395,6 +395,7 @@ def _check_integrator(
             continue
         if not integrate:
             res.ok = False
+            res.level_vs_integrator = False
             res.errors.append(
                 f"{cname}: {surface}-body is a level; `{st.name} {op}` is an integrator "
                 f"(Horizon seed 7: 55/173). Write `{opt}` to opt in."

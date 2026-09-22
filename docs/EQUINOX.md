@@ -19,6 +19,7 @@ binaries.
    writes `integrate when` under `posture review` and accepts the warning.
    `every ack { pace *= k }` is the same death class: write `integrate every`.
    A nested `when` inside `on` cannot opt in.
+   `vela check` stamps `level_vs_integrator` when the law holds.
 2. **No ambient authority.** A `WriteCap<cwnd> @ epoch` plus
    `authority { cwnd: 0 }` refuses cruise writes. Reconfig still
    invalidates samples. Observe is the default power.
