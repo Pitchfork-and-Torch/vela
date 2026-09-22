@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "uncertainty-scaled-yield",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "p95 yield gated on uncertainty|p_ho. vela check stamps uncertainty-scaled-yield when IntervalBw composed. Observe ungated cwnd*=k is a type error. Kernel u_yield_should_cut/reclaim.",
+      "status": "done"
     }
   ]
 }

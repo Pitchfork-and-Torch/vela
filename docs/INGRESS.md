@@ -34,7 +34,12 @@ py -3 -m unittest discover -s tests -v
 ```
 
 `vela check examples/reach.vela` must print `observe-only`,
-`passthrough`, and `no-oracle`.
+`passthrough`, `uncertainty-scaled-yield`, and `no-oracle`.
+
+**Uncertainty-scaled yield (p95).** IntervalBw programs stamp
+`uncertainty-scaled-yield`. Under observe, early `cwnd *= k` (k in (0,1))
+must gate on `uncertainty` or `p_ho` (house u>=0.50 with delay_ratio>1.62).
+Kernel helpers: `u_yield_should_cut` / `u_yield_should_reclaim`.
 
 `vela eval examples/fair.vela --fast` is INCOMPLETE for Jain
 (fast skips `leo_multi`). That is honest.

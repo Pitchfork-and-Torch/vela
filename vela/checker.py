@@ -18,6 +18,8 @@ from vela.types import (
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    HOUSE_U_YIELD_DELAY_RATIO,
+    HOUSE_U_YIELD_UNCERT,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -73,6 +75,8 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        if controller_stamps_uncertainty_yield(first):
+            res.uncertainty_scaled_yield = True
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:
@@ -279,6 +283,7 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
                 _check_house_cut_in_stmts(c.name, arm.body, res)
 
     _check_passthrough_cruise(c, res)
+    _check_uncertainty_yield(c, res)
     _check_hint_surface(c, prog, res)
     _check_oracle(c, res)
     hints = _hint_names(c)
@@ -985,6 +990,122 @@ def unknown_cut_error(cname: str) -> str:
         f"{cname}: observe-only Unknown cut requires delay_ratio > {UNKNOWN_DELAY_RATIO} "
         "(typed loss; fall-through)"
     )
+
+
+def uncertainty_yield_error(cname: str) -> str:
+    return (
+        f"{cname}: observe-only early yield must gate on uncertainty|p_ho "
+        f"(uncertainty-scaled yield; house u>={HOUSE_U_YIELD_UNCERT:g} "
+        f"with delay_ratio>{HOUSE_U_YIELD_DELAY_RATIO:g}; "
+        "v3.4-p95 every-ACK yield is the bug)"
+    )
+
+
+def uncertainty_yield_warning(cname: str) -> str:
+    return (
+        f"{cname}: early yield without uncertainty|p_ho gate "
+        f"(review; uncertainty-scaled yield; house u>={HOUSE_U_YIELD_UNCERT:g})"
+    )
+
+
+def controller_stamps_uncertainty_yield(c: Controller) -> bool:
+    """Stamp when IntervalBw supplies uncertainty for p95 yield law."""
+    return "IntervalBw" in c.compose
+
+
+def _expr_names(expr) -> set[str]:
+    out: set[str] = set()
+    if expr is None or not hasattr(expr, "kind"):
+        return out
+    if expr.kind == "name" and expr.name:
+        out.add(str(expr.name))
+    out |= _expr_names(getattr(expr, "left", None))
+    out |= _expr_names(getattr(expr, "right", None))
+    for a in getattr(expr, "args", []) or []:
+        out |= _expr_names(a)
+    return out
+
+
+def _pred_gates_uncertainty_yield(pred) -> bool:
+    """True when predicate names uncertainty or p_ho (LANGUAGE Horizon #3)."""
+    names = _expr_names(pred)
+    return "uncertainty" in names or "p_ho" in names
+
+
+def _cwnd_yield_remaining(st: Stmt) -> float | None:
+    """Literal remaining fraction from `cwnd *= k` with k in (0, 1)."""
+    if st.kind != "assign" or st.name != "cwnd":
+        return None
+    op = str(st.args[0]) if st.args else "="
+    if op != "*=":
+        return None
+    n = _lit_num(st.expr)
+    if n is None:
+        return None
+    if not (0.0 < n < 1.0):
+        return None
+    return n
+
+
+def _check_uncertainty_yield(c: Controller, res: CheckResult) -> None:
+    """Refuse/warn early cwnd yield without uncertainty|p_ho gate.
+
+    LANGUAGE Horizon #3 / MISSION delay yield: v3.4-p95 yielded early on
+    every ACK. Horizon yields only when uncertainty is high or p_ho is
+    high. Under observe an ungated `cwnd *= k` (k in (0,1)) is a type
+    error. Under review it is a warning so ablation stays named.
+    """
+    # Top-level when: gate is the when predicate.
+    for w in c.whens:
+        gated = _pred_gates_uncertainty_yield(w.pred)
+        for st in _flatten_stmts(w.body):
+            if _cwnd_yield_remaining(st) is None:
+                continue
+            if gated:
+                continue
+            if c.posture == "observe":
+                res.ok = False
+                res.errors.append(uncertainty_yield_error(c.name))
+            else:
+                res.warnings.append(uncertainty_yield_warning(c.name))
+    # every: no predicate => always ungated.
+    for e in c.everys:
+        for st in _flatten_stmts(e.body):
+            if _cwnd_yield_remaining(st) is None:
+                continue
+            if c.posture == "observe":
+                res.ok = False
+                res.errors.append(uncertainty_yield_error(c.name))
+            else:
+                res.warnings.append(uncertainty_yield_warning(c.name))
+    # Nested when/if/require inside on: use their own expr as gate.
+    for o in c.ons:
+        bodies = [o.body] + [arm.body for arm in o.match_arms]
+        for body in bodies:
+            _check_uncertainty_yield_nested(c, body, res)
+
+
+def _check_uncertainty_yield_nested(
+    c: Controller, stmts: list[Stmt], res: CheckResult
+) -> None:
+    for st in stmts:
+        if st.kind in ("when", "if", "require") and st.expr is not None:
+            gated = _pred_gates_uncertainty_yield(st.expr)
+            for inner in _flatten_stmts(st.body):
+                if _cwnd_yield_remaining(inner) is None:
+                    continue
+                if gated:
+                    continue
+                if c.posture == "observe":
+                    res.ok = False
+                    res.errors.append(uncertainty_yield_error(c.name))
+                else:
+                    res.warnings.append(uncertainty_yield_warning(c.name))
+            else_body = _stmt_else_body(st)
+            if else_body:
+                _check_uncertainty_yield_nested(c, else_body, res)
+        elif st.body:
+            _check_uncertainty_yield_nested(c, st.body, res)
 
 
 def house_cut_error(cname: str, n: float) -> str:

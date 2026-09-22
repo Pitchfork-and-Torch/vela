@@ -4,7 +4,7 @@ VELA does **not** compete with LeoAware.
 
 LeoAware is the packet-path congestion controller (OrbitStack). It is the engine that already works on Starlink-class paths.
 
-VELA is the language that **builds onto** that engine: names Detect, SoftReprobe, delay yield, and typed loss; refuses stale samples and unnamed double-cuts; and lets the next improvement be composed and checked instead of stacked as another flag.
+VELA is the language that **builds onto** that engine: names Detect, SoftReprobe, delay yield, and typed loss; refuses stale samples and unnamed double-cuts; and lets the next improvement be composed and checked instead of stacked as another flag. Uncertainty-scaled yield (p95) is a checkable stamp (`uncertainty-scaled-yield`), not a silent every-ACK cut.
 
 ## Success
 
