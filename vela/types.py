@@ -73,6 +73,27 @@ HYBRID_JUMP_KINDS = frozenset({"enter", "invalidate", "cut"})
 HYBRID_MODES = frozenset({"Reprobe"})
 HYBRID_TICKS = frozenset({"ack", "epoch"})
 
+# Epoch-clock honesty: Epoch increments on reconfig; sampled flows are
+# ack|epoch only. Wall-clock elapsed time cannot invent capacity.
+EPOCH_CLOCK_STAMP = "epoch-clock"
+EPOCH_CLOCK_CHECK_LINE = (
+    "epoch-clock  (advances on ack|reconfig; refuse wall-clock capacity)"
+)
+WALL_CLOCK_CAPACITY_NAMES = frozenset(
+    {
+        "wall_clock",
+        "wall_time",
+        "wall_capacity",
+        "wall_capacity_bps",
+        "wall_bw",
+        "wall_bw_bps",
+        "elapsed_wall",
+        "elapsed_wall_s",
+        "wall_clock_capacity",
+        "wall_clock_bw",
+    }
+)
+
 # LANGUAGE.md D2 closed-write class. Stdlib only until a named ablation is green.
 CLOSED_WRITE_OPERATORS = frozenset(
     {
@@ -216,6 +237,7 @@ class CheckResult:
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True
+    epoch_clock: bool = True
     writecap: str = ""
     fairness: str = ""
     jain_min: float | None = None

@@ -9,7 +9,7 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
-from vela.types import POWER_OK_MIN_SEEDS
+from vela.types import EPOCH_CLOCK_CHECK_LINE, POWER_OK_MIN_SEEDS
 
 
 class InputError(Exception):
@@ -185,6 +185,8 @@ def _main(argv: list[str] | None = None) -> int:
             print("    affine  (Sample @ e is use-once; e+1 is prior)")
         if res.hybrid:
             print("    hybrid  (on = jump; when/every = flow)")
+        if res.epoch_clock:
+            print(f"    {EPOCH_CLOCK_CHECK_LINE}")
         if res.writecap == "linear":
             print("    writecap=linear  (split/borrow; no ambient write)")
         elif res.writecap == "budget":

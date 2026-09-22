@@ -43,7 +43,7 @@ use std.eval
 
 | Type | Meaning |
 |------|---------|
-| `Epoch` | Opaque generation. Increments on reconfig (detected or hinted). |
+| `Epoch` | Opaque generation. Increments on reconfig (detected or hinted). Epoch-clock: advances on ack|reconfig edges only; wall-clock cannot invent capacity. |
 | `Sample<T> @ e` | Point measurement valid only in epoch `e`. |
 | `Interval<T> @ e` | `{lo, mid, hi, n, e}`. Default for bandwidth and RTT. |
 | `Prob` | `[0, 1]` probability (handover calendar, loss class). |
@@ -74,6 +74,8 @@ when <pred> { ... }         # guarded continuous action
 `when p_ho > 0.35` is not a thread. It is a predicate evaluated on each ACK against the path model. Under `posture observe` the body may `freeze` samples. It may not scale `pace`, write `cwnd`, `chase`, or `cut` (passthrough; Horizon's leftover `pace = bw.mid` dumped seed 7). Review may name a cruise write so ablation stays named. It may not invent capacity. `every ack { pace *= k }` is the same integrator death as `when`; write `integrate every` to opt in.
 
 **Hybrid law.** `on` is a discrete jump. `when` and `every` are flows (`every ack` packet horizon, `every epoch` epoch horizon). `enter`, `invalidate`, and `cut` are jumps: they belong in `on`, not in a flow. `enter Reprobe` is the named location; `enter Cruise` is a type error. A nested `when` inside `on` is a guarded jump, not a flow. `vela check` stamps `hybrid`.
+
+**Epoch-clock law.** Epoch generation advances on reconfig (detected or hinted). Sampled flows tick `ack` or `epoch` only. Wall-clock elapsed time cannot invent capacity (`wall_clock`, `wall_capacity`, `wall_bw`, ...). `vela check` stamps `epoch-clock` (advances on ack|reconfig; refuse wall-clock capacity) when the law holds.
 
 `on Reconfig` under `posture observe` must match `RttHop | Flicker`. A bare Reconfig body is legal only under `posture review`.
 
@@ -306,6 +308,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Level vs integrator | `when` / `every` `{ pace *= k }` without `integrate when` / `integrate every` |
 | Affine samples | second Sample read in one block; Sample @ e after `enter Reprobe` |
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
+| Epoch-clock (`epoch-clock`) | wall-clock capacity invent (`wall_clock` / `wall_capacity` / `wall_bw`); every tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |

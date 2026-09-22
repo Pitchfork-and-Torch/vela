@@ -57,6 +57,10 @@ binaries.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.
+10. **Epoch-clock.** Epoch advances on reconfig. Sampled flows tick
+   `ack` or `epoch` only. Wall-clock elapsed time cannot invent
+   capacity. `vela check` stamps `epoch-clock` (advances on ack|reconfig;
+   refuse wall-clock capacity) on Reach and Equinox.
 
 ## Commands
 
