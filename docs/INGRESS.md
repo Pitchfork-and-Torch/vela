@@ -59,3 +59,28 @@ WriteCap, and hybrid automata. See `docs/LANGUAGE.md` Equinox
 laws and section K. `--fast` cannot become house. Workers write
 the result row to `--out`. ACCEPT on `gate=fast` is not a
 dual-gate win.
+
+## ASCENT hint ingress (compose examples)
+
+Fail-closed is already law: missing or erased ASCENT-D / Orb is `None`,
+not a hop oracle. Flagship Reach stays defined without `use std.hint`.
+
+Useful observe-only compose shapes:
+
+1. **Assist present** (`examples/ascent.vela`):
+   `Detect + SoftReprobe + Calendar + IntervalBw + DualGateGuard` with
+   `on Hint(h) match Some|None` and `when hint.ascent { freeze ... }`.
+   Some freezes samples; None holds. Endpoint still owns RttHop|Flicker
+   at SoftReprobe cut 0.58.
+
+2. **Assist erased** (`examples/ascent_erased.vela`):
+   same compose; `None => hold` is the only legal arm when the channel
+   is gone. Do not invent a hop time. Do not cut from a missing hint.
+
+Checker reminders (already enforced):
+
+- `use std.hint` required to mention Hint.
+- Bare `hint.ascent` arithmetic is a type error.
+- `on Hint(h)` must match `Some | None`.
+- `on Hint` Some-only (missing None) is fail-closed error.
+
