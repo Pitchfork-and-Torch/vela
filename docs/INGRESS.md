@@ -36,6 +36,9 @@ py -3 -m unittest discover -s tests -v
 `vela check examples/reach.vela` must print `observe-only`,
 `passthrough`, and `no-oracle`.
 
+`vela check examples/ascent.vela` stamps `hint=Some|None` (fail-closed;
+missing is None, not a hop oracle). Reach stays defined without hints.
+
 `vela eval examples/fair.vela --fast` is INCOMPLETE for Jain
 (fast skips `leo_multi`). That is honest.
 

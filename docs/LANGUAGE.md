@@ -58,14 +58,14 @@ use std.eval
 
 **Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth. The checker now enforces this as a type error unless the same block proves `n >= 2`.
 
-**Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level. The checker now enforces it: `on Hint(h)` must match `Some | None`; `when hint.ascent` / `require hint.ascent then` prove Some; a bare `hint.ascent` in arithmetic is illegal. `use std.hint` is required to mention Hint. Today's Starlink has no official path-hint API, so absence is None, not a hop oracle. Flagship Reach stays defined without hints.
+**Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level. The checker now enforces it: `on Hint(h)` must match `Some | None`; `when hint.ascent` / `require hint.ascent then` prove Some; a bare `hint.ascent` in arithmetic is illegal. `use std.hint` is required to mention Hint. `vela check` stamps `hint=Some|None` when a Hint surface is present (fail-closed; missing is None, not a hop oracle). Today's Starlink has no official path-hint API, so absence is None, not a hop oracle. Flagship Reach stays defined without hints.
 
 ### Events
 
 ```
 on Reconfig(e) match e { RttHop => ...; Flicker => ... }
 on Loss(k) match k { Mobility => ...; Congestive => ...; Unknown => ... }
-on Hint(h) { ... }          # fail-closed Option
+on Hint(h) match h { Some => ...; None => ... }  # hint=Some|None
 every ack { ... }           # packet horizon
 every epoch { ... }         # epoch horizon
 when <pred> { ... }         # guarded continuous action
