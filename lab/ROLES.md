@@ -9,10 +9,12 @@ VELA builds onto LeoAware. Do not fork Detect/SoftReprobe. Do not enable Horizon
 Run isolated evals from `lab/BACKLOG.json` items with kind=eval.
 
 ```
+py -3 scripts/space_internet_loop.py --once --dry-run
 py -3 scripts/space_internet_loop.py --once
 ```
 
-Write results to `lab/journal.jsonl`. If seed 7 45s moves more than 0.05 Mbps / 0.2 ms from 88.65 / 108.4, revert and mark fail.
+`--once` acts on safe pending language/eval only. `--dry-run` previews into `results/loop_last.json` without mutating lab files.
+Write results to `lab/journal.jsonl` and `results/loop_ticks.jsonl`. If seed 7 45s moves more than 0.05 Mbps / 0.2 ms from 88.65 / 108.4, revert and mark fail.
 
 ## Language
 

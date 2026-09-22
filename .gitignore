@@ -4,6 +4,7 @@ __pycache__/
 emit/*.py
 emit/*.rs
 results/*.json
+results/*.jsonl
 !results/.gitkeep
 !emit/.gitkeep
 lab/journal.jsonl

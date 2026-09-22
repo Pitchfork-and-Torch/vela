@@ -134,6 +134,67 @@ def path_empty_error(name: str) -> str:
     return f"path {name}: empty model (path law; a claim needs rails)"
 
 
+def path_zero_capacity_error(name: str) -> str:
+    return (
+        f"path {name}: capacity upper bound must be positive "
+        "(a zero-capacity rail is not a path)"
+    )
+
+
+def path_zero_handover_error(name: str) -> str:
+    return (
+        f"path {name}: handover period must be positive "
+        "(a zero-period rail is not a path)"
+    )
+
+
+def path_zero_mobility_window_error(name: str) -> str:
+    return (
+        f"path {name}: mobility_loss window must be positive "
+        "(a zero-window burst is not a path)"
+    )
+
+
+def path_inverted_range_error(name: str, field: str) -> str:
+    return (
+        f"path {name}: {field} range is inverted "
+        "(lo > hi is not a path rail)"
+    )
+
+
+def _enforce_path_realism(law: PathLaw) -> None:
+    """Reject dead LeoPath rails. House LeoFastHO stays 12s+/-4s when valid."""
+    name = law.name
+    if law.handover_interval_s is not None and law.handover_interval_s <= 0:
+        law.errors.append(path_zero_handover_error(name))
+        law.handover_interval_s = None
+        law.handover_jitter_s = None
+    if (
+        law.rtt_jump_lo_s is not None
+        and law.rtt_jump_hi_s is not None
+        and law.rtt_jump_lo_s > law.rtt_jump_hi_s
+    ):
+        law.errors.append(path_inverted_range_error(name, "rtt_jump"))
+        law.rtt_jump_lo_s = None
+        law.rtt_jump_hi_s = None
+    if law.capacity_hi_bps is not None and law.capacity_hi_bps <= 0:
+        law.errors.append(path_zero_capacity_error(name))
+        law.capacity_lo_bps = None
+        law.capacity_hi_bps = None
+    elif (
+        law.capacity_lo_bps is not None
+        and law.capacity_hi_bps is not None
+        and law.capacity_lo_bps > law.capacity_hi_bps
+    ):
+        law.errors.append(path_inverted_range_error(name, "capacity"))
+        law.capacity_lo_bps = None
+        law.capacity_hi_bps = None
+    if law.mobility_window_s is not None and law.mobility_window_s <= 0:
+        law.errors.append(path_zero_mobility_window_error(name))
+        law.mobility_p = None
+        law.mobility_window_s = None
+
+
 def parse_path_model(model: PathModel) -> PathLaw:
     law = PathLaw(name=model.name, fields=dict(model.fields))
     law.scenario = PATH_SCENARIO.get(model.name, "")
@@ -191,6 +252,7 @@ def parse_path_model(model: PathModel) -> PathLaw:
                 law.mobility_window_s = _to_seconds(m.group(2), m.group(3))
             except ValueError:
                 law.errors.append(path_parse_error(model.name, key))
+    _enforce_path_realism(law)
     return law
 
 
