@@ -58,7 +58,7 @@ use std.eval
 
 **Uncertainty law.** An `Interval` used as a point (`bw` in arithmetic) is implicitly `bw.mid` and **requires** `bw.n >= 2`. A single sample is not a bandwidth. The checker now enforces this as a type error unless the same block proves `n >= 2`.
 
-**Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level. The checker now enforces it: `on Hint(h)` must match `Some | None`; `when hint.ascent` / `require hint.ascent then` prove Some; a bare `hint.ascent` in arithmetic is illegal. `use std.hint` is required to mention Hint. Today's Starlink has no official path-hint API, so absence is None, not a hop oracle. Flagship Reach stays defined without hints.
+**Hint law.** `hint.ascent` is `Option<PathHint>`. Acting on a missing or erased hint is a type error. This is the ASCENT-D erase-on-fail policy at the type level. The checker now enforces it: `on Hint(h)` must match `Some | None`; `when hint.ascent` / `require hint.ascent then` prove Some; a bare `hint.ascent` in arithmetic is illegal. Role mismatch and stale age fail closed on that Option path: trusted roles are `pilot` | `gateway` (ASCENT ROLE line); `age > duration` selects a stale hint; runtime `hint_role_age_accept` erases either case to None. `use std.hint` is required to mention Hint. Today's Starlink has no official path-hint API, so absence is None, not a hop oracle. Flagship Reach stays defined without hints (and without leo-aware-transport at `vela check`).
 
 ### Events
 
@@ -156,7 +156,7 @@ The same model object is used by the discrete-event simulator **and** by `Predic
 | `std.measure` | `Sample`, `Interval`, `quantile`, `delay_ratio`, delivery-rate window |
 | `std.control` | `cwnd`, `pace`, `Reprobe`, `Freeze`, `cut`, `hold`, `chase` |
 | `std.path` | handover calendar, flicker, RTT-jump priors, `p_ho` |
-| `std.hint` | ASCENT-D / Orb ingest, `fail_closed`, role checks |
+| `std.hint` | ASCENT-D / Orb ingest, `fail_closed`, role + age rail |
 | `std.eval` | `contract`, dual-gate, CI, ablation, seed lists |
 | `std.mech` | `Detect`, `SoftReprobe`, `IntervalBw`, `PredictiveFreeze`, `HorizonChase`, `DualGateGuard`, `OCE` (legacy), `Calendar`, `WriteBudget`, `TrimHold`, `TrimFill`, `TrimReclaim`, `QuietReach`, `QuietShield`, `SoftFlicker` |
 
@@ -271,7 +271,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Fairness and AQMs.** Horizon is a single-sender policy. A fleet of Horizons plus Cubic plus BBR at a shared gateway is a different paper. The language can *state* a Jain bound on `leo_multi` and the harness will score it. It cannot enforce other people's stacks.
 
-**Hints can lie.** Fail-closed integrity (ASCENT-D) stops bit flips. It does not stop a malicious or stale honest hint with a valid MAC. Role + age checks are the remaining rail; they are not a PKI.
+**Hints can lie.** Fail-closed integrity (ASCENT-D) stops bit flips. It does not stop a malicious or stale honest hint with a valid MAC. Role + age checks are the remaining rail and are now checkable: mismatch or stale => None at check/runtime. They are not a PKI.
 
 **Sim != orbit.** `LeoPath` is a Starlink-*class* model (handover, jump, flicker, mobility burst). It is not a replay of a particular cell or a particular software release. Real CSV traces are a `path` object. Until they are wired, numbers are lab numbers.
 
@@ -398,3 +398,22 @@ contract seed list. A 2-seed incomplete house contract is
 A later stdout JSON line cannot replace it. The default `--tag`
 is the controller name, not `horizon`. ACCEPT on `gate=fast`
 prints that it is not a dual-gate win. No packet-path change.
+
+
+## L. Hint role + age rail
+
+LANGUAGE.md said role + age were the remaining rail against lying hints.
+They are now a checkable Option law on `hint.ascent`:
+
+- Trusted roles: `pilot` | `gateway` (same as LeoAware ASCENT ingest).
+- A predicate that selects a non-trusted role (`role == "untrusted"`, or
+  `role != "pilot"` / `role != "gateway"`) is a type error.
+- A predicate that selects a stale hint (`age > duration` / `age >= duration`)
+  is a type error. Prefer `age < duration`.
+- Runtime `hint_role_age_accept(role, age_s)` refuses apply when either
+  check fails (house max age 2s). Missing role/age kwargs stay passthrough
+  for endpoint-only paths that never name them.
+- Default `vela check` on Reach still does not require leo-aware-transport.
+- SoftReprobe house cut stays 0.58. No Detect/SoftReprobe fork. No closed-write.
+
+`vela check` stamps `hint-role+age` when the controller has a Hint surface.

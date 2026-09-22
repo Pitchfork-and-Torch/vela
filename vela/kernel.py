@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 from vela.compose import apply_composed_cut
 from vela.ir import VelaConfig
-from vela.oracle import refuse_oracle_hint
+from vela.oracle import hint_role_age_accept, refuse_oracle_hint
 
 if TYPE_CHECKING:
     pass
@@ -160,6 +160,12 @@ class HorizonCCA:
 
     def on_path_hint(self, t: float, reconfigured: bool, **kw) -> None:
         # No-oracle: never forward next_capacity / future PathState.
+        # Role + age rail: mismatch or stale => Option None (do not apply).
+        role = kw.get("role")
+        age_s = kw.get("age_s", kw.get("age"))
+        if role is not None or age_s is not None:
+            if not hint_role_age_accept(role, age_s):
+                return
         clean = refuse_oracle_hint(kw)
         self._leo.on_path_hint(t, reconfigured, next_capacity_bps=None, **clean)
 
