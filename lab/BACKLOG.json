@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "path-geometry-hint-age",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Eval binds declared capacity, RTT jump, and mobility. Inverted bands, non-positive capacity, zero mobility windows, and jitter that is not narrower than the handover interval are type errors. Hint payload needs age < duration. eta stays no-oracle. Observe on may not assign pace or cwnd. House cut stays 0.58. Reach stays observe-only.",
+      "status": "done"
     }
   ]
 }

@@ -19,6 +19,12 @@ ORACLE_NAMES = frozenset(
         "future_capacity",
         "future_capacity_bps",
         "next_path_state",
+        # Hint payload that names the next hop. A fresh MAC does not make it current.
+        "eta",
+        "t_ho",
+        "t_next",
+        "seconds_until",
+        "handover_at",
     }
 )
 

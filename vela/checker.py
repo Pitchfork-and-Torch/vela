@@ -6,6 +6,7 @@ from vela.digest import compose_digest
 from vela.ir import parse_report_ci
 from vela.oracle import oracle_error, oracle_name_of
 from vela.path import (
+    geometry_warnings,
     house_mismatch_warning,
     parse_program_paths,
     path_digest,
@@ -292,11 +293,14 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
         _check_prior_min_rtt(c.name, o.body, res)
         for arm in o.match_arms:
             arm_proved = set(hints) if o.event == "Hint" and arm.pattern == "Some" else set()
+            arm_closed = set(hints) if o.event == "Hint" and arm.pattern == "None" else set()
             if o.event != "Loss":
                 _check_stale_in_stmts(c.name, arm.body, res)
             _check_cuts_in_stmts(c.name, arm.body, res)
             _check_interval_in_stmts(c.name, arm.body, intervals, set(), res)
-            _check_hint_in_stmts(c.name, arm.body, hints, arm_proved, res)
+            _check_hint_in_stmts(
+                c.name, arm.body, hints, arm_proved, res, set(), arm_closed
+            )
             _check_prior_min_rtt(c.name, arm.body, res)
     for w in c.whens:
         _check_stale_in_stmts(c.name, w.body, res)
@@ -305,10 +309,12 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
         proved = _proved_n_ge_2(w.pred, intervals)
         _walk_interval_point(c.name, w.pred, intervals, set(), res)
         _check_interval_in_stmts(c.name, w.body, intervals, proved, res)
-        hinted = _proved_hints(w.pred, hints)
-        if not _is_hint_presence(w.pred, hints):
-            _walk_hint_act(c.name, w.pred, hints, set(), res)
-        _check_hint_in_stmts(c.name, w.body, hints, hinted, res)
+        hinted, fresh_h, consumed = _consume_hint_guard(
+            c.name, w.pred, hints, set(), set(), set(), res
+        )
+        if not consumed:
+            _walk_hint_act(c.name, w.pred, hints, set(), set(), res)
+        _check_hint_in_stmts(c.name, w.body, hints, hinted, res, fresh_h, set())
         _check_prior_min_rtt(c.name, w.body, res)
     for e in c.everys:
         _check_stale_in_stmts(c.name, e.body, res)
@@ -1022,6 +1028,8 @@ def _check_paths(prog: Program, res: CheckResult) -> None:
         warn = house_mismatch_warning(law)
         if warn:
             res.warnings.append(warn)
+        for gwarn in geometry_warnings(law):
+            res.warnings.append(gwarn)
         unbound = unbound_path_warning(law)
         if unbound:
             res.warnings.append(unbound)
@@ -1120,6 +1128,23 @@ def _cruise_write_label(st: Stmt) -> str | None:
     return None
 
 
+def _on_capacity_write_label(st: Stmt) -> str | None:
+    """pace/cwnd/chase invent capacity. SoftReprobe cut and enter stay on the jump."""
+    if st.kind == "assign" and st.name in WRITE_TARGETS:
+        op = str(st.args[0]) if st.args else "="
+        return f"{st.name} {op}"
+    if st.kind == "chase":
+        return "chase"
+    return None
+
+
+def on_capacity_write_error(cname: str, what: str) -> str:
+    return (
+        f"{cname}: observe-only `{what}` in on "
+        "(passthrough; a jump may cut or enter Reprobe, not assign pace or cwnd)"
+    )
+
+
 def controller_cruise_writes(c: Controller) -> list[str]:
     found: list[str] = []
     bodies = [w.body for w in c.whens] + [e.body for e in c.everys]
@@ -1131,6 +1156,19 @@ def controller_cruise_writes(c: Controller) -> list[str]:
     return found
 
 
+def controller_on_capacity_writes(c: Controller) -> list[str]:
+    """Observe on-handlers must not invent capacity (LeoAware wrap)."""
+    found: list[str] = []
+    for o in c.ons:
+        bodies = [o.body] + [arm.body for arm in o.match_arms]
+        for body in bodies:
+            for st in _flatten_stmts(body):
+                label = _on_capacity_write_label(st)
+                if label:
+                    found.append(label)
+    return found
+
+
 def controller_is_passthrough(c: Controller) -> bool:
     return (
         c.posture == "observe"
@@ -1138,6 +1176,7 @@ def controller_is_passthrough(c: Controller) -> bool:
         and _has_typed_reconfig(c)
         and _has_typed_loss(c)
         and not controller_cruise_writes(c)
+        and not controller_on_capacity_writes(c)
     )
 
 
@@ -1151,6 +1190,12 @@ def _check_passthrough_cruise(c: Controller, res: CheckResult) -> None:
         seen.add(label)
         res.ok = False
         res.errors.append(cruise_write_error(c.name, label))
+    for label in controller_on_capacity_writes(c):
+        if label in seen:
+            continue
+        seen.add(label)
+        res.ok = False
+        res.errors.append(on_capacity_write_error(c.name, label))
 
 
 def _has_typed_reconfig(c: Controller) -> bool:
@@ -1354,11 +1399,181 @@ def _is_hint_presence(expr, hints: set[str]) -> bool:
     return False
 
 
-def _proved_hints(expr, hints: set[str]) -> set[str]:
+# Payload attrs that name the next hop. A fresh MAC is still not a calendar.
+_HINT_FUTURE = frozenset(
+    {
+        "eta",
+        "t_ho",
+        "t_next",
+        "seconds_until",
+        "handover_at",
+        "next_capacity",
+        "next_capacity_bps",
+        "next_rtt",
+        "next_rtt_s",
+        "next_handover",
+        "next_handover_t",
+        "future_capacity",
+        "future_capacity_bps",
+        "next_path_state",
+    }
+)
+
+
+def hint_stale_age_error(cname: str) -> str:
+    return (
+        f"{cname}: Hint age bound selects a stale hint "
+        "(fail-closed; write age < duration, not age > duration)"
+    )
+
+
+def hint_age_bound_error(cname: str) -> str:
+    return (
+        f"{cname}: Hint age bound must be a positive duration literal "
+        "(ms or s; fail-closed)"
+    )
+
+
+def hint_age_on_none_error(cname: str) -> str:
+    return (
+        f"{cname}: Hint age in a None arm "
+        "(fail-closed; a missing hint has no age)"
+    )
+
+
+def hint_payload_age_error(cname: str, field: str) -> str:
+    return (
+        f"{cname}: Hint payload .{field} needs age < duration "
+        "(fail-closed; a valid MAC can still be stale)"
+    )
+
+
+def hint_future_error(cname: str, field: str) -> str:
+    return (
+        f"{cname}: Hint .{field} names the next hop "
+        "(no-oracle; fail-closed hint is not a calendar)"
+    )
+
+
+def _positive_duration_s(expr) -> float | None:
+    if expr is None or getattr(expr, "kind", None) != "num":
+        return None
+    raw = str(expr.value).strip().lower()
+    try:
+        if raw.endswith("ms"):
+            n = float(raw[:-2]) / 1000.0
+        elif raw.endswith("s"):
+            n = float(raw[:-1])
+        else:
+            return None
+    except ValueError:
+        return None
+    if n > 0.0:
+        return n
+    return None
+
+
+def _age_subject(expr, hints: set[str]) -> str | None:
+    if expr is None or getattr(expr, "kind", None) != "attr" or expr.name != "age":
+        return None
+    return _hint_subject_of(expr, hints)
+
+
+def _classify_hint_expr(expr, hints: set[str]) -> tuple[str, str, str] | None:
+    """(subject, kind, field). kind is presence, age, payload, or future."""
+    if expr is None or not hasattr(expr, "kind"):
+        return None
+    if expr.kind == "name" and expr.name in hints:
+        return expr.name, "presence", ""
+    if expr.kind != "attr":
+        return None
+    subject = _hint_subject_of(expr, hints)
+    if subject is None:
+        return None
+    field = expr.name
+    if field in _HINT_FUTURE:
+        return subject, "future", field
+    if field == "age":
+        return subject, "age", field
+    if (
+        field in HINT_CHANNELS
+        and expr.left is not None
+        and expr.left.kind == "name"
+    ):
+        return subject, "presence", field
+    return subject, "payload", field
+
+
+def _split_age_cmp(expr, hints: set[str]) -> tuple[str, str] | None:
+    """(subject, kind) where kind is fresh, stale, or bad. None if not an age compare."""
+    if expr is None or getattr(expr, "kind", None) != "binop":
+        return None
+    op = expr.name
+    left_age = _age_subject(expr.left, hints)
+    right_age = _age_subject(expr.right, hints)
+    if bool(left_age) == bool(right_age):
+        return None
+    subject = left_age or right_age
+    if subject is None:
+        return None
+    side = "left" if left_age else "right"
+    bound = expr.right if side == "left" else expr.left
+    fresh_op = (side == "left" and op in ("<", "<=")) or (
+        side == "right" and op in (">", ">=")
+    )
+    stale_op = (side == "left" and op in (">", ">=")) or (
+        side == "right" and op in ("<", "<=")
+    )
+    if fresh_op:
+        if _positive_duration_s(bound) is None:
+            return subject, "bad"
+        return subject, "fresh"
+    if stale_op:
+        return subject, "stale"
+    return subject, "bad"
+
+
+def _consume_hint_guard(
+    cname: str,
+    expr,
+    hints: set[str],
+    proved: set[str],
+    fresh: set[str],
+    closed: set[str],
+    res: CheckResult,
+) -> tuple[set[str], set[str], bool]:
+    """Proofs for the then-body. consumed means the guard was a hint predicate."""
+    proved = set(proved)
+    fresh = set(fresh)
+    if not hints or expr is None:
+        return proved, fresh, True
+    age = _split_age_cmp(expr, hints)
+    if age is not None:
+        subject, kind = age
+        if subject in closed:
+            res.ok = False
+            res.errors.append(hint_age_on_none_error(cname))
+            return proved, fresh, True
+        if kind == "stale":
+            res.ok = False
+            res.errors.append(hint_stale_age_error(cname))
+            return proved, fresh, True
+        if kind == "bad":
+            res.ok = False
+            res.errors.append(hint_age_bound_error(cname))
+            return proved, fresh, True
+        proved.add(subject)
+        fresh.add(subject)
+        return proved, fresh, True
     if _is_hint_presence(expr, hints):
         sub = _hint_subject_of(expr, hints)
-        return {sub} if sub else set()
-    return set()
+        if sub and sub not in closed:
+            proved.add(sub)
+        elif sub and sub in closed:
+            res.ok = False
+            res.errors.append(hint_law_error(cname, sub))
+        return proved, fresh, True
+    return proved, fresh, False
 
 
 def _walk_hint_act(
@@ -1366,19 +1581,30 @@ def _walk_hint_act(
     expr,
     hints: set[str],
     proved: set[str],
+    fresh: set[str],
     res: CheckResult,
 ) -> None:
     if expr is None or not hasattr(expr, "kind") or not hints:
         return
-    sub = _hint_subject_of(expr, hints)
-    if sub and sub not in proved:
-        res.ok = False
-        res.errors.append(hint_law_error(cname, sub))
-        return
-    _walk_hint_act(cname, expr.left, hints, proved, res)
-    _walk_hint_act(cname, expr.right, hints, proved, res)
+    hit = _classify_hint_expr(expr, hints)
+    if hit:
+        subject, kind, field = hit
+        if kind == "future":
+            res.ok = False
+            res.errors.append(hint_future_error(cname, field))
+            return
+        if kind == "payload" and subject not in fresh:
+            res.ok = False
+            res.errors.append(hint_payload_age_error(cname, field))
+            return
+        if kind in ("presence", "age") and subject not in proved:
+            res.ok = False
+            res.errors.append(hint_law_error(cname, subject))
+            return
+    _walk_hint_act(cname, getattr(expr, "left", None), hints, proved, fresh, res)
+    _walk_hint_act(cname, getattr(expr, "right", None), hints, proved, fresh, res)
     for a in getattr(expr, "args", []) or []:
-        _walk_hint_act(cname, a, hints, proved, res)
+        _walk_hint_act(cname, a, hints, proved, fresh, res)
 
 
 def _check_hint_in_stmts(
@@ -1387,33 +1613,42 @@ def _check_hint_in_stmts(
     hints: set[str],
     proved: set[str],
     res: CheckResult,
+    fresh: set[str] | None = None,
+    closed: set[str] | None = None,
 ) -> None:
     if not hints:
         return
+    proved = set(proved)
+    fresh = set() if fresh is None else set(fresh)
+    closed = set() if closed is None else set(closed)
     for st in stmts:
         if st.kind in ("assign", "let", "chase", "cut") and st.expr is not None:
-            _walk_hint_act(cname, st.expr, hints, proved, res)
+            _walk_hint_act(cname, st.expr, hints, proved, fresh, res)
         if st.kind == "chase":
             for a in st.args:
-                _walk_hint_act(cname, a, hints, proved, res)
+                _walk_hint_act(cname, a, hints, proved, fresh, res)
         if st.kind == "freeze" and st.expr is not None:
-            _walk_hint_act(cname, st.expr, hints, proved, res)
+            _walk_hint_act(cname, st.expr, hints, proved, fresh, res)
         if st.kind == "enter":
             for a in st.args:
                 if isinstance(a, tuple) and len(a) == 2:
-                    _walk_hint_act(cname, a[1], hints, proved, res)
+                    _walk_hint_act(cname, a[1], hints, proved, fresh, res)
                 else:
-                    _walk_hint_act(cname, a, hints, proved, res)
+                    _walk_hint_act(cname, a, hints, proved, fresh, res)
         if st.kind in ("when", "if", "require"):
-            extra = proved | _proved_hints(st.expr, hints)
-            if not _is_hint_presence(st.expr, hints):
-                _walk_hint_act(cname, st.expr, hints, proved, res)
-            _check_hint_in_stmts(cname, st.body, hints, extra, res)
+            extra_some, extra_fresh, consumed = _consume_hint_guard(
+                cname, st.expr, hints, proved, fresh, closed, res
+            )
+            if not consumed:
+                _walk_hint_act(cname, st.expr, hints, proved, fresh, res)
+            _check_hint_in_stmts(
+                cname, st.body, hints, extra_some, res, extra_fresh, closed
+            )
             else_body = _stmt_else_body(st)
             if else_body:
-                _check_hint_in_stmts(cname, else_body, hints, proved, res)
+                _check_hint_in_stmts(cname, else_body, hints, proved, res, fresh, closed)
         elif st.body:
-            _check_hint_in_stmts(cname, st.body, hints, proved, res)
+            _check_hint_in_stmts(cname, st.body, hints, proved, res, fresh, closed)
 
 
 def _expr_has_prior_min_rtt(expr) -> bool:

@@ -9,6 +9,7 @@ from vela.checker import (
     closed_write_error,
     cruise_write_error,
     house_cut_error,
+    on_capacity_write_error,
     typed_reconfig_error,
 )
 from vela.compile import compile_source
@@ -377,6 +378,53 @@ view Sneak of Base {
         res = check(parse(src, "cruise-cut.vela"))
         self.assertFalse(res.ok)
         self.assertIn(cruise_write_error("Probe", "cut"), res.errors)
+
+    def test_observe_pace_inside_on_is_not_passthrough(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+    bw: Interval<bps> @ epoch
+  on Reconfig(e) match e {
+    RttHop => {
+      when bw.n >= 2 {
+        pace = bw.mid
+      }
+    }
+    Flicker => hold
+  }
+"""
+        )
+        res = check(parse(src, "on-pace.vela"))
+        self.assertFalse(res.ok)
+        self.assertIn(on_capacity_write_error("Probe", "pace ="), res.errors)
+        self.assertFalse(res.passthrough)
+        self.assertTrue(res.observe_only)
+
+    def test_observe_reprobe_in_on_stays_passthrough(self):
+        src = _src(
+            """
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {
+    RttHop => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+    Flicker => {
+      invalidate min_rtt, bw
+      enter Reprobe(cut: 0.58, explore: 1.15 * rtt, fill: 1.85 * rtt)
+    }
+  }
+"""
+        )
+        res = check(parse(src, "on-reprobe.vela"))
+        self.assertTrue(res.ok, res.errors)
+        self.assertTrue(res.passthrough)
 
     def test_observe_freeze_is_not_a_cruise_write(self):
         src = _src(

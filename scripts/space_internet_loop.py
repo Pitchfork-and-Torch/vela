@@ -45,7 +45,7 @@ def _write_state(*, last: str, nxt: str, status: str, extra: str = "") -> None:
                 f"status: {status}",
                 f"updated: {_now()}",
                 "engine: LeoAware v3.4-p95 on this machine (73.57 / 138.37 vs BBR 70.88 / 138.83)",
-                "vela: 0.4.3 affine + WriteCap linear + hybrid automata, observe-only Reach",
+                "vela: 0.4.4 path geometry bind + hint age, observe-only Reach",
                 f"last_job: {last}",
                 f"next_job: {nxt}",
                 f"stop: {'yes' if STOP.exists() else 'no'}",

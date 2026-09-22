@@ -16,7 +16,11 @@ use std.eval
 //
 // Observe-only. No closed-write. LeoAware remains the engine.
 // When the hint is Some, freeze samples. When it is None, hold.
-// The packet path is still Detect + SoftReprobe + Calendar.
+// A payload field (role, capacity_bps) needs age < duration.
+// eta and next_capacity stay no-oracle even when the MAC is fresh.
+// Freeze-or-hold does not read a payload, so this program stays
+// defined when the hint is missing. The packet path is still
+// Detect + SoftReprobe + Calendar.
 
 controller Ascent {
   posture observe

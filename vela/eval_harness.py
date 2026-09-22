@@ -16,6 +16,7 @@ from vela.kernel import leo_aware_root, make_cca, oce_cca_factory
 from vela.path import (
     HOUSE_HANDOVER_INTERVAL_S,
     HOUSE_HANDOVER_JITTER_S,
+    geometry_kwargs,
     path_overlay,
 )
 from vela.receipt import eval_gate
@@ -122,42 +123,55 @@ def scenario_cfg(
     cfg: VelaConfig | None = None,
 ):
     LeoPathConfig = mod["LeoPathConfig"]
-    interval, jitter = path_overlay(name, cfg)
+    rails = path_overlay(name, cfg)
+    extra = geometry_kwargs(rails)
     if name == "leo_fast_ho":
         return (
             LeoPathConfig(
                 duration_s=duration_s,
                 handover_interval_s=(
-                    HOUSE_HANDOVER_INTERVAL_S if interval is None else interval
+                    HOUSE_HANDOVER_INTERVAL_S
+                    if rails.handover_interval_s is None
+                    else rails.handover_interval_s
                 ),
                 handover_jitter_s=(
-                    HOUSE_HANDOVER_JITTER_S if jitter is None else jitter
+                    HOUSE_HANDOVER_JITTER_S
+                    if rails.handover_jitter_s is None
+                    else rails.handover_jitter_s
                 ),
                 seed=seed,
+                **extra,
             ),
             1,
         )
     if name == "leo_single":
-        return (
-            LeoPathConfig(
-                duration_s=duration_s,
-                handover_interval_s=22 if interval is None else interval,
-                seed=seed,
+        kw = {
+            "duration_s": duration_s,
+            "handover_interval_s": (
+                22 if rails.handover_interval_s is None else rails.handover_interval_s
             ),
-            1,
-        )
+            "seed": seed,
+            **extra,
+        }
+        if rails.handover_jitter_s is not None:
+            kw["handover_jitter_s"] = rails.handover_jitter_s
+        return (LeoPathConfig(**kw), 1)
     if name == "terrestrial":
+        # Stable comparison path. Do not paint LEO capacity onto it.
         d = min(duration_s, 60.0)
         return (LeoPathConfig(duration_s=d, seed=seed, terrestrial=True), 1)
     if name == "leo_multi":
-        return (
-            LeoPathConfig(
-                duration_s=duration_s,
-                handover_interval_s=25 if interval is None else interval,
-                seed=seed,
+        kw = {
+            "duration_s": duration_s,
+            "handover_interval_s": (
+                25 if rails.handover_interval_s is None else rails.handover_interval_s
             ),
-            3,
-        )
+            "seed": seed,
+            **extra,
+        }
+        if rails.handover_jitter_s is not None:
+            kw["handover_jitter_s"] = rails.handover_jitter_s
+        return (LeoPathConfig(**kw), 3)
     raise ValueError(name)
 
 

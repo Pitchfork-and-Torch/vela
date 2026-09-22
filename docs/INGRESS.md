@@ -59,3 +59,10 @@ WriteCap, and hybrid automata. See `docs/LANGUAGE.md` Equinox
 laws and section K. `--fast` cannot become house. Workers write
 the result row to `--out`. ACCEPT on `gate=fast` is not a
 dual-gate win.
+
+0.4.4 binds declared path geometry (RTT jump, capacity band,
+mobility burst) into eval, not only the handover cadence. House
+LeoFastHO numbers match the sibling sim defaults, so Reach stays
+on the same path. Hint payload needs `age < duration`. `eta` stays
+no-oracle. Observe `on` may cut or enter Reprobe; it may not
+assign pace or cwnd. See `docs/LANGUAGE.md` section L.

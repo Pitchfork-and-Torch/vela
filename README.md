@@ -130,6 +130,8 @@ VELA does not violate causality or invent capacity. A Starlink-class path still 
 
 **v0.4.3:** affine samples (use-once; e+1 is prior), linear WriteCap (`split` / `borrow`), hybrid automata (`on` jump, `when`/`every` flow). `--fast` cannot be mixed with `--seeds`/`--duration`. Gate is stamped from the rows that ran. A worker writes the result row to a file so a later stdout line cannot replace it. ACCEPT on `gate=fast` is not a house dual-gate claim.
 
+**v0.4.4:** a `path` block's capacity, RTT jump, and mobility burst are the rails eval runs. House LeoFastHO matches the sibling sim defaults, so flagship Reach does not move. An inverted band or a handover jitter that swallows the interval is a type error. ASCENT payload reads need `age < duration`; `eta` is still not a calendar. Observe `on` may cut or enter Reprobe (house cut 0.58). It may not assign pace or cwnd.
+
 **v0.3 Equinox:** integrators in `when` / `every` are type errors. WriteCap is linear (`split` / `borrow`, else integer budget). Affine samples are use-once per block; `enter Reprobe` is e+1. Reconfig is a closed kind. Eval writes a SHA-256 receipt bound to source + compose + merkle of rows. Views are first-class compose morphisms. House LeoAware (coupled-RNG, not OPE-fair) remains 73.57 / 138.37 vs BBR 70.88 / 138.83. JSON + receipt under `results/` are the only win table. See `docs/INGRESS.md`, `docs/EQUINOX.md`, and `docs/EVAL-NOTES.md`.
 
 ## License
