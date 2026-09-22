@@ -75,6 +75,9 @@ def _main(argv: list[str] | None = None) -> int:
     p_ev.add_argument("--view", default=None)
 
     p_rs = sub.add_parser("emit-rust", help="emit Rust IR sketch")
+    p_pow = sub.add_parser("power", help="label eval power for a seed list (not DualGate)")
+    p_pow.add_argument("--seeds", required=True, help="comma-separated seeds, e.g. 13,7,42,99,123")
+
     p_rs.add_argument("file")
     p_rs.add_argument("-o", "--out", default=None)
 
@@ -134,6 +137,20 @@ def _main(argv: list[str] | None = None) -> int:
         )
         if summary is None:
             print("    pass --eval to bind seed rows (a swapped number fails then)")
+        return 0
+
+
+    if args.cmd == "power":
+        from vela.types import power_label_for_seeds
+        raw = [x.strip() for x in str(args.seeds).split(",") if x.strip()]
+        try:
+            seeds = [int(x) for x in raw]
+        except ValueError:
+            print("error: --seeds must be integers")
+            return 2
+        label = power_label_for_seeds(seeds)
+        print(f"power={label['power']}  n={label['n']}")
+        print(label["note"])
         return 0
 
     if not getattr(args, "file", None):
@@ -222,6 +239,7 @@ def _main(argv: list[str] | None = None) -> int:
             return 1
         print(f"wrote {out}")
         return 0
+
 
     if args.cmd == "emit-rust":
         from vela.emit_rust import emit_rust

@@ -24,6 +24,28 @@ def eval_power(n_seeds: int) -> str:
     return "low" if int(n_seeds) < POWER_OK_MIN_SEEDS else "ok"
 
 
+# House DualGate seed list (means ACCEPT legal; power still low at n=5).
+HOUSE_DUAL_GATE_SEEDS = (13, 7, 42, 99, 123)
+
+
+def power_label_for_seeds(seeds: Iterable[int] | None) -> dict:
+    """Honesty label for a seed list. Never a dual-gate claim.
+
+    Returns a small dict the harness/CLI/ablation scripts can share:
+    n, power ('low'|'ok'), and a one-line note that ACCEPT on means is
+    still legal when power=low. Does not stamp gate=house or dual-gate.
+    """
+    listed = list(seeds or ())
+    n = len(listed)
+    power = eval_power(n)
+    note = (
+        f"power={power} (n={n}; floor n<{POWER_OK_MIN_SEEDS} is low). "
+        "Means ACCEPT may still be legal. Not a dual-gate win; gate comes "
+        "from the rows that ran."
+    )
+    return {"n": n, "power": power, "seeds": listed, "note": note}
+
+
 def assert_names_jain(left: str) -> bool:
     s = str(left).lower().replace(" ", "")
     return "jain" in s or "fairness" in s

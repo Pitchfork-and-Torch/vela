@@ -52,7 +52,7 @@ Seed 7: 65.89 / 118.4 vs Leo 88.65 / 108.4 (chase dump).
 | Horizon-chase only (uncapped) | 55.29 | 173.5 |
 | Horizon-chase (180ms, then prior_bdp) | 65.9-76 | 120-150 |
 
-**Decision:** ship Horizon compose **without** HorizonChase. Chase stays in the stdlib. Re-enable after `scripts/ablate_seed7.py` is green on seed 7 and seed 13.
+**Decision:** ship Horizon compose **without** HorizonChase. Chase stays in the stdlib. Re-enable after `scripts/ablate_seed7.py` is green on seed 7 and seed 13. Cheap path: `python3 scripts/ablate_seed7.py --only pass chase` (plan-only; add `--run` when the sibling sim is present). Not a DualGate claim.
 
 ### horizon-fast4 (v0.1.3, chase out of compose)
 
