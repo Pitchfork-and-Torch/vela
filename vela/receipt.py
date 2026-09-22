@@ -15,6 +15,7 @@ from vela.digest import (
     tagged,
 )
 from vela.path import path_digest
+from vela.types import EARLY_EPOCH_MIN_RTTS, EARLY_EPOCH_TIGHT_UNCERT
 
 # House DualGate rails (EVAL-NOTES). --fast is not this gate.
 HOUSE_GATE_SEEDS = frozenset({13, 7, 42, 99, 123})
@@ -122,6 +123,8 @@ def build_receipt(
         "verdict": summary.get("verdict"),
         "power": summary.get("power"),
         "honesty": summary.get("honesty"),
+        "early_epoch_rtts": EARLY_EPOCH_MIN_RTTS,
+        "early_epoch_tight_uncert": EARLY_EPOCH_TIGHT_UNCERT,
         "gate": summary.get("gate") or eval_gate(
             config.get("seeds"),
             config.get("duration_s"),

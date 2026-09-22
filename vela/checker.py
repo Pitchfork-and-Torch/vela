@@ -17,6 +17,8 @@ from vela.types import (
     HINT_ARMS,
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
+    EARLY_EPOCH_MIN_RTTS,
+    EARLY_EPOCH_TIGHT_UNCERT,
     HOUSE_ENDPOINT_CUT,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
@@ -322,6 +324,7 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
     _check_write_cap(c, res)
     _check_affine(c, res)
     _check_hybrid(c, res)
+    _check_early_epoch(c, res)
 
 
 def _check_stale_in_stmts(cname: str, stmts: list[Stmt], res: CheckResult) -> None:
@@ -1439,6 +1442,262 @@ def _check_prior_min_rtt(cname: str, stmts: list[Stmt], res: CheckResult) -> Non
             res.errors.append(
                 f"{cname}: cannot write min_rtt from prior.min_rtt (freshness law)"
             )
+
+
+# Point fields of an Interval. .n / .e are counts. .uncertainty is width.
+_EARLY_POINT_ATTRS = frozenset({"lo", "mid", "hi"})
+_EPOCH_CMP = frozenset({">", "<", ">=", "<="})
+_EPOCH_FLIP = {">": "<", "<": ">", ">=": "<=", "<=": ">="}
+
+
+def early_epoch_point_error(cname: str, name: str) -> str:
+    return (
+        f"{cname}: Interval {name} used as a point in the first "
+        f"{EARLY_EPOCH_MIN_RTTS:g} RTT (early-epoch uncertainty law)"
+    )
+
+
+def early_epoch_tight_error(cname: str) -> str:
+    return (
+        f"{cname}: tight bandwidth interval in the first "
+        f"{EARLY_EPOCH_MIN_RTTS:g} RTT "
+        f"(uncertainty floor {EARLY_EPOCH_TIGHT_UNCERT:g}; "
+        "early-epoch uncertainty law)"
+    )
+
+
+def _add_check_error(res: CheckResult, msg: str) -> None:
+    if msg not in res.errors:
+        res.ok = False
+        res.errors.append(msg)
+
+
+def _epoch_age_kind(expr) -> str | None:
+    """'span' for epoch.age (compared to N * rtt), 'count' for epoch.rtts."""
+    if expr is None or getattr(expr, "kind", None) != "attr":
+        return None
+    left = expr.left
+    if left is None or getattr(left, "kind", None) != "name" or left.name != "epoch":
+        return None
+    if expr.name == "age":
+        return "span"
+    if expr.name == "rtts":
+        return "count"
+    return None
+
+
+def _span_rtts(expr) -> float | None:
+    """N from `N * rtt` or `rtt * N`."""
+    if expr is None or getattr(expr, "kind", None) != "binop" or expr.name != "*":
+        return None
+
+    def is_rtt(node) -> bool:
+        return (
+            node is not None
+            and getattr(node, "kind", None) == "name"
+            and node.name == "rtt"
+        )
+
+    n_left = _lit_num(expr.left)
+    n_right = _lit_num(expr.right)
+    if n_left is not None and is_rtt(expr.right):
+        return n_left
+    if n_right is not None and is_rtt(expr.left):
+        return n_right
+    return None
+
+
+def _epoch_threshold(kind: str, expr) -> float | None:
+    if kind == "span":
+        return _span_rtts(expr)
+    return _lit_num(expr)
+
+
+def _epoch_window_pair(expr) -> tuple[str | None, str | None]:
+    """(then, else) from one epoch-age comparison.
+
+    'early' is inside the first EARLY_EPOCH_MIN_RTTS.
+    'mature' is at or after that bound.
+    None means the branch still includes both.
+    """
+    if expr is None or getattr(expr, "kind", None) != "binop":
+        return None, None
+    op = expr.name
+    if op not in _EPOCH_CMP:
+        return None, None
+
+    def classify(age_expr, num_expr, op_age_left: str) -> tuple[str | None, str | None] | None:
+        kind = _epoch_age_kind(age_expr)
+        if kind is None:
+            return None
+        n = _epoch_threshold(kind, num_expr)
+        if n is None:
+            return None
+        cap = EARLY_EPOCH_MIN_RTTS
+        if op_age_left in (">=", ">"):
+            then_w = "mature" if n + 1e-12 >= cap else None
+            else_w = "early" if n <= cap + 1e-12 else None
+            return then_w, else_w
+        if op_age_left in ("<", "<="):
+            then_w = "early" if n <= cap + 1e-12 else None
+            else_w = "mature" if n + 1e-12 >= cap else None
+            return then_w, else_w
+        return None
+
+    hit = classify(expr.left, expr.right, op)
+    if hit is None:
+        hit = classify(expr.right, expr.left, _EPOCH_FLIP[op])
+    if hit is None:
+        return None, None
+    return hit
+
+
+def _merge_epoch_ctx(window: str | None, parent: str | None) -> str | None:
+    return window if window is not None else parent
+
+
+def _is_uncertainty_expr(expr) -> bool:
+    if expr is None:
+        return False
+    if getattr(expr, "kind", None) == "name" and expr.name == "uncertainty":
+        return True
+    if getattr(expr, "kind", None) == "attr" and expr.name == "uncertainty":
+        return True
+    return False
+
+
+def _pred_forces_tight(expr) -> bool:
+    """True when a predicate claims uncertainty at or below the tight ceiling."""
+    if expr is None or getattr(expr, "kind", None) != "binop":
+        return False
+    op = expr.name
+    if op not in _EPOCH_CMP:
+        return False
+    cap = EARLY_EPOCH_TIGHT_UNCERT
+
+    def tight(threshold: float, op_unc_left: str) -> bool:
+        return op_unc_left in ("<", "<=") and threshold <= cap + 1e-12
+
+    n_right = _lit_num(expr.right)
+    n_left = _lit_num(expr.left)
+    if _is_uncertainty_expr(expr.left) and n_right is not None:
+        return tight(n_right, op)
+    if _is_uncertainty_expr(expr.right) and n_left is not None:
+        return tight(n_left, _EPOCH_FLIP[op])
+    return False
+
+
+def _assign_forces_tight(st: Stmt) -> bool:
+    if st.kind != "assign" or st.name != "uncertainty":
+        return False
+    n = _lit_num(st.expr)
+    if n is None:
+        return False
+    return n <= EARLY_EPOCH_TIGHT_UNCERT + 1e-12
+
+
+def _walk_early_points(cname: str, expr, intervals: set[str], res: CheckResult) -> None:
+    if expr is None or not hasattr(expr, "kind") or not intervals:
+        return
+    if expr.kind == "name" and expr.name in intervals:
+        _add_check_error(res, early_epoch_point_error(cname, expr.name))
+        return
+    if (
+        expr.kind == "attr"
+        and expr.left is not None
+        and getattr(expr.left, "kind", None) == "name"
+        and expr.left.name in intervals
+        and expr.name in _EARLY_POINT_ATTRS
+    ):
+        _add_check_error(res, early_epoch_point_error(cname, expr.left.name))
+        return
+    _walk_early_points(cname, getattr(expr, "left", None), intervals, res)
+    _walk_early_points(cname, getattr(expr, "right", None), intervals, res)
+    for arg in getattr(expr, "args", []) or []:
+        if hasattr(arg, "kind"):
+            _walk_early_points(cname, arg, intervals, res)
+
+
+def _check_early_epoch_guard(
+    cname: str,
+    pred,
+    body: list[Stmt],
+    else_body: list[Stmt],
+    intervals: set[str],
+    parent: str | None,
+    res: CheckResult,
+) -> None:
+    then_w, else_w = _epoch_window_pair(pred)
+    then_ctx = _merge_epoch_ctx(then_w, parent)
+    else_ctx = _merge_epoch_ctx(else_w, parent)
+    if _pred_forces_tight(pred) and then_ctx != "mature":
+        _add_check_error(res, early_epoch_tight_error(cname))
+    if then_ctx == "early":
+        _walk_early_points(cname, pred, intervals, res)
+    _check_early_epoch_stmts(cname, body, intervals, then_ctx, res)
+    if else_body:
+        _check_early_epoch_stmts(cname, else_body, intervals, else_ctx, res)
+
+
+def _check_early_epoch_stmts(
+    cname: str,
+    stmts: list[Stmt],
+    intervals: set[str],
+    ctx: str | None,
+    res: CheckResult,
+) -> None:
+    for st in stmts:
+        if st.kind in ("when", "if", "require"):
+            _check_early_epoch_guard(
+                cname,
+                st.expr,
+                st.body,
+                _stmt_else_body(st),
+                intervals,
+                ctx,
+                res,
+            )
+            continue
+        if ctx == "early" and st.expr is not None:
+            _walk_early_points(cname, st.expr, intervals, res)
+        if ctx == "early" and st.kind == "chase":
+            for arg in st.args:
+                if hasattr(arg, "kind"):
+                    _walk_early_points(cname, arg, intervals, res)
+        if ctx == "early" and st.kind == "enter":
+            for arg in st.args:
+                if isinstance(arg, tuple) and len(arg) == 2 and hasattr(arg[1], "kind"):
+                    _walk_early_points(cname, arg[1], intervals, res)
+                elif hasattr(arg, "kind"):
+                    _walk_early_points(cname, arg, intervals, res)
+        if _assign_forces_tight(st) and ctx != "mature":
+            _add_check_error(res, early_epoch_tight_error(cname))
+        if st.body:
+            _check_early_epoch_stmts(cname, st.body, intervals, ctx, res)
+
+
+def _check_early_epoch(c: Controller, res: CheckResult) -> None:
+    """Refuse a tight IntervalBw band in the first 2 RTT under posture observe.
+
+    A point read under `epoch.age < 2 * rtt` (or `epoch.rtts < 2`) is a
+    type error even when n >= 2. A tight uncertainty compare or assign
+    needs a mature guard (`epoch.age >= 2 * rtt` or `epoch.rtts >= 2`).
+    n >= 2 alone stays the older uncertainty law. Review may name the
+    early tight band so an ablation stays a program, not a kernel fork.
+    """
+    if c.posture != "observe":
+        return
+    intervals = {s.name for s in c.signals if s.typ.name == "Interval"}
+    if not intervals and "IntervalBw" not in c.compose:
+        return
+    for o in c.ons:
+        _check_early_epoch_stmts(c.name, o.body, intervals, None, res)
+        for arm in o.match_arms:
+            _check_early_epoch_stmts(c.name, arm.body, intervals, None, res)
+    for w in c.whens:
+        _check_early_epoch_guard(c.name, w.pred, w.body, [], intervals, None, res)
+    for e in c.everys:
+        _check_early_epoch_stmts(c.name, e.body, intervals, None, res)
 
 
 def interval_point_error(cname: str, name: str) -> str:

@@ -4,7 +4,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from vela.ast import Program
-from vela.types import assert_names_jain, is_observe_only, parse_jain_floor
+from vela.types import (
+    EARLY_EPOCH_MIN_RTTS,
+    EARLY_EPOCH_TIGHT_UNCERT,
+    assert_names_jain,
+    is_observe_only,
+    parse_jain_floor,
+)
 
 
 @dataclass
@@ -70,6 +76,9 @@ class VelaConfig:
     handover_jitter_s: float | None = None
     paths: list = field(default_factory=list)
     path_digest: str = ""
+    # Same constants the checker stamps. Not a pace or cwnd write.
+    early_epoch_rtts: float = EARLY_EPOCH_MIN_RTTS
+    early_epoch_tight_uncert: float = EARLY_EPOCH_TIGHT_UNCERT
 
 
 def parse_report_ci(reports: list[str]) -> tuple[float | None, list[str]]:

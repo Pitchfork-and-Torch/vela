@@ -189,6 +189,11 @@ def _main(argv: list[str] | None = None) -> int:
             print("    writecap=linear  (split/borrow; no ambient write)")
         elif res.writecap == "budget":
             print("    writecap=budget  (integer authority)")
+        print(
+            f"    early-epoch={res.early_epoch_rtts:g}rtt  "
+            f"(IntervalBw tight band needs epoch.age >= {res.early_epoch_rtts:g} RTT; "
+            f"uncertainty floor {res.early_epoch_tight:g})"
+        )
         if res.path_bound:
             print(f"    path={res.path_bound}")
         if res.fairness:

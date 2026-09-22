@@ -34,7 +34,7 @@ py -3 -m unittest discover -s tests -v
 ```
 
 `vela check examples/reach.vela` must print `observe-only`,
-`passthrough`, and `no-oracle`.
+`passthrough`, `no-oracle`, and `early-epoch=2rtt`.
 
 `vela eval examples/fair.vela --fast` is INCOMPLETE for Jain
 (fast skips `leo_multi`). That is honest.
