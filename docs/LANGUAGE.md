@@ -73,7 +73,7 @@ when <pred> { ... }         # guarded continuous action
 
 `when p_ho > 0.35` is not a thread. It is a predicate evaluated on each ACK against the path model. Under `posture observe` the body may `freeze` samples. It may not scale `pace`, write `cwnd`, `chase`, or `cut` (passthrough; Horizon's leftover `pace = bw.mid` dumped seed 7). Review may name a cruise write so ablation stays named. It may not invent capacity. `every ack { pace *= k }` is the same integrator death as `when`; write `integrate every` to opt in.
 
-**Hybrid law.** `on` is a discrete jump. `when` and `every` are flows (`every ack` packet horizon, `every epoch` epoch horizon). `enter`, `invalidate`, and `cut` are jumps: they belong in `on`, not in a flow. `enter Reprobe` is the named location; `enter Cruise` is a type error. A nested `when` inside `on` is a guarded jump, not a flow. `vela check` stamps `hybrid`.
+**Hybrid law.** `on` is a discrete jump. `when` and `every` are flows (`every ack` packet horizon, `every epoch` epoch horizon). `enter`, `invalidate`, and `cut` are jumps: they belong in `on`, not in a flow. `enter Reprobe` is the named location; `enter Cruise` is a type error. A nested `when` inside `on` is a guarded jump, not a flow. `vela check` stamps `hybrid-automata` (enter/invalidate/cut only in on-handlers; every tick ack|epoch) when the law holds.
 
 `on Reconfig` under `posture observe` must match `RttHop | Flicker`. A bare Reconfig body is legal only under `posture review`.
 
@@ -305,7 +305,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 |-----|-----------------|
 | Level vs integrator | `when` / `every` `{ pace *= k }` without `integrate when` / `integrate every` |
 | Affine samples | second Sample read in one block; Sample @ e after `enter Reprobe` |
-| Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
+| Hybrid automata (`hybrid-automata`) | enter/invalidate/cut only in on-handlers refuse in flow; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |

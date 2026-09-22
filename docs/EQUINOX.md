@@ -57,6 +57,11 @@ binaries.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.
+10. **Hybrid automata.** `on` is a discrete jump. `when` and `every`
+   are flows. `enter`, `invalidate`, and `cut` belong in `on-handlers`,
+   not in a flow. Every tick is `ack` or `epoch` only. `vela check`
+   stamps `hybrid-automata` (enter/invalidate/cut only in on-handlers;
+   every tick ack|epoch) on Reach and Equinox.
 
 ## Commands
 

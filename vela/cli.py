@@ -184,7 +184,7 @@ def _main(argv: list[str] | None = None) -> int:
         if res.affine:
             print("    affine  (Sample @ e is use-once; e+1 is prior)")
         if res.hybrid:
-            print("    hybrid  (on = jump; when/every = flow)")
+            print("    hybrid-automata  (enter/invalidate/cut only in on-handlers; every tick ack|epoch)")
         if res.writecap == "linear":
             print("    writecap=linear  (split/borrow; no ambient write)")
         elif res.writecap == "budget":
