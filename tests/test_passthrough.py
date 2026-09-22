@@ -165,5 +165,64 @@ controller Probe {
         self.assertTrue(res.passthrough)
 
 
+    def test_observe_on_cwnd_is_not_passthrough(self):
+        src = """
+lang vela 0.1
+controller Probe {
+  posture observe
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+  on Reconfig(e) match e {
+    RttHop => { cwnd = 10 }
+    Flicker => hold
+  }
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => hold
+  }
+}
+"""
+        from vela.checker import cruise_write_error
+        res = check(parse(src, "on-cwnd.vela"))
+        self.assertFalse(res.ok)
+        self.assertFalse(res.passthrough)
+        self.assertIn(cruise_write_error("Probe", "cwnd ="), res.errors)
+
+    def test_observe_hint_some_pace_is_not_passthrough(self):
+        src = """
+lang vela 0.1
+use std.hint
+controller Probe {
+  posture observe
+  compose Detect + SoftReprobe
+  signals:
+    epoch: Epoch
+    rtt: Sample<ms> @ epoch
+    hint: Hint<PathHint>
+  on Hint(h) match h {
+    Some => { pace = 1 }
+    None => hold
+  }
+  on Reconfig(e) match e {
+    RttHop => hold
+    Flicker => hold
+  }
+  on Loss(k) match k {
+    Mobility => hold
+    Congestive => cut(0.72)
+    Unknown => hold
+  }
+}
+"""
+        from vela.checker import cruise_write_error
+        res = check(parse(src, "hint-pace.vela"))
+        self.assertFalse(res.ok)
+        self.assertFalse(res.passthrough)
+        self.assertIn(cruise_write_error("Probe", "pace ="), res.errors)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -327,6 +327,24 @@ def path_overlay(
     return None, None
 
 
+
+
+def path_capacity_overlay(
+    scenario: str, cfg
+) -> tuple[float | None, float | None]:
+    """Capacity rails declared for this scenario, or (None, None)."""
+    if cfg is None:
+        return None, None
+    for item in getattr(cfg, "paths", None) or []:
+        if isinstance(item, dict) and item.get("scenario") == scenario:
+            return item.get("capacity_lo_bps"), item.get("capacity_hi_bps")
+    if getattr(cfg, "path_scenario", "") == scenario:
+        return (
+            getattr(cfg, "capacity_lo_bps", None),
+            getattr(cfg, "capacity_hi_bps", None),
+        )
+    return None, None
+
 def house_mismatch_warning(law: PathLaw) -> str | None:
     if law.scenario != "leo_fast_ho" or not law.bound or law.house:
         return None

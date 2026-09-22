@@ -6,6 +6,7 @@ import unittest
 from vela.checker import check
 from vela.parser import parse
 from vela.path import (
+    path_capacity_overlay,
     path_inverted_bounds_error,
     path_jitter_exceeds_error,
     path_zero_capacity_error,
@@ -200,6 +201,22 @@ path LeoFastHO {
         self.assertIn("capacity_lo_bps=20000000.0", text)
         self.assertIn("capacity_hi_bps=120000000.0", text)
         self.assertEqual(cfg2.capacity_hi_bps, 120e6)
+
+
+    def test_path_capacity_overlay(self):
+        from vela.ir import program_to_config
+        from pathlib import Path as P
+
+        src = (P(__file__).resolve().parents[1] / "examples" / "reach.vela").read_text(
+            encoding="utf-8"
+        )
+        cfg = program_to_config(parse(src, "reach.vela"))
+        lo, hi = path_capacity_overlay("leo_fast_ho", cfg)
+        self.assertEqual(lo, 20e6)
+        self.assertEqual(hi, 120e6)
+        lo2, hi2 = path_capacity_overlay("leo_multi", cfg)
+        self.assertIsNone(lo2)
+        self.assertIsNone(hi2)
 
 
 if __name__ == "__main__":
