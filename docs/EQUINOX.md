@@ -68,6 +68,13 @@ py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela
 py -3 -m vela receipt results/receipt_reach.json --source examples/reach.vela --eval results/eval_reach.json
 ```
 
+## Flagship
+
+Equinox is the discipline demo. The packet-path flagship remains
+observe-only `examples/reach.vela` (LeoAware wrap). Do not merge a
+`posture review` closed-write compose as the flagship. SoftFlicker and
+HorizonChase stay review until a named ablation is green.
+
 ## What 0.3 does not do
 
 It does not replace LeoAware. The engine remains v3.4-p95 at

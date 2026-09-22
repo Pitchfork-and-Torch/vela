@@ -17,6 +17,8 @@ use std.eval
 //   views are first-class compose morphisms. Not self-modifying code.
 //
 // Packet path is still LeoAware. Writes stay in the stdlib.
+// House flagship remains examples/reach.vela (observe-only wrap).
+// Equinox is the discipline demo on that compose class, not a rival CCA.
 // The leap is that a claim without a receipt does not compile as truth.
 
 controller Equinox {
