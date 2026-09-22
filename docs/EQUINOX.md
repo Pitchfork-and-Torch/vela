@@ -54,6 +54,11 @@ binaries.
    Sample `freeze` stays legal. Review may name a cruise write.
    The public README teaser must check as observe-only Reach.
    A cruise write is not the language intro.
+8b. **IntervalBw early-uncertain.** Observe refuses forcing a tight
+   bandwidth Interval in the first 1-2 RTT after Reconfig/enter
+   (`uncertainty` width-ratio below 0.35, or `bw = prior.bw`).
+   `vela check` stamps `intervalbw-early-uncertain`. Ratio only;
+   not a dish Mbps claim.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.

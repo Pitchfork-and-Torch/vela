@@ -9,7 +9,11 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
-from vela.types import POWER_OK_MIN_SEEDS
+from vela.types import (
+    HOUSE_EARLY_EPOCH_RTTS,
+    HOUSE_EARLY_UNCERT_FLOOR,
+    POWER_OK_MIN_SEEDS,
+)
 
 
 class InputError(Exception):
@@ -179,6 +183,12 @@ def _main(argv: list[str] | None = None) -> int:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
+        if res.intervalbw_early_uncertain:
+            print(
+                "    intervalbw-early-uncertain  "
+                f"(width-ratio>={HOUSE_EARLY_UNCERT_FLOOR:g} "
+                f"for first {HOUSE_EARLY_EPOCH_RTTS} RTT)"
+            )
         if res.no_oracle:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:

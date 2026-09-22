@@ -18,6 +18,8 @@ from vela.types import (
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    HOUSE_EARLY_EPOCH_RTTS,
+    HOUSE_EARLY_UNCERT_FLOOR,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -73,6 +75,8 @@ def check(prog: Program) -> CheckResult:
         res.passthrough = controller_is_passthrough(first)
         res.no_oracle = not _controller_mentions_oracle(first)
         res.cuts_compose = first.cuts_compose or ""
+        if controller_stamps_intervalbw_early(first):
+            res.intervalbw_early_uncertain = True
     _check_paths(prog, res)
     for con in prog.contracts:
         if not con.seeds:
@@ -279,6 +283,7 @@ def _check_controller(c: Controller, prog: Program, res: CheckResult) -> None:
                 _check_house_cut_in_stmts(c.name, arm.body, res)
 
     _check_passthrough_cruise(c, res)
+    _check_intervalbw_early(c, res)
     _check_hint_surface(c, prog, res)
     _check_oracle(c, res)
     hints = _hint_names(c)
@@ -1414,6 +1419,209 @@ def _check_hint_in_stmts(
                 _check_hint_in_stmts(cname, else_body, hints, proved, res)
         elif st.body:
             _check_hint_in_stmts(cname, st.body, hints, proved, res)
+
+
+
+def controller_stamps_intervalbw_early(c: Controller) -> bool:
+    """Stamp when IntervalBw is composed (Information early-epoch law)."""
+    return "IntervalBw" in c.compose
+
+
+def intervalbw_early_tight_error(cname: str, detail: str) -> str:
+    floor = HOUSE_EARLY_UNCERT_FLOOR
+    rtts = HOUSE_EARLY_EPOCH_RTTS
+    return (
+        f"{cname}: observe-only IntervalBw refuses {detail} "
+        f"in the first {rtts} RTT after Reconfig/enter "
+        f"(early uncertainty floor width-ratio>={floor:g}; "
+        f"forcing a tight interval early is a stale min-RTT)"
+    )
+
+
+def intervalbw_early_tight_warning(cname: str, detail: str) -> str:
+    floor = HOUSE_EARLY_UNCERT_FLOOR
+    rtts = HOUSE_EARLY_EPOCH_RTTS
+    return (
+        f"{cname}: IntervalBw {detail} in the first {rtts} RTT "
+        f"after Reconfig/enter (review; early uncertainty floor "
+        f"width-ratio>={floor:g})"
+    )
+
+
+def _expr_has_prior_bw(expr) -> bool:
+    """True if expr roots at prior.bw (any attr chain)."""
+    if expr is None or not hasattr(expr, "kind"):
+        return False
+    if expr.kind == "attr" and expr.left is not None:
+        # prior.bw or prior.bw.mid / .lo / .hi
+        if (
+            expr.name == "bw"
+            and expr.left.kind == "name"
+            and expr.left.name == "prior"
+        ):
+            return True
+        if _expr_has_prior_bw(expr.left):
+            return True
+    if expr.kind == "name" and expr.name == "bw":
+        # bare name is not prior; only prior.bw
+        return False
+    if _expr_has_prior_bw(getattr(expr, "left", None)):
+        return True
+    if _expr_has_prior_bw(getattr(expr, "right", None)):
+        return True
+    return any(
+        _expr_has_prior_bw(a) for a in getattr(expr, "args", []) or []
+        if hasattr(a, "kind")
+    )
+
+
+def _uncertainty_assign_below_floor(st: Stmt) -> float | None:
+    """Literal uncertainty = k when k < HOUSE_EARLY_UNCERT_FLOOR."""
+    if st.kind != "assign" or st.name != "uncertainty":
+        return None
+    op = str(st.args[0]) if st.args else "="
+    if op != "=":
+        return None
+    n = _lit_num(st.expr)
+    if n is None:
+        return None
+    if n < HOUSE_EARLY_UNCERT_FLOOR:
+        return n
+    return None
+
+
+def _bw_assign_from_prior(st: Stmt) -> bool:
+    """bw = prior.bw... -- carry prior interval into the new epoch."""
+    if st.kind != "assign" or st.name != "bw":
+        return False
+    return _expr_has_prior_bw(st.expr)
+
+
+def _stmts_after_enter(stmts: list[Stmt]) -> list[Stmt]:
+    """Statements in this block that run after an enter (epoch just moved)."""
+    out: list[Stmt] = []
+    seen_enter = False
+    for st in stmts:
+        if st.kind == "enter":
+            seen_enter = True
+            continue
+        if seen_enter:
+            out.append(st)
+            if st.body:
+                out.extend(_flatten_stmts(st.body))
+            else_body = _stmt_else_body(st) if hasattr(st, "body") else []
+            if else_body:
+                out.extend(_flatten_stmts(else_body))
+    return out
+
+
+def _pred_proves_early_epoch(expr) -> bool:
+    """Heuristic: predicate claims age within first HOUSE_EARLY_EPOCH_RTTS RTT."""
+    if expr is None or not hasattr(expr, "kind"):
+        return False
+    if expr.kind == "binop":
+        op = expr.name
+        left, right = expr.left, expr.right
+        # age < 2 * rtt  /  epoch_age <= 2  /  rtt_count < 2
+        subj_names = set()
+
+        def collect_names(e, into: set[str]) -> None:
+            if e is None or not hasattr(e, "kind"):
+                return
+            if e.kind == "name":
+                into.add(e.name)
+            elif e.kind == "attr":
+                into.add(e.name)
+                collect_names(e.left, into)
+            collect_names(getattr(e, "left", None), into)
+            collect_names(getattr(e, "right", None), into)
+            for a in getattr(e, "args", []) or []:
+                if hasattr(a, "kind"):
+                    collect_names(a, into)
+
+        collect_names(left, subj_names)
+        collect_names(right, subj_names)
+        early_keys = {"age", "epoch_age", "rtt_count", "ack_count", "samples"}
+        if subj_names & early_keys:
+            num = _lit_num(right) if _lit_num(right) is not None else _lit_num(left)
+            # age < 2, age <= 2, rtt_count < 2, etc.
+            if num is not None and op in ("<", "<="):
+                if num <= float(HOUSE_EARLY_EPOCH_RTTS):
+                    return True
+            # age < 2 * rtt -- right is binop
+            if right is not None and right.kind == "binop" and right.name == "*":
+                n = _lit_num(right.left) or _lit_num(right.right)
+                if n is not None and op in ("<", "<=") and n <= float(HOUSE_EARLY_EPOCH_RTTS):
+                    return True
+            if left is not None and left.kind == "binop" and left.name == "*":
+                n = _lit_num(left.left) or _lit_num(left.right)
+                if n is not None and op in (">", ">=") and n <= float(HOUSE_EARLY_EPOCH_RTTS):
+                    return True
+        if _pred_proves_early_epoch(left) or _pred_proves_early_epoch(right):
+            return True
+    return False
+
+
+def _record_early_tight(
+    c: Controller, res: CheckResult, detail: str
+) -> None:
+    if c.posture == "observe":
+        res.ok = False
+        res.errors.append(intervalbw_early_tight_error(c.name, detail))
+    else:
+        res.warnings.append(intervalbw_early_tight_warning(c.name, detail))
+
+
+def _scan_early_stmts(c: Controller, res: CheckResult, stmts: list[Stmt]) -> None:
+    for st in _flatten_stmts(stmts):
+        u = _uncertainty_assign_below_floor(st)
+        if u is not None:
+            _record_early_tight(
+                c,
+                res,
+                f"uncertainty={u:g} (width-ratio below {HOUSE_EARLY_UNCERT_FLOOR:g})",
+            )
+        if _bw_assign_from_prior(st):
+            _record_early_tight(
+                c,
+                res,
+                "bw = prior.bw (carrying a prior interval into the new epoch)",
+            )
+
+
+def _check_intervalbw_early(c: Controller, res: CheckResult) -> None:
+    """Refuse forcing a tight IntervalBw in the first 1-2 RTT of an epoch.
+
+    Information law (LANGUAGE.md): the first HOUSE_EARLY_EPOCH_RTTS RTT
+    after Reconfig/enter are supposed to be uncertain. Under observe,
+    writing uncertainty below HOUSE_EARLY_UNCERT_FLOOR or assigning
+    bw from prior.bw in an early-epoch context is a type error. Review
+    warns so ablation stays named. Threshold is a width ratio
+    (hi-lo)/mid -- not a dish Mbps claim.
+    """
+    if "IntervalBw" not in c.compose:
+        return
+
+    # Reconfig handlers are epoch edges -- always early.
+    for o in c.ons:
+        if o.event != "Reconfig":
+            # Still refuse prior.bw carriage after enter on any event.
+            _scan_early_stmts(c, res, _stmts_after_enter(o.body))
+            for arm in o.match_arms:
+                _scan_early_stmts(c, res, _stmts_after_enter(arm.body))
+            continue
+        _scan_early_stmts(c, res, o.body)
+        for arm in o.match_arms:
+            _scan_early_stmts(c, res, arm.body)
+
+    # when/every: only when the predicate proves early age, or after enter.
+    for w in c.whens:
+        if _pred_proves_early_epoch(w.pred):
+            _scan_early_stmts(c, res, w.body)
+        else:
+            _scan_early_stmts(c, res, _stmts_after_enter(w.body))
+    for e in c.everys:
+        _scan_early_stmts(c, res, _stmts_after_enter(e.body))
 
 
 def _expr_has_prior_min_rtt(expr) -> bool:
