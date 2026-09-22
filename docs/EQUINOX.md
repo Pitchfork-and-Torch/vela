@@ -57,6 +57,9 @@ binaries.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.
+10. **Enter location.** Only `enter Reprobe` is a legal mode. `enter Cruise`
+   is a type error. `vela check` stamps `enter=Reprobe-only` (enter Cruise is a
+   type error) on Reach and Equinox. SoftReprobe house cut stays 0.58.
 
 ## Commands
 

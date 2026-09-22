@@ -184,6 +184,9 @@ def _main(argv: list[str] | None = None) -> int:
         if res.affine:
             print("    affine  (Sample @ e is use-once; e+1 is prior)")
         if res.hybrid:
+            from vela.types import ENTER_REPROBE_ONLY_CHECK_LINE
+
+            print(f"    {ENTER_REPROBE_ONLY_CHECK_LINE}")
             print("    hybrid  (on = jump; when/every = flow)")
         if res.writecap == "linear":
             print("    writecap=linear  (split/borrow; no ambient write)")
