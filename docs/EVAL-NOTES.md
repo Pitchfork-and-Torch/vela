@@ -52,7 +52,7 @@ Seed 7: 65.89 / 118.4 vs Leo 88.65 / 108.4 (chase dump).
 | Horizon-chase only (uncapped) | 55.29 | 173.5 |
 | Horizon-chase (180ms, then prior_bdp) | 65.9-76 | 120-150 |
 
-**Decision:** ship Horizon compose **without** HorizonChase. Chase stays in the stdlib. Re-enable after `scripts/ablate_seed7.py` is green on seed 7 and seed 13.
+**Decision:** ship Horizon compose **without** HorizonChase. Chase stays in the stdlib. Re-enable after `scripts/ablate_seed7.py` is green on seed 7 and seed 13 (both required; do not change compose until both are green). Cheap fail-closed path: `python3 scripts/ablate_seed7.py --dry-run` (default plan-only; add `--run` when the sibling sim is present; `--only pass chase` for a cheap chase check). SoftReprobe cut stays 0.58 on hop and flicker. SoftFlicker and QuietShield are refused on observe. Hop = RttHop / real HO; flicker = mid-epoch wobble (detect-HO extras), not a hop bug. Not a DualGate claim.
 
 ### horizon-fast4 (v0.1.3, chase out of compose)
 
