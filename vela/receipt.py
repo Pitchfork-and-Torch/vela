@@ -81,13 +81,17 @@ def resolve_eval_rails(
 
 
 def gate_cli_line(gate: str, verdict: str | None = None) -> str:
-    """One honest CLI line. ACCEPT on gate=fast is not a house win."""
+    """One honest CLI line. Stamp dual_gate_claim so fast ACCEPT is not a house win."""
+    from vela.types import dual_gate_claim
+
     if gate == "house":
         line = "gate=house  (5 seeds, 90s, leo_fast_ho+terrestrial)"
     elif gate == "fast":
         line = "gate=fast  (not the house gate)"
     else:
         line = f"gate={gate}  (not the house gate)"
+    claim = dual_gate_claim(gate, verdict)
+    line += f"  dual_gate_claim={'true' if claim else 'false'}"
     if verdict == "ACCEPT" and gate != "house":
         line += ". ACCEPT here is not a dual-gate win"
     return line
@@ -128,6 +132,12 @@ def build_receipt(
             config.get("scenarios"),
         ),
     }
+    from vela.types import dual_gate_claim as _dual_gate_claim
+
+    if "dual_gate_claim" in summary:
+        body["dual_gate_claim"] = bool(summary.get("dual_gate_claim"))
+    else:
+        body["dual_gate_claim"] = _dual_gate_claim(body["gate"], body.get("verdict"))
     body["receipt_digest"] = tagged("receipt", _canon(body))
     return body
 

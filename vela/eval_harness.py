@@ -19,7 +19,7 @@ from vela.path import (
     path_overlay,
 )
 from vela.receipt import eval_gate
-from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power
+from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, dual_gate_claim, eval_power
 
 # Seed 7 45s locked LeoAware rails (WORKDAY / EVAL-NOTES). Not house-gate.
 LEO_S7_45_GP = 88.65
@@ -387,11 +387,18 @@ def parse_worker_stdout(text: str) -> dict | None:
     return None
 
 
-def honesty_text(gate: str) -> str:
+def honesty_text(gate: str, verdict: str | None = None) -> str:
+    claim = dual_gate_claim(gate, verdict)
+    claim_note = (
+        "dual_gate_claim=true (ACCEPT on gate=house)."
+        if claim
+        else "dual_gate_claim=false (ACCEPT on gate=fast is not a dual-gate win)."
+    )
     return (
         "Means only. p-values are not claimed. "
         f"power=low when n<{POWER_OK_MIN_SEEDS}. "
         f"gate={gate} (--fast is not the house gate). "
+        f"{claim_note} "
         "Coupled-RNG house LeoAware is 73.57/138.37 vs BBR 70.88/138.83. "
         "Do not mix these numbers with OPE-fair v3.7 prompt figures."
     )
@@ -627,15 +634,17 @@ def _summarize(
     obs_seeds = sorted({int(r["seed"]) for r in rows}) if rows else list(cfg.seeds)
     obs_scens = sorted({str(r["scenario"]) for r in rows}) if rows else list(cfg.scenarios)
     gate = eval_gate(obs_seeds, duration_s, obs_scens)
+    verdict = _decide_verdict(
+        verdicts, n_seeds, contract_min, _required_asserts(cfg)
+    )
     out = {
-        "verdict": _decide_verdict(
-            verdicts, n_seeds, contract_min, _required_asserts(cfg)
-        ),
+        "verdict": verdict,
         "power": eval_power(n_seeds),
         "gate": gate,
+        "dual_gate_claim": dual_gate_claim(gate, verdict),
         "tables": tables,
         "asserts": verdicts,
-        "honesty": honesty_text(gate),
+        "honesty": honesty_text(gate, verdict),
     }
     ci_level, _ci_errs = parse_report_ci(list(getattr(cfg, "reports", []) or []))
     if ci_level is not None:

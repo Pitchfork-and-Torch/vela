@@ -397,4 +397,4 @@ contract seed list. A 2-seed incomplete house contract is
 `gate=named`. Isolated workers write the result row to `--out`.
 A later stdout JSON line cannot replace it. The default `--tag`
 is the controller name, not `horizon`. ACCEPT on `gate=fast`
-prints that it is not a dual-gate win. No packet-path change.
+prints that it is not a dual-gate win and stamps `dual_gate_claim=false`. Only ACCEPT on `gate=house` stamps `dual_gate_claim=true`. No packet-path change.
