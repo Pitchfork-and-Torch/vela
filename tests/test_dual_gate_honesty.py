@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
 
 from vela.eval_harness import _summarize, honesty_text
 from vela.ir import VelaConfig
