@@ -163,6 +163,14 @@
       "public": true,
       "note": "on is a jump. when/every are flows. enter/invalidate/cut in a flow is a type error. enter Reprobe only.",
       "status": "done"
+    },
+    {
+      "id": "intervalbw-early-uncertain",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "IntervalBw early-epoch Information law. vela check stamps intervalbw-early-uncertain. Observe refuses uncertainty below width-ratio 0.35 or bw=prior.bw in first 2 RTT after Reconfig/enter.",
+      "status": "done"
     }
   ]
 }

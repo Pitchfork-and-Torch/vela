@@ -34,7 +34,13 @@ py -3 -m unittest discover -s tests -v
 ```
 
 `vela check examples/reach.vela` must print `observe-only`,
-`passthrough`, and `no-oracle`.
+`passthrough`, `intervalbw-early-uncertain`, and `no-oracle`.
+
+**IntervalBw early-uncertain (Information).** The first 1-2 RTT after
+Reconfig/enter must keep IntervalBw width-ratio
+`(hi-lo)/mid >= HOUSE_EARLY_UNCERT_FLOOR` (0.35). Under observe,
+`uncertainty = k` below that floor or `bw = prior.bw` in an early-epoch
+context is a type error. Not a dish Mbps claim.
 
 `vela eval examples/fair.vela --fast` is INCOMPLETE for Jain
 (fast skips `leo_multi`). That is honest.

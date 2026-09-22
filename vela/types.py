@@ -9,6 +9,12 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+# IntervalBw early-epoch Information law: first HOUSE_EARLY_EPOCH_RTTS RTT after
+# Reconfig/enter must stay uncertain. uncertainty = (hi-lo)/mid width ratio.
+# Forcing below this floor early is the same bug as a stale min-RTT.
+# Ratio only -- not a dish Mbps claim.
+HOUSE_EARLY_EPOCH_RTTS = 2
+HOUSE_EARLY_UNCERT_FLOOR = 0.35
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
 # Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays
@@ -222,6 +228,8 @@ class CheckResult:
     cuts_compose: str = ""
     path_bound: str = ""
     path_digest: str = ""
+    # Set when IntervalBw is composed: early-epoch must stay uncertain.
+    intervalbw_early_uncertain: bool = False
 
     def raise_if_error(self) -> None:
         if not self.ok:

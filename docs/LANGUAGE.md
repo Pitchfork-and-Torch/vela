@@ -261,7 +261,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 
 **Physics.** VELA cannot see the next satellite before the path changes unless a real hint exists. `p_ho` is a calendar estimate from past gaps. Irregular hops (ISL reroute, weather, beam reshape) will fool the calendar. Predictive freeze then becomes a mild pace ease at the wrong time. The kernel caps that ease (default 6%) so a wrong calendar cannot stall the flow.
 
-**Information.** IntervalBw needs samples. The first 1-2 RTT of an epoch are supposed to be uncertain. Forcing a tight interval early is the same bug as a stale min-RTT, with extra ceremony.
+**Information.** IntervalBw needs samples. The first 1-2 RTT of an epoch are supposed to be uncertain. Forcing a tight interval early is the same bug as a stale min-RTT, with extra ceremony. This is a checkable language law, not silent prose: `vela check` stamps `intervalbw-early-uncertain` when `IntervalBw` is composed; under observe, writing `uncertainty = k` with width-ratio `k < HOUSE_EARLY_UNCERT_FLOOR` (0.35) or `bw = prior.bw` inside a Reconfig/enter early-epoch context (first `HOUSE_EARLY_EPOCH_RTTS` = 2 RTT) is a type error; under review it is a warning. The threshold is a width ratio `(hi-lo)/mid`, not a dish Mbps claim.
 
 **Statistics.** Five seeds do not make a journal result. VELA marks `power=low` when n<8 (check warning + eval JSON) and still allows ACCEPT on the dual-gate *means* (the OrbitStack house rule). It refuses a `p < 0.05` badge unless the contract asks for n>=8 or a paired bootstrap and gets them.
 
@@ -284,7 +284,7 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority; split/borrow) |
-| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
+| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, intervalbw-early-uncertain, power=low n<8, no-oracle, leo_multi Jain |
 | `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
@@ -308,6 +308,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
+| IntervalBw early-uncertain | observe `uncertainty = k` below width-ratio 0.35 or `bw = prior.bw` in the first 2 RTT after Reconfig/enter |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
 | Cut refinement | `cut(1.2)` |
