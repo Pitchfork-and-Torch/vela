@@ -16,6 +16,7 @@ Canonical language tree for **VELA** (Variance-aware Epoch Language for Adaptati
 py -3 -m vela check examples/equinox.vela
 py -3 -m vela digest examples/equinox.vela
 py -3 -m vela mech
+py -3 -m vela power --seeds 13,7,42,99,123
 py -3 -m vela compile examples/equinox.vela
 py -3 -m vela eval examples/reach.vela --fast --tag reach-fast
 py -3 -m vela receipt results/receipt_reach-fast.json --source examples/reach.vela --eval results/eval_reach-fast.json
