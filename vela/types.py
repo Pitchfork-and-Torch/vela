@@ -210,6 +210,8 @@ class CheckResult:
     closed_writes: list[str] = field(default_factory=list)
     hint_fail_closed: bool = False
     typed_reconfig: bool = False
+    # Visible stamp: RttHop|Flicker when kinded match holds. SoftFlicker stays review.
+    reconfig_kinds: str = ""
     typed_loss: bool = False
     passthrough: bool = False
     power: str = ""
