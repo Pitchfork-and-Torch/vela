@@ -170,7 +170,8 @@
       "safe": true,
       "public": true,
       "note": "Path realism: reject dead LeoPath rails (non-positive capacity upper, zero handover period, zero mobility_loss window, inverted rtt/capacity). House LeoFastHO stays 12s+/-4s. No next_capacity / future PathState.",
-      "status": "pending"
+      "status": "done",
+      "pr": 28
     },
     {
       "id": "hint-ingress-fail-closed",
