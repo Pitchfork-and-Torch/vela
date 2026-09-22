@@ -190,7 +190,7 @@ OCE is a ~3 RTT post-SER echo that chases delivery into `bw_est / 1.42 x BDP` an
 
 2. **Packet horizon (interval chase) - stdlib, not in the v0.1 compose.** `HorizonChase` is a named mechanism. Uncapped chase failed seed-7 ablation (55 Mbps / 173 ms vs LeoAware 89 / 108). The language did its job: compose-list ablation found the bad operator. The shipped Horizon program does **not** include it until `scripts/ablate_seed7.py` is green. IntervalBw still *observes* `{lo, mid, hi}` for `p_ho` and future chase.
 
-3. **Uncertainty-scaled yield.** v3.4-p95 yielded early on every ACK (that is how p95 fell under BBR and goodput fell from the v3.3-A peak). Horizon yields early only when uncertainty is high or `p_ho` is high. In a tight epoch it is allowed to sit closer to 1.15 x BDP. The language makes this one `when` clause, not a sixth copy of the delay ladder.
+3. **Uncertainty-scaled yield.** v3.4-p95 yielded early on every ACK (that is how p95 fell under BBR and goodput fell from the v3.3-A peak). Horizon yields early only when uncertainty is high or `p_ho` is high. In a tight epoch it is allowed to sit closer to 1.15 x BDP. The language makes this one `when` clause, not a sixth copy of the delay ladder. This is a checkable language/kernel law, not silent prose: `vela check` stamps `uncertainty-scaled-yield` when `IntervalBw` is composed; under observe, `cwnd *= k` (k in (0,1)) in a `when`/`every` without an `uncertainty` or `p_ho` gate is a type error; under review it is a warning. House gates live in `HOUSE_U_YIELD_UNCERT` (0.50) with `HOUSE_U_YIELD_DELAY_RATIO` (1.62); reclaim toward `HOUSE_U_RECLAIM_BDP_FRAC` (1.16) uses `u_yield_should_cut` / `u_yield_should_reclaim`. Ratio thresholds only -- not a dish Mbps claim.
 
 4. **Typed Unknown loss.** Mobility holds. Congestive cuts 0.72. Unknown requires `delay_ratio > 1.35` before a cut. This is already LeoAware policy; VELA makes the fall-through visible. The checker now enforces that on the observe rail.
 
@@ -284,11 +284,11 @@ Secondary: a VELA program is a reviewable artifact. A reviewer can see `compose`
 | Piece | Role |
 |-------|------|
 | `vela/lexer.py` `parser.py` `ast.py` | Concrete syntax (0.3: view, integrate, authority; split/borrow) |
-| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, power=low n<8, no-oracle, leo_multi Jain |
+| `vela/types.py` `checker.py` | Freshness, affine samples, hybrid automata, typed loss, typed reconfig, WriteCap split/borrow, integrators, observe posture, hint law, passthrough, uncertainty-scaled-yield, power=low n<8, no-oracle, leo_multi Jain |
 | `vela/oracle.py` `compose.py` | Future PathState refuse; runtime soft-cut min |
 | `vela/digest.py` `receipt.py` | Domain-separated SHA-256, merkle receipts; `--eval` binds rows; `--fast` cannot be house |
 | `vela/ir.py` `compile.py` | Mechanism IR + Python lowering + views |
-| `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts) |
+| `vela/kernel.py` | Composition runtime + HorizonCCA (no-oracle, min of soft cuts, u_yield_should_cut/reclaim) |
 | `vela/eval_harness.py` | Dual-gate runner; gate from rows that ran; worker `--out` |
 | `vela/path.py` | Path law: parse, bind, digest. Same model object as the sim. |
 | `examples/*.vela` | Equinox (0.3), Reach (flagship teaser), Fair (0.4 holdout), Horizon, Ascent (fail-closed hint), Luff, OCE-class |
@@ -308,6 +308,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Hybrid automata | `enter` / `invalidate` / `cut` in `when` or `every`; unknown `enter`; `every` tick not ack/epoch |
 | WriteCap | cruise writes with `authority` budget 0; second use without split; write without borrow once split |
 | Passthrough | observe `when`/`every` writing pace/cwnd/chase |
+| Uncertainty-scaled yield | observe `cwnd *= k` (k in (0,1)) without `uncertainty` or `p_ho` in the gate |
 | Kinded reconfig | `on Reconfig match` missing `RttHop` or `Flicker` |
 | Typed loss | observe `on Loss` bare, Mobility cut, or Unknown cut without `delay_ratio > 1.35` |
 | Cut refinement | `cut(1.2)` |

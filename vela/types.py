@@ -9,6 +9,16 @@ LOSS_KINDS = ("Mobility", "Congestive", "Unknown")
 RECONFIG_KINDS = ("RttHop", "Flicker")
 # Load-bearing SoftReprobe cut on hop and flicker. SoftFlicker 0.85 is review.
 HOUSE_ENDPOINT_CUT = 0.58
+# Uncertainty-scaled yield (LANGUAGE Horizon #3 / p95). Extra yield only when
+# uncertainty and delay are both high; tight epoch may sit near 1.15x BDP.
+# Unconditional early yield (v3.4-p95 every-ACK) is the bug this names.
+# Width / ratio thresholds only -- not a dish Mbps claim.
+HOUSE_U_YIELD_UNCERT = 0.50
+HOUSE_U_YIELD_DELAY_RATIO = 1.62
+HOUSE_U_RECLAIM_UNCERT = 0.25
+HOUSE_U_RECLAIM_DELAY_RATIO = 1.26
+HOUSE_U_RECLAIM_P_HO = 0.20
+HOUSE_U_RECLAIM_BDP_FRAC = 1.16  # closer to 1.15x BDP
 # LeoAware Unknown fall-through. A cut without this delay proof is congestive guesswork.
 UNKNOWN_DELAY_RATIO = 1.35
 # Shared eval-power floor. House DualGate is 5 seeds: ACCEPT on means stays
@@ -222,6 +232,8 @@ class CheckResult:
     cuts_compose: str = ""
     path_bound: str = ""
     path_digest: str = ""
+    # Set when IntervalBw is composed: p95 yield must gate on uncertainty|p_ho.
+    uncertainty_scaled_yield: bool = False
 
     def raise_if_error(self) -> None:
         if not self.ok:

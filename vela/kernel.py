@@ -8,11 +8,45 @@ from typing import TYPE_CHECKING, Optional
 from vela.compose import apply_composed_cut
 from vela.ir import VelaConfig
 from vela.oracle import refuse_oracle_hint
+from vela.types import (
+    HOUSE_U_RECLAIM_BDP_FRAC,
+    HOUSE_U_RECLAIM_DELAY_RATIO,
+    HOUSE_U_RECLAIM_P_HO,
+    HOUSE_U_RECLAIM_UNCERT,
+    HOUSE_U_YIELD_DELAY_RATIO,
+    HOUSE_U_YIELD_UNCERT,
+)
 
 if TYPE_CHECKING:
     pass
 
 MSS = 1200
+
+
+def u_yield_should_cut(uncertainty: float, delay_ratio: float) -> bool:
+    """True when house uncertainty-scaled yield should ease cwnd (p95)."""
+    return (
+        float(delay_ratio) > HOUSE_U_YIELD_DELAY_RATIO
+        and float(uncertainty) > HOUSE_U_YIELD_UNCERT
+    )
+
+
+def u_yield_should_reclaim(
+    uncertainty: float,
+    delay_ratio: float,
+    p_ho: float,
+    cwnd: float,
+    bdp: float,
+) -> bool:
+    """True when a tight epoch may reclaim toward ~1.15x BDP."""
+    if bdp <= 0:
+        return False
+    return (
+        float(uncertainty) < HOUSE_U_RECLAIM_UNCERT
+        and float(delay_ratio) < HOUSE_U_RECLAIM_DELAY_RATIO
+        and float(p_ho) < HOUSE_U_RECLAIM_P_HO
+        and float(cwnd) < float(bdp) * HOUSE_U_RECLAIM_BDP_FRAC
+    )
 
 
 def _median(xs: list[float]) -> float:
@@ -508,19 +542,23 @@ class HorizonCCA:
             self.vela_mode = "chase_fill"
 
     def _uncertainty_yield(self, t: float, rtt_s: float) -> None:
+        """Gated p95 yield. Not on the observe packet path by default.
+
+        House law (LANGUAGE Horizon #3): yield early only when uncertainty
+        is high *and* delay is high. Tight epoch may reclaim toward
+        HOUSE_U_RECLAIM_BDP_FRAC x BDP. Unconditional every-ACK yield is
+        the v3.4-p95 bug. Observe flagships stay passthrough; this helper
+        is the named gate for review/ablation and checkable stamps.
+        """
         dr = self._delay_ratio(rtt_s)
         bdp = self._bdp(rtt_s)
         if bdp <= 0:
             return
         u = self.uncertainty
-        # high u or high p_ho: yield early (protect p95)
-        # low u stable epoch: allow closer to 1.15x BDP (reclaim goodput)
-        # Extra yield only when both uncertainty and delay are high.
-        # Clean-epoch reclaim is a small additive step on top of v3.4.
-        if dr > 1.62 and u > 0.50:
+        if u_yield_should_cut(u, dr):
             self._leo.cwnd = max(4 * MSS, self._leo.cwnd * 0.98)
             self.vela_mode = "u_yield"
-        elif u < 0.25 and dr < 1.26 and self.p_ho < 0.20 and self._leo.cwnd < bdp * 1.16:
+        elif u_yield_should_reclaim(u, dr, self.p_ho, self._leo.cwnd, bdp):
             self._leo.cwnd += MSS * 0.22
             self.vela_mode = "reclaim"
 

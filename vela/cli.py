@@ -9,7 +9,10 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
-from vela.types import POWER_OK_MIN_SEEDS
+from vela.types import (
+    HOUSE_U_YIELD_UNCERT,
+    POWER_OK_MIN_SEEDS,
+)
 
 
 class InputError(Exception):
@@ -179,6 +182,11 @@ def _main(argv: list[str] | None = None) -> int:
             print("    loss=Mobility|Congestive|Unknown  (hold / cut / delay_ratio)")
         if res.passthrough:
             print("    passthrough  (LeoAware wrap; no cruise write)")
+        if res.uncertainty_scaled_yield:
+            print(
+                "    uncertainty-scaled-yield  "
+                f"(p95; gated on u|p_ho; house u>={HOUSE_U_YIELD_UNCERT:g})"
+            )
         if res.no_oracle:
             print("    no-oracle  (endpoint cannot see next_capacity)")
         if res.affine:
