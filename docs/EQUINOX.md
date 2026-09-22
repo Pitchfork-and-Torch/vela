@@ -57,6 +57,11 @@ binaries.
 9. **Power label.** Checker and harness share `n < 8` as `power=low`.
    House DualGate is 5 seeds, so check warns and eval labels `low`.
    ACCEPT on means stays legal. Not a p-value.
+10. **Interval point-use n>=2.** An `Interval` used as a point (`bw` in
+   arithmetic) is implicitly `bw.mid` and requires `bw.n >= 2`. A single
+   sample is not a bandwidth. `vela check` stamps `interval_n>=2`
+   (`uncertainty-n`) when IntervalBw is composed or an Interval signal
+   is declared. SoftReprobe house cut stays 0.58.
 
 ## Commands
 

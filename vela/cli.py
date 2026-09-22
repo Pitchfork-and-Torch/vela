@@ -185,6 +185,8 @@ def _main(argv: list[str] | None = None) -> int:
             print("    affine  (Sample @ e is use-once; e+1 is prior)")
         if res.hybrid:
             print("    hybrid  (on = jump; when/every = flow)")
+        if res.interval_n2:
+            print("    interval_n>=2  (uncertainty-n; bw as point requires n>=2)")
         if res.writecap == "linear":
             print("    writecap=linear  (split/borrow; no ambient write)")
         elif res.writecap == "budget":

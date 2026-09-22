@@ -216,6 +216,8 @@ class CheckResult:
     no_oracle: bool = True
     affine: bool = True
     hybrid: bool = True
+    # Uncertainty law: Interval used as a point requires n>=2. Visible check stamp.
+    interval_n2: bool = False
     writecap: str = ""
     fairness: str = ""
     jain_min: float | None = None
