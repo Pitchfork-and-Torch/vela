@@ -18,6 +18,36 @@ POWER_OK_MIN_SEEDS = 8
 FAIRNESS_SCENARIO = "leo_multi"
 KNOWN_SCENARIOS = frozenset({"leo_fast_ho", "leo_single", "terrestrial", "leo_multi"})
 
+# Contract text the harness can score. Closed on purpose: an assert the
+# harness never reads used to check ok and ride an ACCEPT unscored.
+SCORABLE_BASELINES = frozenset({"BBRv3approx"})
+# left -> (op the harness scores, right the harness compares against).
+# A right of "Mbps" means a literal megabit floor.
+SCORABLE_ASSERTS = {
+    "mean(goodput)": (">=", "baseline.goodput"),
+    "mean(p95)": ("<=", "baseline.p95"),
+    "terrestrial.goodput": (">=", "Mbps"),
+}
+# The dual-gate pair. Missing is a warning (harness scores it anyway).
+DUAL_GATE_ASSERTS = ("mean(goodput)", "mean(p95)")
+SCORABLE_ASSERT_FORMS = (
+    "mean(goodput) >= baseline.goodput, mean(p95) <= baseline.p95, "
+    "terrestrial.goodput >= <n> Mbps, mean(jain) >= <fraction>"
+)
+
+
+def parse_mbps_literal(raw: str) -> float | None:
+    """`77`, `77Mbps`, `77 Mbps` -> 77.0. ms / s / names -> None."""
+    s = str(raw).strip().replace(" ", "")
+    if s.endswith("Mbps"):
+        s = s[: -len("Mbps")]
+    elif s.endswith("ms") or s.endswith("s"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
 
 def eval_power(n_seeds: int) -> str:
     """Honesty label: 'low' when n < POWER_OK_MIN_SEEDS, else 'ok'."""

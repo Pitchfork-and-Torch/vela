@@ -171,6 +171,14 @@
       "public": true,
       "note": "Visible authority=absent|budget stamp on vela check (WriteCap companion).",
       "status": "done"
+    },
+    {
+      "id": "scorable-asserts",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Contract asserts are a closed scorable set. Unknown assert, reversed gate, non-baseline right side, or unknown baseline is a type error (fail closed).",
+      "status": "done"
     }
   ]
 }

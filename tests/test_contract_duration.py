@@ -34,10 +34,11 @@ path LeoFastHO {{
   capacity ~ uniform 20Mbps 120Mbps
   mobility_loss ~ burst p=0.08 window=400ms
 }}
-contract DualGate vs BBR {{
+contract DualGate vs BBRv3approx {{
   seeds = [13, 7, 42, 99, 123]
   scenario leo_fast_ho {duration_clause}
-  assert mean(goodput) >= 1
+  assert mean(goodput) >= baseline.goodput
+  assert mean(p95) <= baseline.p95
   assert terrestrial.goodput >= 77 Mbps
 }}
 """
