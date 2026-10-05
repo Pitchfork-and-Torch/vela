@@ -13,6 +13,7 @@ from vela.path import (
     unbound_path_warning,
 )
 from vela.types import (
+    DUAL_GATE_ASSERTS,
     FAIRNESS_SCENARIO,
     HINT_ARMS,
     HINT_CHANNELS,
@@ -27,9 +28,13 @@ from vela.types import (
     UNKNOWN_DELAY_RATIO,
     LOSS_KINDS,
     RECONFIG_KINDS,
+    SCORABLE_ASSERT_FORMS,
+    SCORABLE_ASSERTS,
+    SCORABLE_BASELINES,
     assert_names_jain,
     eval_power,
     parse_jain_floor,
+    parse_mbps_literal,
     STDLIB_MECHANISMS,
     STDLIB_MODULES,
     WRITE_TARGETS,
@@ -104,6 +109,7 @@ def check(prog: Program) -> CheckResult:
         for err in ci_errs:
             res.ok = False
             res.errors.append(f"contract {con.name}: {err}")
+        _check_scorable_contract(con, res)
         _check_fairness_contract(con, res)
         for scen in con.scenarios:
             if scen not in KNOWN_SCENARIOS:
@@ -1032,6 +1038,80 @@ def _check_paths(prog: Program, res: CheckResult) -> None:
     elif laws:
         res.path_bound = laws[0].stamp()
     res.path_digest = path_digest(laws)
+
+
+def unscorable_assert_error(name: str, a) -> str:
+    return (
+        f"contract {name}: assert {a.left} {a.op} {a.right} is not scorable "
+        f"(harness scores: {SCORABLE_ASSERT_FORMS}); "
+        "an unscored assert cannot ride an ACCEPT"
+    )
+
+
+def reversed_assert_error(name: str, a, want_op: str) -> str:
+    return (
+        f"contract {name}: assert {a.left} {a.op} {a.right} is reversed "
+        f"(harness scores {a.left} {want_op} ...; a flipped gate is not a win)"
+    )
+
+
+def assert_right_error(name: str, a, want: str) -> str:
+    return (
+        f"contract {name}: assert {a.left} compares against {a.right}; "
+        f"harness scores {a.left} {a.op} {want}"
+    )
+
+
+def unscorable_baseline_error(name: str, baseline: str) -> str:
+    return (
+        f"contract {name}: baseline {baseline} is not scorable "
+        f"(harness dual-gate baseline: {', '.join(sorted(SCORABLE_BASELINES))})"
+    )
+
+
+def missing_dual_gate_warning(name: str, left: str) -> str:
+    return (
+        f"contract {name}: no {left} assert "
+        "(harness scores the dual gate anyway; name it)"
+    )
+
+
+def _check_scorable_contract(con, res: CheckResult) -> None:
+    """Closed assert taxonomy. The harness scores a fixed set of gates;
+    an assert outside that set used to check ok and never be read."""
+    if con.baseline not in SCORABLE_BASELINES:
+        res.ok = False
+        res.errors.append(unscorable_baseline_error(con.name, con.baseline))
+    seen: set[str] = set()
+    for a in con.asserts:
+        left = str(a.left).replace(" ", "")
+        if assert_names_jain(left):
+            # Floor shape is _check_fairness_contract's job; direction is ours.
+            if a.op != ">=":
+                res.ok = False
+                res.errors.append(reversed_assert_error(con.name, a, ">="))
+            continue
+        spec = SCORABLE_ASSERTS.get(left)
+        if spec is None:
+            res.ok = False
+            res.errors.append(unscorable_assert_error(con.name, a))
+            continue
+        want_op, want_right = spec
+        seen.add(left)
+        if a.op != want_op:
+            res.ok = False
+            res.errors.append(reversed_assert_error(con.name, a, want_op))
+            continue
+        if want_right == "Mbps":
+            if parse_mbps_literal(a.right) is None:
+                res.ok = False
+                res.errors.append(assert_right_error(con.name, a, "<n> Mbps"))
+        elif str(a.right).replace(" ", "") != want_right:
+            res.ok = False
+            res.errors.append(assert_right_error(con.name, a, want_right))
+    for left in DUAL_GATE_ASSERTS:
+        if left not in seen:
+            res.warnings.append(missing_dual_gate_warning(con.name, left))
 
 
 def _check_fairness_contract(con, res: CheckResult) -> None:
