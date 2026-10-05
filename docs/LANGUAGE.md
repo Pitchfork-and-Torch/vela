@@ -128,6 +128,8 @@ contract DualGate vs BBRv3approx {
 
 Asserts are a closed set. The harness scores `mean(goodput) >= baseline.goodput`, `mean(p95) <= baseline.p95`, `terrestrial.goodput >= <n> Mbps`, and (with `scenario leo_multi`) `mean(jain) >= <fraction>`. Anything else (`assert mean(loss_rate) <= 0.01`, a reversed `mean(p95) >= baseline.p95`, `mean(goodput) >= 1`, `vs CUBICish`) used to check ok and never be read; it is now a type error, because an unscored assert cannot ride an ACCEPT.
 
+The terrestrial floor is the contract's number, not the harness's. `assert terrestrial.goodput >= 90 Mbps` is scored at 90 (it used to be scored at a literal 77.0); `assert terrestrial.p95 <= 38 ms` tightens the 40.5 ms cap the same way. The eval JSON `terrestrial_floor` assert records `floor_mbps` / `p95_cap_ms`, and the receipt's config digest commits them. A floor looser than the house rail (77 Mbps @ 40.5 ms) is a type error on `posture observe` and a warning on `posture review`, so an ablation can name a looser floor but a flagship cannot. `vela check` prints the bound rail.
+
 `vela eval` runs the contract. The compiler will **not** emit a `// beats BBR` comment. The JSON verdict is ACCEPT / FAIL / INCOMPLETE (missing terrestrial, too few seeds, etc.). The harness now emits that top-level `INCOMPLETE` when terrestrial is missing or `n_seeds` is below the contract minimum; a measured miss on a present assert is `FAIL`, and `INCOMPLETE` is never `ACCEPT`.
 
 Fairness is optional and first-class. A second `scenario leo_multi` plus `assert mean(jain) >= 0.85` is the RFC 5166 holdout. The sibling sim already had 3-flow `leo_multi`; VELA now scores Jain in `evaluate()` instead of leaving it in a README. A jain assert without `leo_multi` is a type error. Missing multi-flow rows are INCOMPLETE. Flagship Reach stays single-flow DualGate. See `examples/fair.vela`.
@@ -319,6 +321,7 @@ See [EQUINOX.md](EQUINOX.md). Summary:
 | Views | eval of compose A claimed as compose B |
 | Power label | silent n<8 p-value; checker and harness share `power=low` |
 | Scorable asserts | an `assert` the harness never scores (`mean(loss_rate) <= 0.01`), a reversed gate (`mean(p95) >= baseline.p95`), a non-baseline right side (`mean(goodput) >= 1`), or a baseline the harness does not run (`vs CUBICish`). Closed set: `mean(goodput) >= baseline.goodput`, `mean(p95) <= baseline.p95`, `terrestrial.goodput >= <n> Mbps`, `mean(jain) >= <fraction>`. A missing dual-gate assert warns. |
+| Terrestrial floor bind | the harness scores the `terrestrial.goodput >= <n> Mbps` / `terrestrial.p95 <= <n> ms` the contract names (was a literal 77.0 / 40.5). The receipt commits the scored floor. A floor looser than the house rail (77 Mbps @ 40.5 ms) is a type error on observe; review warns. `vela check` prints `terrestrial>=77Mbps p95<=40.5ms (house rail)`. |
 
 Existing `lang vela 0.1` programs still parse. WriteCap stays opt-in.
 A declared `WriteCap<cwnd> @ epoch` with no `split` / `borrow` is still an

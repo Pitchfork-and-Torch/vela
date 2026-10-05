@@ -11,3 +11,4 @@ passthrough seed7 45s Leo 88.65/108.4 Reach 88.65/108.4
 
 - authority-stamp: done (authority=absent|budget on check; SoftReprobe 0.58).
 - scorable-asserts: done (unknown / reversed / unscorable contract assert is a type error; SoftReprobe 0.58).
+- terrestrial-floor-bind: done (harness scores the contract's terrestrial floor; receipt commits it; SoftReprobe 0.58).

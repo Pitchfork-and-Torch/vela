@@ -19,6 +19,8 @@ from vela.types import (
     HINT_CHANNELS,
     HINT_TYPE_NAMES,
     HOUSE_ENDPOINT_CUT,
+    HOUSE_TERRESTRIAL_GP_MBPS,
+    HOUSE_TERRESTRIAL_P95_MS,
     HYBRID_JUMP_KINDS,
     HYBRID_MODES,
     HYBRID_TICKS,
@@ -32,9 +34,11 @@ from vela.types import (
     SCORABLE_ASSERTS,
     SCORABLE_BASELINES,
     assert_names_jain,
+    contract_terrestrial_floor,
     eval_power,
     parse_jain_floor,
     parse_mbps_literal,
+    parse_ms_literal,
     STDLIB_MECHANISMS,
     STDLIB_MODULES,
     WRITE_TARGETS,
@@ -111,6 +115,8 @@ def check(prog: Program) -> CheckResult:
             res.errors.append(f"contract {con.name}: {err}")
         _check_scorable_contract(con, res)
         _check_fairness_contract(con, res)
+        if con is prog.contracts[0]:
+            _check_terrestrial_floor(con, prog.controllers[0].posture, res)
         for scen in con.scenarios:
             if scen not in KNOWN_SCENARIOS:
                 res.warnings.append(
@@ -1106,12 +1112,50 @@ def _check_scorable_contract(con, res: CheckResult) -> None:
             if parse_mbps_literal(a.right) is None:
                 res.ok = False
                 res.errors.append(assert_right_error(con.name, a, "<n> Mbps"))
+        elif want_right == "ms":
+            if parse_ms_literal(a.right) is None:
+                res.ok = False
+                res.errors.append(assert_right_error(con.name, a, "<n> ms"))
         elif str(a.right).replace(" ", "") != want_right:
             res.ok = False
             res.errors.append(assert_right_error(con.name, a, want_right))
     for left in DUAL_GATE_ASSERTS:
         if left not in seen:
             res.warnings.append(missing_dual_gate_warning(con.name, left))
+
+
+def loose_terrestrial_error(name: str, what: str, got: float, house: float) -> str:
+    return (
+        f"contract {name}: terrestrial.{what} floor {got:g} is looser than the "
+        f"house rail {house:g} (observe scores the house terrestrial; "
+        "posture review may name a looser floor)"
+    )
+
+
+def loose_terrestrial_warning(name: str, what: str, got: float, house: float) -> str:
+    return (
+        f"contract {name}: terrestrial.{what} floor {got:g} is looser than the "
+        f"house rail {house:g} (review; not a house terrestrial)"
+    )
+
+
+def _check_terrestrial_floor(con, posture: str, res: CheckResult) -> None:
+    """The harness scores the floor the contract names. Bind it here and
+    refuse a floor below the house rail on the observe posture."""
+    gp, p95 = contract_terrestrial_floor(con.asserts)
+    res.terrestrial_floor_mbps = HOUSE_TERRESTRIAL_GP_MBPS if gp is None else gp
+    res.terrestrial_p95_ms = HOUSE_TERRESTRIAL_P95_MS if p95 is None else p95
+    loose: list[tuple[str, float, float]] = []
+    if gp is not None and gp < HOUSE_TERRESTRIAL_GP_MBPS - 1e-9:
+        loose.append(("goodput", gp, HOUSE_TERRESTRIAL_GP_MBPS))
+    if p95 is not None and p95 > HOUSE_TERRESTRIAL_P95_MS + 1e-9:
+        loose.append(("p95", p95, HOUSE_TERRESTRIAL_P95_MS))
+    for what, got, house in loose:
+        if posture == "observe":
+            res.ok = False
+            res.errors.append(loose_terrestrial_error(con.name, what, got, house))
+        else:
+            res.warnings.append(loose_terrestrial_warning(con.name, what, got, house))
 
 
 def _check_fairness_contract(con, res: CheckResult) -> None:

@@ -27,13 +27,20 @@ SCORABLE_ASSERTS = {
     "mean(goodput)": (">=", "baseline.goodput"),
     "mean(p95)": ("<=", "baseline.p95"),
     "terrestrial.goodput": (">=", "Mbps"),
+    "terrestrial.p95": ("<=", "ms"),
 }
 # The dual-gate pair. Missing is a warning (harness scores it anyway).
 DUAL_GATE_ASSERTS = ("mean(goodput)", "mean(p95)")
 SCORABLE_ASSERT_FORMS = (
     "mean(goodput) >= baseline.goodput, mean(p95) <= baseline.p95, "
-    "terrestrial.goodput >= <n> Mbps, mean(jain) >= <fraction>"
+    "terrestrial.goodput >= <n> Mbps, terrestrial.p95 <= <n> ms, "
+    "mean(jain) >= <fraction>"
 )
+# House terrestrial rail (EVAL-NOTES: >= 77 Mbps @ 40 ms; harness cap 40.5).
+# The harness scores the floor the contract names; a looser floor than
+# this is a mislabel on observe.
+HOUSE_TERRESTRIAL_GP_MBPS = 77.0
+HOUSE_TERRESTRIAL_P95_MS = 40.5
 
 
 def parse_mbps_literal(raw: str) -> float | None:
@@ -47,6 +54,42 @@ def parse_mbps_literal(raw: str) -> float | None:
         return float(s)
     except ValueError:
         return None
+
+
+def parse_ms_literal(raw: str) -> float | None:
+    """`40.5`, `40.5ms`, `40.5 ms` -> 40.5. Mbps / s / names -> None."""
+    s = str(raw).strip().replace(" ", "")
+    if s.endswith("Mbps"):
+        return None
+    if s.endswith("ms"):
+        s = s[: -len("ms")]
+    elif s.endswith("s"):
+        return None
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def contract_terrestrial_floor(asserts) -> tuple[float | None, float | None]:
+    """(goodput floor Mbps, p95 cap ms) named by the contract text.
+
+    None where the contract does not name one; the harness then scores
+    the house rail. Shared by checker, compile, and harness.
+    """
+    gp: float | None = None
+    p95: float | None = None
+    for a in asserts:
+        left = str(a.left).replace(" ", "")
+        if left == "terrestrial.goodput" and a.op == ">=":
+            val = parse_mbps_literal(a.right)
+            if val is not None:
+                gp = val
+        elif left == "terrestrial.p95" and a.op == "<=":
+            val = parse_ms_literal(a.right)
+            if val is not None:
+                p95 = val
+    return gp, p95
 
 
 def eval_power(n_seeds: int) -> str:
@@ -264,6 +307,9 @@ class CheckResult:
     cuts_compose: str = ""
     path_bound: str = ""
     path_digest: str = ""
+    # Terrestrial rail the harness will score (contract text, else house).
+    terrestrial_floor_mbps: float | None = None
+    terrestrial_p95_ms: float | None = None
 
     def raise_if_error(self) -> None:
         if not self.ok:
