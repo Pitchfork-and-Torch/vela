@@ -179,6 +179,14 @@
       "public": true,
       "note": "Contract asserts are a closed scorable set. Unknown assert, reversed gate, non-baseline right side, or unknown baseline is a type error (fail closed).",
       "status": "done"
+    },
+    {
+      "id": "terrestrial-floor-bind",
+      "kind": "language",
+      "safe": true,
+      "public": true,
+      "note": "Harness scores the terrestrial floor the contract names (was literal 77.0/40.5). Receipt commits it. Looser than house is a type error on observe.",
+      "status": "done"
     }
   ]
 }

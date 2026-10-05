@@ -19,7 +19,13 @@ from vela.path import (
     path_overlay,
 )
 from vela.receipt import eval_gate
-from vela.types import FAIRNESS_SCENARIO, POWER_OK_MIN_SEEDS, eval_power
+from vela.types import (
+    FAIRNESS_SCENARIO,
+    HOUSE_TERRESTRIAL_GP_MBPS,
+    HOUSE_TERRESTRIAL_P95_MS,
+    POWER_OK_MIN_SEEDS,
+    eval_power,
+)
 
 # Seed 7 45s locked LeoAware rails (WORKDAY / EVAL-NOTES). Not house-gate.
 LEO_S7_45_GP = 88.65
@@ -368,6 +374,9 @@ def evaluate(
         "paths": list(cfg.paths or []),
         "path_digest": cfg.path_digest,
         "gate": summary["gate"],
+        # Receipt commits the floor that was scored; a swapped floor fails.
+        "terrestrial_floor_mbps": float(cfg.terrestrial_floor_mbps),
+        "terrestrial_p95_ms": float(cfg.terrestrial_p95_ms),
     }
     return summary
 
@@ -573,18 +582,32 @@ def _summarize(
     else:
         verdicts.append({"assert": "pareto_vs_LeoAware", "ok": False, "note": "INCOMPLETE"})
     terr_h = cell("terrestrial", cfg.name)
+    # The floor is the contract's text (program_to_config), not a literal
+    # here. A contract asking >= 90 Mbps used to be scored against 77.
+    floor_mbps = float(getattr(cfg, "terrestrial_floor_mbps", HOUSE_TERRESTRIAL_GP_MBPS))
+    p95_cap_ms = float(getattr(cfg, "terrestrial_p95_ms", HOUSE_TERRESTRIAL_P95_MS))
     if terr_h:
-        terr_ok = terr_h["goodput_mean"] >= 77.0 and terr_h["p95_mean"] <= 40.5
+        terr_ok = terr_h["goodput_mean"] >= floor_mbps and terr_h["p95_mean"] <= p95_cap_ms
         verdicts.append(
             {
                 "assert": "terrestrial_floor",
                 "ok": bool(terr_ok),
                 "goodput_mean": terr_h["goodput_mean"],
                 "p95_mean": terr_h["p95_mean"],
+                "floor_mbps": floor_mbps,
+                "p95_cap_ms": p95_cap_ms,
             }
         )
     else:
-        verdicts.append({"assert": "terrestrial_floor", "ok": False, "note": "INCOMPLETE"})
+        verdicts.append(
+            {
+                "assert": "terrestrial_floor",
+                "ok": False,
+                "note": "INCOMPLETE",
+                "floor_mbps": floor_mbps,
+                "p95_cap_ms": p95_cap_ms,
+            }
+        )
 
     jain_min = getattr(cfg, "jain_min", None)
     if jain_min is not None:

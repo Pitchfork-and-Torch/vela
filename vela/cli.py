@@ -9,7 +9,13 @@ from vela import __version__
 from vela.checker import check
 from vela.compile import compile_file, compile_source
 from vela.parser import ParseError, parse
-from vela.types import POWER_OK_MIN_SEEDS, AUTHORITY_ABSENT_CHECK_LINE, AUTHORITY_BUDGET_CHECK_LINE
+from vela.types import (
+    AUTHORITY_ABSENT_CHECK_LINE,
+    AUTHORITY_BUDGET_CHECK_LINE,
+    HOUSE_TERRESTRIAL_GP_MBPS,
+    HOUSE_TERRESTRIAL_P95_MS,
+    POWER_OK_MIN_SEEDS,
+)
 
 
 class InputError(Exception):
@@ -191,6 +197,16 @@ def _main(argv: list[str] | None = None) -> int:
             print("    writecap=budget  (integer authority)")
         if res.path_bound:
             print(f"    path={res.path_bound}")
+        if prog.contracts and res.terrestrial_floor_mbps is not None:
+            house = (
+                abs(res.terrestrial_floor_mbps - HOUSE_TERRESTRIAL_GP_MBPS) < 1e-9
+                and abs((res.terrestrial_p95_ms or 0.0) - HOUSE_TERRESTRIAL_P95_MS) < 1e-9
+            )
+            print(
+                f"    terrestrial>={res.terrestrial_floor_mbps:g}Mbps "
+                f"p95<={res.terrestrial_p95_ms:g}ms  "
+                f"({'house rail' if house else 'contract floor; harness scores it'})"
+            )
         if res.fairness:
             extra = f" jain>={res.jain_min}" if res.jain_min is not None else ""
             print(f"    fairness={res.fairness}{extra}")

@@ -4,7 +4,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from vela.ast import Program
-from vela.types import assert_names_jain, is_observe_only, parse_jain_floor
+from vela.types import (
+    HOUSE_TERRESTRIAL_GP_MBPS,
+    HOUSE_TERRESTRIAL_P95_MS,
+    assert_names_jain,
+    contract_terrestrial_floor,
+    is_observe_only,
+    parse_jain_floor,
+)
 
 
 @dataclass
@@ -70,6 +77,10 @@ class VelaConfig:
     handover_jitter_s: float | None = None
     paths: list = field(default_factory=list)
     path_digest: str = ""
+    # Terrestrial rail the harness scores. Bound from the contract text;
+    # house rail when the contract does not name one.
+    terrestrial_floor_mbps: float = HOUSE_TERRESTRIAL_GP_MBPS
+    terrestrial_p95_ms: float = HOUSE_TERRESTRIAL_P95_MS
 
 
 def parse_report_ci(reports: list[str]) -> tuple[float | None, list[str]]:
@@ -195,4 +206,9 @@ def program_to_config(prog: Program, view: str | None = None) -> VelaConfig:
             if assert_names_jain(a.left):
                 cfg.jain_min = parse_jain_floor(a.right)
                 break
+        gp_floor, p95_cap = contract_terrestrial_floor(con.asserts)
+        if gp_floor is not None:
+            cfg.terrestrial_floor_mbps = float(gp_floor)
+        if p95_cap is not None:
+            cfg.terrestrial_p95_ms = float(p95_cap)
     return cfg
